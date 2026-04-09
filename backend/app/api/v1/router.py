@@ -10,12 +10,12 @@ from app.api.v1.endpoints import (
     auth,
     billing,
     chat,
+    clientes,
     convenios,
     especialidades,
     estabelecimentos,
     licenca,
-    medicos,
-    pacientes,
+    profissionais,
     rag,
 )
 
@@ -38,8 +38,8 @@ api_router.include_router(rag.router)
 # Routers de domínio — exigem licença ativa
 api_router.include_router(convenios.router,      dependencies=_LICENCA_DEP)
 api_router.include_router(especialidades.router, dependencies=_LICENCA_DEP)
-api_router.include_router(medicos.router,        dependencies=_LICENCA_DEP)
-api_router.include_router(pacientes.router,      dependencies=_LICENCA_DEP)
+api_router.include_router(profissionais.router,  dependencies=_LICENCA_DEP)
+api_router.include_router(clientes.router,       dependencies=_LICENCA_DEP)
 api_router.include_router(agenda.router,         dependencies=_LICENCA_DEP)
 api_router.include_router(chat.router,           dependencies=_LICENCA_DEP)
 

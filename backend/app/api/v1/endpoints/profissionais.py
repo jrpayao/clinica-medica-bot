@@ -15,11 +15,11 @@ from app.schemas.profissional import (
 )
 from app.services.profissional_service import ProfissionalService
 
-router = APIRouter(prefix="/medicos", tags=["Medicos"])
+router = APIRouter(prefix="/profissionais", tags=["Profissionais"])
 
 
 @router.get("/", response_model=list[ProfissionalResponse], summary="Listar profissionais")
-async def listar_medicos(
+async def listar_profissionais(
     db: AsyncSession = Depends(get_db),
     estabelecimento_id: Annotated[int, Depends(require_estabelecimento)] = ...,
 ) -> list[ProfissionalResponse]:
@@ -27,13 +27,13 @@ async def listar_medicos(
     return await service.listar(estabelecimento_id)
 
 
-@router.get("/{medico_id}", response_model=ProfissionalResponse, summary="Buscar profissional")
-async def buscar_medico(
-    medico_id: int,
+@router.get("/{profissional_id}", response_model=ProfissionalResponse, summary="Buscar profissional")
+async def buscar_profissional(
+    profissional_id: int,
     db: AsyncSession = Depends(get_db),
 ) -> ProfissionalResponse:
     service = ProfissionalService(db)
-    profissional = await service.buscar_por_id(medico_id)
+    profissional = await service.buscar_por_id(profissional_id)
     if not profissional:
         raise HTTPException(status_code=404, detail="Profissional nao encontrado")
     return profissional
@@ -45,7 +45,7 @@ async def buscar_medico(
     status_code=status.HTTP_201_CREATED,
     summary="Criar profissional",
 )
-async def criar_medico(
+async def criar_profissional(
     dados: ProfissionalCreate,
     db: AsyncSession = Depends(get_db),
     current_user: dict = Depends(
@@ -57,9 +57,9 @@ async def criar_medico(
     return await service.criar(dados, estabelecimento_id)
 
 
-@router.patch("/{medico_id}", response_model=ProfissionalResponse, summary="Atualizar profissional")
-async def atualizar_medico(
-    medico_id: int,
+@router.patch("/{profissional_id}", response_model=ProfissionalResponse, summary="Atualizar profissional")
+async def atualizar_profissional(
+    profissional_id: int,
     dados: ProfissionalUpdate,
     db: AsyncSession = Depends(get_db),
     current_user: dict = Depends(
@@ -67,35 +67,35 @@ async def atualizar_medico(
     ),
 ) -> ProfissionalResponse:
     service = ProfissionalService(db)
-    profissional = await service.atualizar(medico_id, dados)
+    profissional = await service.atualizar(profissional_id, dados)
     if not profissional:
         raise HTTPException(status_code=404, detail="Profissional nao encontrado")
     return profissional
 
 
-@router.delete("/{medico_id}", response_model=ProfissionalResponse, summary="Desativar profissional")
-async def desativar_medico(
-    medico_id: int,
+@router.delete("/{profissional_id}", response_model=ProfissionalResponse, summary="Desativar profissional")
+async def desativar_profissional(
+    profissional_id: int,
     db: AsyncSession = Depends(get_db),
     current_user: dict = Depends(
         require_role("ADMIN_GLOBAL", "ADMIN_ESTABELECIMENTO")
     ),
 ) -> ProfissionalResponse:
     service = ProfissionalService(db)
-    profissional = await service.desativar(medico_id)
+    profissional = await service.desativar(profissional_id)
     if not profissional:
         raise HTTPException(status_code=404, detail="Profissional nao encontrado")
     return profissional
 
 
 @router.post(
-    "/{medico_id}/slots",
+    "/{profissional_id}/slots",
     response_model=list[SlotResponse],
     status_code=status.HTTP_201_CREATED,
     summary="Gerar slots de agenda",
 )
 async def gerar_slots(
-    medico_id: int,
+    profissional_id: int,
     dados: GerarSlotsRequest,
     db: AsyncSession = Depends(get_db),
     current_user: dict = Depends(
@@ -106,7 +106,7 @@ async def gerar_slots(
     service = ProfissionalService(db)
     try:
         slots = await service.gerar_slots(
-            profissional_id=medico_id,
+            profissional_id=profissional_id,
             data_inicio=date.fromisoformat(dados.data_inicio),
             data_fim=date.fromisoformat(dados.data_fim),
             hora_inicio=time.fromisoformat(dados.hora_inicio),

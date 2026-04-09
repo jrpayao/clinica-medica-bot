@@ -8,7 +8,7 @@ from app.core.database import get_db
 from app.schemas.cliente import ClienteCreate, ClienteOut, ClienteUpdate
 from app.services.cliente_service import ClienteService
 
-router = APIRouter(prefix="/pacientes", tags=["Pacientes"])
+router = APIRouter(prefix="/clientes", tags=["Clientes"])
 
 
 @router.get(
@@ -16,7 +16,7 @@ router = APIRouter(prefix="/pacientes", tags=["Pacientes"])
     response_model=list[ClienteOut],
     summary="Listar clientes",
 )
-async def listar_pacientes(
+async def listar_clientes(
     db: AsyncSession = Depends(get_db),
     current_user: dict = Depends(
         require_role("ADMIN_GLOBAL", "ADMIN_ESTABELECIMENTO", "RECEPCIONISTA")
@@ -28,18 +28,18 @@ async def listar_pacientes(
 
 
 @router.get(
-    "/{paciente_id}",
+    "/{cliente_id}",
     response_model=ClienteOut,
     summary="Buscar cliente",
 )
-async def buscar_paciente(
-    paciente_id: int,
+async def buscar_cliente(
+    cliente_id: int,
     db: AsyncSession = Depends(get_db),
     current_user: dict = Depends(get_current_user),
     estabelecimento_id: Annotated[int, Depends(require_estabelecimento)] = ...,
 ) -> ClienteOut:
     service = ClienteService(db)
-    cliente = await service.buscar_por_id(paciente_id, estabelecimento_id)
+    cliente = await service.buscar_por_id(cliente_id, estabelecimento_id)
     if not cliente:
         raise HTTPException(status_code=404, detail="Cliente nao encontrado")
     return cliente
@@ -51,7 +51,7 @@ async def buscar_paciente(
     status_code=status.HTTP_201_CREATED,
     summary="Criar cliente",
 )
-async def criar_paciente(
+async def criar_cliente(
     dados: ClienteCreate,
     db: AsyncSession = Depends(get_db),
     estabelecimento_id: Annotated[int, Depends(require_estabelecimento)] = ...,
@@ -62,19 +62,19 @@ async def criar_paciente(
 
 
 @router.patch(
-    "/{paciente_id}",
+    "/{cliente_id}",
     response_model=ClienteOut,
     summary="Atualizar cliente",
 )
-async def atualizar_paciente(
-    paciente_id: int,
+async def atualizar_cliente(
+    cliente_id: int,
     dados: ClienteUpdate,
     db: AsyncSession = Depends(get_db),
     current_user: dict = Depends(get_current_user),
     estabelecimento_id: Annotated[int, Depends(require_estabelecimento)] = ...,
 ) -> ClienteOut:
     service = ClienteService(db)
-    cliente = await service.atualizar(paciente_id, dados, estabelecimento_id)
+    cliente = await service.atualizar(cliente_id, dados, estabelecimento_id)
     if not cliente:
         raise HTTPException(status_code=404, detail="Cliente nao encontrado")
     return cliente
