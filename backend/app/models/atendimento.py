@@ -1,6 +1,6 @@
 import enum
 
-from sqlalchemy import Enum, ForeignKey, Text
+from sqlalchemy import Enum, ForeignKey, String, Text
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -73,6 +73,10 @@ class Atendimento(Base, TimestampMixin):
         nullable=False,
     )
     observacoes: Mapped[str | None] = mapped_column(Text, nullable=True)
+    cliente_convenio_id: Mapped[int | None] = mapped_column(
+        ForeignKey("cliente_convenios.id", ondelete="SET NULL"), nullable=True
+    )
+    numero_autorizacao: Mapped[str | None] = mapped_column(String(50), nullable=True)
     estabelecimento_id: Mapped[int] = mapped_column(
         ForeignKey("estabelecimentos.id"), nullable=False, index=True
     )
@@ -81,6 +85,7 @@ class Atendimento(Base, TimestampMixin):
     cliente: Mapped["Cliente"] = relationship()  # noqa: F821
     profissional: Mapped["Profissional"] = relationship()  # noqa: F821
     especialidade: Mapped["Especialidade"] = relationship()  # noqa: F821
+    cliente_convenio: Mapped["ClienteConvenio | None"] = relationship()  # noqa: F821
     historico: Mapped[list["AtendimentoStatusHistorico"]] = relationship(  # noqa: F821
         back_populates="atendimento", order_by="AtendimentoStatusHistorico.created_at"
     )

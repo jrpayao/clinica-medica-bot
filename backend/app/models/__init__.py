@@ -15,7 +15,9 @@ from app.models.atendimento_historico import AtendimentoStatusHistorico
 from app.models.auditoria import AuditoriaAcao, TipoAuditoria
 from app.models.base import Base, TimestampMixin
 from app.models.cliente import Cliente, ModalidadePagamento
+from app.models.cliente_convenio import ClienteConvenio
 from app.models.convenio import Convenio
+from app.models.convenio_plano import ConvenioPlano
 from app.models.especialidade import Especialidade
 from app.models.estabelecimento import EstabelecimentoSaude, TipoEstabelecimento
 from app.models.fila_espera import FilaEspera, FilaEsperaStatus
@@ -42,7 +44,9 @@ __all__ = [
     "TimestampMixin",
     "Cliente",
     "ModalidadePagamento",
+    "ClienteConvenio",
     "Convenio",
+    "ConvenioPlano",
     "Especialidade",
     "EstabelecimentoSaude",
     "TipoEstabelecimento",
