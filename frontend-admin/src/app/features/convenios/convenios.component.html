@@ -1,0 +1,89 @@
+<app-page-header titulo="Convênios" subtitulo="Operadoras e planos aceitos pela clínica" />
+
+@if (loading()) {
+  <mat-spinner diameter="40" />
+} @else {
+  <mat-card class="mb-4">
+    <mat-card-header><mat-card-title>Nova Operadora</mat-card-title></mat-card-header>
+    <mat-card-content>
+      <form [formGroup]="form" (ngSubmit)="salvarConvenio()" class="grid grid-cols-2 gap-3 mt-3">
+        <mat-form-field>
+          <mat-label>Nome *</mat-label>
+          <input matInput formControlName="nome" />
+        </mat-form-field>
+        <mat-form-field>
+          <mat-label>Código ANS</mat-label>
+          <input matInput formControlName="codigo_ans" />
+        </mat-form-field>
+        <mat-form-field>
+          <mat-label>CNPJ</mat-label>
+          <input matInput formControlName="cnpj" />
+        </mat-form-field>
+        <mat-form-field>
+          <mat-label>Telefone Autorização</mat-label>
+          <input matInput formControlName="telefone_autorizacao" />
+        </mat-form-field>
+        <mat-form-field>
+          <mat-label>E-mail</mat-label>
+          <input matInput formControlName="email" />
+        </mat-form-field>
+        <mat-form-field>
+          <mat-label>Website</mat-label>
+          <input matInput formControlName="website" />
+        </mat-form-field>
+        <div class="col-span-2">
+          <button mat-raised-button color="primary" type="submit" [disabled]="form.invalid">
+            Salvar Operadora
+          </button>
+        </div>
+      </form>
+    </mat-card-content>
+  </mat-card>
+
+  @if (convenios().length === 0) {
+    <app-empty-state title="Nenhum convênio cadastrado" />
+  } @else {
+    <mat-accordion>
+      @for (conv of convenios(); track conv.id) {
+        <mat-expansion-panel (opened)="carregarPlanos(conv.id)">
+          <mat-expansion-panel-header>
+            <mat-panel-title>{{ conv.nome }}</mat-panel-title>
+            <mat-panel-description>
+              @if (conv.codigo_ans) { ANS: {{ conv.codigo_ans }} }
+              &nbsp;{{ conv.ativo ? '● Ativo' : '○ Inativo' }}
+            </mat-panel-description>
+          </mat-expansion-panel-header>
+
+          <div class="mt-2">
+            <h4 class="font-medium mb-2">Planos</h4>
+            @for (plano of (planos()[conv.id] ?? []); track plano.id) {
+              <div class="flex items-center gap-2 mb-1">
+                <span>{{ plano.nome }}</span>
+                <span>{{ plano.ativo ? '● Ativo' : '○ Inativo' }}</span>
+                <button mat-icon-button (click)="togglePlano(conv.id, plano)" [title]="plano.ativo ? 'Desativar' : 'Reativar'">
+                  <mat-icon>{{ plano.ativo ? 'block' : 'check_circle' }}</mat-icon>
+                </button>
+              </div>
+            }
+
+            <form [formGroup]="formPlano" (ngSubmit)="salvarPlano(conv.id)" class="flex gap-2 mt-3">
+              <mat-form-field class="flex-1">
+                <mat-label>Novo plano</mat-label>
+                <input matInput formControlName="nome" />
+              </mat-form-field>
+              <button mat-raised-button color="accent" type="submit" [disabled]="formPlano.invalid">
+                Adicionar
+              </button>
+            </form>
+          </div>
+
+          <mat-action-row>
+            <button mat-button color="warn" (click)="toggleConvenio(conv)">
+              {{ conv.ativo ? 'Desativar operadora' : 'Reativar operadora' }}
+            </button>
+          </mat-action-row>
+        </mat-expansion-panel>
+      }
+    </mat-accordion>
+  }
+}

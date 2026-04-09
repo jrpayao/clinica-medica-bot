@@ -117,6 +117,13 @@ export const routes: Routes = [
         loadComponent: () =>
           import('./features/auditoria/auditoria.component').then((m) => m.AuditoriaComponent),
       },
+
+      // ── G26: Convênios ──────────────────────────────────────────
+      {
+        path: 'convenios',
+        loadComponent: () =>
+          import('./features/convenios/convenios.component').then((m) => m.ConveniosComponent),
+      },
     ],
   },
   { path: '**', redirectTo: '' },

@@ -48,6 +48,7 @@ const NAV_ITEMS: NavItem[] = [
   { path: '/clientes',           label: 'Clientes',         icon: 'group',            modos: ['escopado', 'estabelecimento'] },
   { path: '/profissionais',      label: 'Profissionais',    icon: 'medical_services', modos: ['escopado', 'estabelecimento'] },
   { path: '/especialidades',     label: 'Especialidades',   icon: 'category',         modos: ['escopado', 'estabelecimento'] },
+  { path: '/convenios',          label: 'Convênios',        icon: 'health_and_safety', modos: ['escopado', 'estabelecimento'] },
   { path: '/billing',            label: 'Billing IA',       icon: 'payments',         modos: ['escopado'] },
   { path: '/documentos',         label: 'Documentos RAG',   icon: 'description',      modos: ['escopado', 'estabelecimento'] },
 
