@@ -6,86 +6,86 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.v1.dependencies import require_estabelecimento, require_role
 from app.core.database import get_db
-from app.schemas.consulta import SlotResponse
-from app.schemas.medico import (
+from app.schemas.atendimento import SlotResponse
+from app.schemas.profissional import (
     GerarSlotsRequest,
-    MedicoCreate,
-    MedicoResponse,
-    MedicoUpdate,
+    ProfissionalCreate,
+    ProfissionalResponse,
+    ProfissionalUpdate,
 )
-from app.services.medico_service import MedicoService
+from app.services.profissional_service import ProfissionalService
 
 router = APIRouter(prefix="/medicos", tags=["Medicos"])
 
 
-@router.get("/", response_model=list[MedicoResponse], summary="Listar medicos")
+@router.get("/", response_model=list[ProfissionalResponse], summary="Listar profissionais")
 async def listar_medicos(
     db: AsyncSession = Depends(get_db),
     estabelecimento_id: Annotated[int, Depends(require_estabelecimento)] = ...,
-) -> list[MedicoResponse]:
-    service = MedicoService(db)
+) -> list[ProfissionalResponse]:
+    service = ProfissionalService(db)
     return await service.listar(estabelecimento_id)
 
 
-@router.get("/{medico_id}", response_model=MedicoResponse, summary="Buscar medico")
+@router.get("/{medico_id}", response_model=ProfissionalResponse, summary="Buscar profissional")
 async def buscar_medico(
     medico_id: int,
     db: AsyncSession = Depends(get_db),
-) -> MedicoResponse:
-    service = MedicoService(db)
-    medico = await service.buscar_por_id(medico_id)
-    if not medico:
-        raise HTTPException(status_code=404, detail="Medico nao encontrado")
-    return medico
+) -> ProfissionalResponse:
+    service = ProfissionalService(db)
+    profissional = await service.buscar_por_id(medico_id)
+    if not profissional:
+        raise HTTPException(status_code=404, detail="Profissional nao encontrado")
+    return profissional
 
 
 @router.post(
     "/",
-    response_model=MedicoResponse,
+    response_model=ProfissionalResponse,
     status_code=status.HTTP_201_CREATED,
-    summary="Criar medico",
+    summary="Criar profissional",
 )
 async def criar_medico(
-    dados: MedicoCreate,
+    dados: ProfissionalCreate,
     db: AsyncSession = Depends(get_db),
     current_user: dict = Depends(
         require_role("ADMIN_GLOBAL", "ADMIN_ESTABELECIMENTO")
     ),
     estabelecimento_id: Annotated[int, Depends(require_estabelecimento)] = ...,
-) -> MedicoResponse:
-    service = MedicoService(db)
+) -> ProfissionalResponse:
+    service = ProfissionalService(db)
     return await service.criar(dados, estabelecimento_id)
 
 
-@router.patch("/{medico_id}", response_model=MedicoResponse, summary="Atualizar medico")
+@router.patch("/{medico_id}", response_model=ProfissionalResponse, summary="Atualizar profissional")
 async def atualizar_medico(
     medico_id: int,
-    dados: MedicoUpdate,
+    dados: ProfissionalUpdate,
     db: AsyncSession = Depends(get_db),
     current_user: dict = Depends(
         require_role("ADMIN_GLOBAL", "ADMIN_ESTABELECIMENTO")
     ),
-) -> MedicoResponse:
-    service = MedicoService(db)
-    medico = await service.atualizar(medico_id, dados)
-    if not medico:
-        raise HTTPException(status_code=404, detail="Medico nao encontrado")
-    return medico
+) -> ProfissionalResponse:
+    service = ProfissionalService(db)
+    profissional = await service.atualizar(medico_id, dados)
+    if not profissional:
+        raise HTTPException(status_code=404, detail="Profissional nao encontrado")
+    return profissional
 
 
-@router.delete("/{medico_id}", response_model=MedicoResponse, summary="Desativar medico")
+@router.delete("/{medico_id}", response_model=ProfissionalResponse, summary="Desativar profissional")
 async def desativar_medico(
     medico_id: int,
     db: AsyncSession = Depends(get_db),
     current_user: dict = Depends(
         require_role("ADMIN_GLOBAL", "ADMIN_ESTABELECIMENTO")
     ),
-) -> MedicoResponse:
-    service = MedicoService(db)
-    medico = await service.desativar(medico_id)
-    if not medico:
-        raise HTTPException(status_code=404, detail="Medico nao encontrado")
-    return medico
+) -> ProfissionalResponse:
+    service = ProfissionalService(db)
+    profissional = await service.desativar(medico_id)
+    if not profissional:
+        raise HTTPException(status_code=404, detail="Profissional nao encontrado")
+    return profissional
 
 
 @router.post(
@@ -103,10 +103,10 @@ async def gerar_slots(
     ),
     estabelecimento_id: Annotated[int, Depends(require_estabelecimento)] = ...,
 ) -> list[SlotResponse]:
-    service = MedicoService(db)
+    service = ProfissionalService(db)
     try:
         slots = await service.gerar_slots(
-            medico_id=medico_id,
+            profissional_id=medico_id,
             data_inicio=date.fromisoformat(dados.data_inicio),
             data_fim=date.fromisoformat(dados.data_fim),
             hora_inicio=time.fromisoformat(dados.hora_inicio),

@@ -12,7 +12,7 @@ from app.core.security import (
     verify_password,
     verify_token,
 )
-from app.models.paciente import Paciente
+from app.models.cliente import Cliente
 from app.models.usuario import Usuario
 
 log = structlog.get_logger(__name__)
@@ -83,34 +83,34 @@ class AuthService:
         # Remover codigo apos uso
         await self.redis.delete(code_key)
 
-        # Buscar paciente — criar automaticamente se não existir (auto-registro)
+        # Buscar cliente — criar automaticamente se não existir (auto-registro)
         result = await self.db.execute(
-            select(Paciente).where(Paciente.cpf == cpf)
+            select(Cliente).where(Cliente.cpf == cpf)
         )
-        paciente = result.scalar_one_or_none()
+        cliente = result.scalar_one_or_none()
 
-        if not paciente:
+        if not cliente:
             from app.models.estabelecimento import EstabelecimentoSaude
             est_result = await self.db.execute(
                 select(EstabelecimentoSaude.id).order_by(EstabelecimentoSaude.id).limit(1)
             )
             est_id = est_result.scalar_one_or_none() or 1
 
-            paciente = Paciente(
+            cliente = Cliente(
                 cpf=cpf,
-                nome=f"Paciente {cpf[:3]}***",
+                nome=f"Cliente {cpf[:3]}***",
                 estabelecimento_id=est_id,
             )
-            self.db.add(paciente)
+            self.db.add(cliente)
             await self.db.flush()
-            await self.db.refresh(paciente)
-            log.info("paciente_auto_registrado", cpf_prefixo=cpf[:3] + "***", estabelecimento_id=est_id)
+            await self.db.refresh(cliente)
+            log.info("cliente_auto_registrado", cpf_prefixo=cpf[:3] + "***", estabelecimento_id=est_id)
 
         token_data: dict[str, str | int] = {
             "sub": cpf,
             "role": "PACIENTE_EXTERNO",
-            "paciente_id": paciente.id,
-            "estabelecimento_id": paciente.estabelecimento_id,
+            "cliente_id": cliente.id,
+            "estabelecimento_id": cliente.estabelecimento_id,
         }
 
         access_token = create_access_token(token_data)

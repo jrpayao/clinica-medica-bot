@@ -11,7 +11,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload
 
-from app.models.consulta import Consulta, ConsultaStatus
+from app.models.atendimento import Atendimento, AtendimentoStatus
 from app.models.slot import Slot
 from app.services.notificacao_service import enviar_email, template_email_lembrete
 from app.services.whatsapp_service import (
@@ -23,22 +23,22 @@ from app.workers.celery_app import celery_app
 log = structlog.get_logger(__name__)
 
 
-async def buscar_consultas_para_lembrete_d1(db: AsyncSession) -> list[Consulta]:
-    """Busca consultas agendadas para amanha (D-1)."""
+async def buscar_consultas_para_lembrete_d1(db: AsyncSession) -> list[Atendimento]:
+    """Busca atendimentos agendados para amanha (D-1)."""
     amanha = date.today() + timedelta(days=1)
 
     query = (
-        select(Consulta)
-        .join(Slot, Consulta.slot_id == Slot.id)
+        select(Atendimento)
+        .join(Slot, Atendimento.slot_id == Slot.id)
         .where(
-            Consulta.status == ConsultaStatus.AGENDADA,
+            Atendimento.status == AtendimentoStatus.AGENDADA,
             Slot.data == amanha,
         )
         .options(
-            joinedload(Consulta.paciente),
-            joinedload(Consulta.medico),
-            joinedload(Consulta.especialidade),
-            joinedload(Consulta.slot),
+            joinedload(Atendimento.cliente),
+            joinedload(Atendimento.profissional),
+            joinedload(Atendimento.especialidade),
+            joinedload(Atendimento.slot),
         )
     )
 
@@ -46,26 +46,26 @@ async def buscar_consultas_para_lembrete_d1(db: AsyncSession) -> list[Consulta]:
     return list(result.scalars().all())
 
 
-async def buscar_consultas_para_lembrete_h2(db: AsyncSession) -> list[Consulta]:
-    """Busca consultas nas proximas 2 horas (H-2)."""
+async def buscar_consultas_para_lembrete_h2(db: AsyncSession) -> list[Atendimento]:
+    """Busca atendimentos nas proximas 2 horas (H-2)."""
     agora = datetime.now()
     limite = agora + timedelta(hours=2)
     hoje = date.today()
 
     query = (
-        select(Consulta)
-        .join(Slot, Consulta.slot_id == Slot.id)
+        select(Atendimento)
+        .join(Slot, Atendimento.slot_id == Slot.id)
         .where(
-            Consulta.status == ConsultaStatus.AGENDADA,
+            Atendimento.status == AtendimentoStatus.AGENDADA,
             Slot.data == hoje,
             Slot.hora_inicio >= agora.time(),
             Slot.hora_inicio <= limite.time(),
         )
         .options(
-            joinedload(Consulta.paciente),
-            joinedload(Consulta.medico),
-            joinedload(Consulta.especialidade),
-            joinedload(Consulta.slot),
+            joinedload(Atendimento.cliente),
+            joinedload(Atendimento.profissional),
+            joinedload(Atendimento.especialidade),
+            joinedload(Atendimento.slot),
         )
     )
 
@@ -73,15 +73,15 @@ async def buscar_consultas_para_lembrete_h2(db: AsyncSession) -> list[Consulta]:
     return list(result.scalars().all())
 
 
-async def enviar_lembrete(consulta, tipo: str = "D-1") -> None:
-    """Envia lembrete via WhatsApp e email para uma consulta.
+async def enviar_lembrete(atendimento, tipo: str = "D-1") -> None:
+    """Envia lembrete via WhatsApp e email para um atendimento.
 
     Falha em um canal nao impede envio no outro.
     """
-    paciente = consulta.paciente
-    medico = consulta.medico
-    especialidade = consulta.especialidade
-    slot = consulta.slot
+    paciente = atendimento.cliente
+    medico = atendimento.profissional
+    especialidade = atendimento.especialidade
+    slot = atendimento.slot
 
     # WhatsApp
     msg_wa = template_lembrete_consulta(
@@ -112,7 +112,7 @@ async def enviar_lembrete(consulta, tipo: str = "D-1") -> None:
 
     log.info(
         "lembrete_enviado",
-        consulta_id=consulta.id,
+        atendimento_id=atendimento.id,
         tipo=tipo,
         whatsapp=wa_ok,
         email=email_ok,
@@ -128,10 +128,10 @@ def enviar_lembretes_d1() -> dict:
 
     async def _run():
         async with AsyncSessionLocal() as db:
-            consultas = await buscar_consultas_para_lembrete_d1(db)
-            for consulta in consultas:
-                await enviar_lembrete(consulta, tipo="D-1")
-            return {"enviados": len(consultas)}
+            atendimentos = await buscar_consultas_para_lembrete_d1(db)
+            for atendimento in atendimentos:
+                await enviar_lembrete(atendimento, tipo="D-1")
+            return {"enviados": len(atendimentos)}
 
     return asyncio.get_event_loop().run_until_complete(_run())
 
@@ -145,9 +145,9 @@ def enviar_lembretes_h2() -> dict:
 
     async def _run():
         async with AsyncSessionLocal() as db:
-            consultas = await buscar_consultas_para_lembrete_h2(db)
-            for consulta in consultas:
-                await enviar_lembrete(consulta, tipo="H-2")
-            return {"enviados": len(consultas)}
+            atendimentos = await buscar_consultas_para_lembrete_h2(db)
+            for atendimento in atendimentos:
+                await enviar_lembrete(atendimento, tipo="H-2")
+            return {"enviados": len(atendimentos)}
 
     return asyncio.get_event_loop().run_until_complete(_run())

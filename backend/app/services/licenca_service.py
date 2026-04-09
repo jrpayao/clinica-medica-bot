@@ -15,9 +15,9 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import PLANO_QUOTAS, TRIAL_DIAS
-from app.models.consulta import Consulta, ConsultaStatus
+from app.models.atendimento import Atendimento, AtendimentoStatus
 from app.models.licenca import Licenca, LicencaStatus
-from app.models.medico_estabelecimento import MedicoEstabelecimento
+from app.models.profissional_estabelecimento import ProfissionalEstabelecimento
 
 log = structlog.get_logger(__name__)
 
@@ -257,8 +257,8 @@ class LicencaService:
 
         result = await self.db.execute(
             select(func.count()).where(
-                MedicoEstabelecimento.estabelecimento_id == estabelecimento_id,
-                MedicoEstabelecimento.ativo == True,  # noqa: E712
+                ProfissionalEstabelecimento.estabelecimento_id == estabelecimento_id,
+                ProfissionalEstabelecimento.ativo == True,  # noqa: E712
             )
         )
         atual = result.scalar_one()
@@ -281,9 +281,9 @@ class LicencaService:
 
         result = await self.db.execute(
             select(func.count()).where(
-                Consulta.estabelecimento_id == estabelecimento_id,
-                Consulta.status != ConsultaStatus.CANCELADA,
-                Consulta.created_at >= inicio_mes,
+                Atendimento.estabelecimento_id == estabelecimento_id,
+                Atendimento.status != AtendimentoStatus.CANCELADA,
+                Atendimento.created_at >= inicio_mes,
             )
         )
         atual = result.scalar_one()
@@ -295,8 +295,8 @@ class LicencaService:
         """Conta médicos ativos no estabelecimento."""
         result = await self.db.execute(
             select(func.count()).where(
-                MedicoEstabelecimento.estabelecimento_id == estabelecimento_id,
-                MedicoEstabelecimento.ativo == True,  # noqa: E712
+                ProfissionalEstabelecimento.estabelecimento_id == estabelecimento_id,
+                ProfissionalEstabelecimento.ativo == True,  # noqa: E712
             )
         )
         return result.scalar_one()
@@ -308,9 +308,9 @@ class LicencaService:
 
         result = await self.db.execute(
             select(func.count()).where(
-                Consulta.estabelecimento_id == estabelecimento_id,
-                Consulta.status != ConsultaStatus.CANCELADA,
-                Consulta.created_at >= inicio_mes,
+                Atendimento.estabelecimento_id == estabelecimento_id,
+                Atendimento.status != AtendimentoStatus.CANCELADA,
+                Atendimento.created_at >= inicio_mes,
             )
         )
         return result.scalar_one()

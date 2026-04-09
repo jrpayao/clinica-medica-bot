@@ -689,7 +689,7 @@ class ChatService:
         Retorna lista serializada no formato esperado pelo frontend (SlotSugerido).
         """
         from app.models.especialidade import Especialidade
-        from app.models.medico import Medico
+        from app.models.profissional import Profissional
         from sqlalchemy import select
 
         estabelecimento_id = session_data.get("estabelecimento_id")
@@ -717,19 +717,19 @@ class ChatService:
             especialidade_id=especialidade_id,
         )
 
-        # Carregar nomes dos médicos e serializar para o frontend
+        # Carregar nomes dos profissionais e serializar para o frontend
         result_slots = []
         for slot in slots[:5]:  # máximo 5 slots
-            medico_result = await self.db.execute(
-                select(Medico).where(Medico.id == slot.medico_id)
+            profissional_result = await self.db.execute(
+                select(Profissional).where(Profissional.id == slot.profissional_id)
             )
-            medico = medico_result.scalar_one_or_none()
+            profissional = profissional_result.scalar_one_or_none()
             result_slots.append({
                 "id": slot.id,
                 "data": slot.data.strftime("%d/%m/%Y"),
                 "hora_inicio": slot.hora_inicio.strftime("%H:%M"),
                 "hora_fim": slot.hora_fim.strftime("%H:%M"),
-                "medico_nome": medico.nome if medico else "Médico",
+                "profissional_nome": profissional.nome if profissional else "Profissional",
             })
 
         return result_slots
@@ -755,7 +755,7 @@ class ChatService:
         slot_desc = "o horário selecionado"
         for s in session_data.get("slots_temp", []):
             if s["id"] == slot_id:
-                slot_desc = f"{s['data']} às {s['hora_inicio']} com Dr(a). {s['medico_nome']}"
+                slot_desc = f"{s['data']} às {s['hora_inicio']} com Dr(a). {s['profissional_nome']}"
                 break
 
         nome = (dados_coletados.get("nome") or "").split()[0]
@@ -810,7 +810,7 @@ class ChatService:
             slot_desc = "horário selecionado"
             for s in session_data.get("slots_temp", []):
                 if s["id"] == dados_coletados.get("slot_id_selecionado"):
-                    slot_desc = f"{s['data']} às {s['hora_inicio']} com Dr(a). {s['medico_nome']}"
+                    slot_desc = f"{s['data']} às {s['hora_inicio']} com Dr(a). {s['profissional_nome']}"
                     break
 
             resposta = (
@@ -847,8 +847,8 @@ class ChatService:
         mensagens: list,
     ) -> dict:
         """Cria o agendamento no banco após confirmação do usuário."""
-        from app.models.paciente import Paciente
-        from app.schemas.consulta import ConsultaCreate
+        from app.models.cliente import Cliente
+        from app.schemas.atendimento import AtendimentoCreate
         from sqlalchemy import select
 
         msg_lower = mensagem.lower()
@@ -880,10 +880,10 @@ class ChatService:
             return {"resposta": resposta, "estado": ChatEstado.FINALIZADO, "emergencia": False, "sessao_expirada": False}
 
         try:
-            from app.models.medico import Medico
+            from app.models.profissional import Profissional
             from app.models.slot import Slot
 
-            # Buscar slot para obter medico_id
+            # Buscar slot para obter profissional_id
             slot_result = await self.db.execute(
                 select(Slot).where(Slot.id == slot_id, Slot.estabelecimento_id == estabelecimento_id)
             )
@@ -891,49 +891,49 @@ class ChatService:
             if not slot_obj:
                 raise ValueError(f"Slot {slot_id} não encontrado")
 
-            # Buscar medico para obter especialidade_id
-            medico_result = await self.db.execute(
-                select(Medico).where(Medico.id == slot_obj.medico_id)
+            # Buscar profissional para obter especialidade_id
+            profissional_result = await self.db.execute(
+                select(Profissional).where(Profissional.id == slot_obj.profissional_id)
             )
-            medico_obj = medico_result.scalar_one_or_none()
-            if not medico_obj:
-                raise ValueError(f"Médico do slot {slot_id} não encontrado")
+            profissional_obj = profissional_result.scalar_one_or_none()
+            if not profissional_obj:
+                raise ValueError(f"Profissional do slot {slot_id} não encontrado")
 
-            # Buscar ou criar paciente pelo telefone+estabelecimento
+            # Buscar ou criar cliente pelo telefone+estabelecimento
             result = await self.db.execute(
-                select(Paciente).where(
-                    Paciente.telefone == telefone,
-                    Paciente.estabelecimento_id == estabelecimento_id,
+                select(Cliente).where(
+                    Cliente.telefone == telefone,
+                    Cliente.estabelecimento_id == estabelecimento_id,
                 ).limit(1)
             )
-            paciente = result.scalar_one_or_none()
+            cliente = result.scalar_one_or_none()
 
-            if not paciente:
-                paciente = Paciente(
-                    cpf="00000000000",  # placeholder para pacientes sem cadastro prévio
+            if not cliente:
+                cliente = Cliente(
+                    cpf="00000000000",  # placeholder para clientes sem cadastro prévio
                     nome=nome,
                     telefone=telefone,
                     email=email,
                     estabelecimento_id=estabelecimento_id,
                 )
-                self.db.add(paciente)
+                self.db.add(cliente)
                 await self.db.flush()
-                await self.db.refresh(paciente)
+                await self.db.refresh(cliente)
             else:
                 # Atualizar email se veio novo
-                if email and not paciente.email:
-                    paciente.email = email
+                if email and not cliente.email:
+                    cliente.email = email
 
-            # Criar consulta
+            # Criar atendimento
             agenda = AgendaService(self.db)
-            dados_consulta = ConsultaCreate(
+            dados_atendimento = AtendimentoCreate(
                 slot_id=slot_id,
-                paciente_id=paciente.id,
-                medico_id=slot_obj.medico_id,
-                especialidade_id=medico_obj.especialidade_id,
+                cliente_id=cliente.id,
+                profissional_id=slot_obj.profissional_id,
+                especialidade_id=profissional_obj.especialidade_id,
                 observacoes=f"Agendado via chatbot. Especialidade: {dados_coletados.get('especialidade', '')}",
             )
-            consulta = await agenda.agendar_consulta(dados_consulta, estabelecimento_id)
+            atendimento = await agenda.agendar_consulta(dados_atendimento, estabelecimento_id)
             await self.db.commit()
 
             # Buscar info do slot
@@ -943,7 +943,7 @@ class ChatService:
                     slot_desc = f"{s['data']} às {s['hora_inicio']}"
                     break
 
-            protocolo = f"PROTO-{consulta.id:06d}"
+            protocolo = f"PROTO-{atendimento.id:06d}"
             resposta = (
                 f"✅ **Agendamento confirmado!**\n\n"
                 f"📋 **Protocolo:** {protocolo}\n"
@@ -955,8 +955,8 @@ class ChatService:
 
             log.info(
                 "agendamento_criado_via_chat",
-                consulta_id=consulta.id,
-                paciente_id=paciente.id,
+                atendimento_id=atendimento.id,
+                cliente_id=cliente.id,
                 slot_id=slot_id,
                 token=session_token[:8] + "...",
             )

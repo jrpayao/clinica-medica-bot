@@ -17,7 +17,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.api.v1.dependencies import get_current_user, require_role
 from app.core.database import get_db
 from app.models.auditoria import AuditoriaAcao, TipoAuditoria
-from app.models.consulta import Consulta, ConsultaStatus
+from app.models.atendimento import Atendimento, AtendimentoStatus
 from app.models.estabelecimento import EstabelecimentoSaude
 from app.models.licenca import Licenca, LicencaStatus
 from app.models.usuario import Usuario, UsuarioRole
@@ -50,15 +50,15 @@ async def _contagem_usuarios_por_role(db: AsyncSession) -> dict[str, int]:
 
 async def _total_consultas_hoje(db: AsyncSession, data: date) -> dict[str, int]:
     result = await db.execute(
-        select(Consulta.status, func.count(Consulta.id))
-        .where(cast(Consulta.created_at, Date) == data)
-        .group_by(Consulta.status)
+        select(Atendimento.status, func.count(Atendimento.id))
+        .where(cast(Atendimento.created_at, Date) == data)
+        .group_by(Atendimento.status)
     )
     contagens = {row[0] if isinstance(row[0], str) else row[0].value: row[1] for row in result.all()}
     return {
-        "agendadas":  contagens.get(ConsultaStatus.AGENDADA,  0),
-        "realizadas": contagens.get(ConsultaStatus.REALIZADA, 0),
-        "canceladas": contagens.get(ConsultaStatus.CANCELADA, 0),
+        "agendadas":  contagens.get(AtendimentoStatus.AGENDADA,  0),
+        "realizadas": contagens.get(AtendimentoStatus.REALIZADA, 0),
+        "canceladas": contagens.get(AtendimentoStatus.CANCELADA, 0),
     }
 
 

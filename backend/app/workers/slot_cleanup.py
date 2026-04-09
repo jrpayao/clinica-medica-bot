@@ -5,7 +5,7 @@ import structlog
 from sqlalchemy import and_, select, update
 
 from app.core.database import AsyncSessionLocal
-from app.models.consulta import Consulta, ConsultaStatus
+from app.models.atendimento import Atendimento, AtendimentoStatus
 from app.models.slot import Slot, SlotStatus
 from app.workers.celery_app import celery_app
 
@@ -24,25 +24,25 @@ async def _limpar_slots_expirados() -> int:
     async with AsyncSessionLocal() as session:
         # Buscar consultas AGENDADAS (nao confirmadas) criadas ha mais de 10min
         result = await session.execute(
-            select(Consulta).where(
+            select(Atendimento).where(
                 and_(
-                    Consulta.status == ConsultaStatus.AGENDADA,
-                    Consulta.created_at < limite,
+                    Atendimento.status == AtendimentoStatus.AGENDADA,
+                    Atendimento.created_at < limite,
                 )
             )
         )
-        consultas_expiradas = result.scalars().all()
+        atendimentos_expirados = result.scalars().all()
 
         count = 0
-        for consulta in consultas_expiradas:
-            # Cancelar consulta
-            consulta.status = ConsultaStatus.CANCELADA
-            consulta.observacoes = "Cancelada automaticamente: timeout de confirmacao"
+        for atendimento in atendimentos_expirados:
+            # Cancelar atendimento
+            atendimento.status = AtendimentoStatus.CANCELADA
+            atendimento.observacoes = "Cancelada automaticamente: timeout de confirmacao"
 
             # Liberar slot
             await session.execute(
                 update(Slot)
-                .where(Slot.id == consulta.slot_id)
+                .where(Slot.id == atendimento.slot_id)
                 .values(status=SlotStatus.DISPONIVEL)
             )
             count += 1

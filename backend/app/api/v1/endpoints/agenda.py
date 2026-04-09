@@ -6,10 +6,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.v1.dependencies import get_current_user, require_estabelecimento
 from app.core.database import get_db
-from app.schemas.consulta import (
-    ConsultaCancelar,
-    ConsultaCreate,
-    ConsultaResponse,
+from app.schemas.atendimento import (
+    AtendimentoCancelar,
+    AtendimentoCreate,
+    AtendimentoOut,
     SlotResponse,
 )
 from app.services.agenda_service import (
@@ -27,25 +27,25 @@ router = APIRouter(prefix="/agenda", tags=["Agenda"])
 
 @router.get(
     "/slots/dia/{data}",
-    summary="Listar slots do dia com consultas embutidas (admin)",
+    summary="Listar slots do dia com atendimentos embutidos (admin)",
 )
 async def slots_do_dia(
     data: date,
-    medico_id: int | None = Query(None, description="Filtrar por médico"),
+    profissional_id: int | None = Query(None, description="Filtrar por profissional"),
     db: AsyncSession = Depends(get_db),
     estabelecimento_id: Annotated[int, Depends(require_estabelecimento)] = ...,
 ) -> list[dict]:
-    """Retorna todos os slots do dia com consulta embutida via LEFT JOIN.
+    """Retorna todos os slots do dia com atendimento embutido via LEFT JOIN.
 
-    Slots livres retornam consulta=null.
-    CPF do paciente é sempre mascarado.
+    Slots livres retornam atendimento=null.
+    CPF do cliente é sempre mascarado.
     RBAC: require_estabelecimento garante isolamento por tenant.
     """
     return await listar_slots_dia(
         db,
         data=data,
         estabelecimento_id=estabelecimento_id,
-        medico_id=medico_id,
+        profissional_id=profissional_id,
     )
 
 
@@ -56,7 +56,7 @@ async def slots_do_dia(
 )
 async def buscar_disponibilidade(
     especialidade_id: int | None = Query(None),
-    medico_id: int | None = Query(None),
+    profissional_id: int | None = Query(None),
     data_inicio: date | None = Query(None),
     data_fim: date | None = Query(None),
     db: AsyncSession = Depends(get_db),
@@ -67,7 +67,7 @@ async def buscar_disponibilidade(
     return await service.buscar_disponibilidade(
         estabelecimento_id=estabelecimento_id,
         especialidade_id=especialidade_id,
-        medico_id=medico_id,
+        profissional_id=profissional_id,
         data_inicio=data_inicio,
         data_fim=data_fim,
     )
@@ -75,16 +75,16 @@ async def buscar_disponibilidade(
 
 @router.post(
     "/consultas",
-    response_model=ConsultaResponse,
+    response_model=AtendimentoOut,
     status_code=status.HTTP_201_CREATED,
-    summary="Agendar consulta",
+    summary="Agendar atendimento",
 )
 async def agendar_consulta(
-    dados: ConsultaCreate,
+    dados: AtendimentoCreate,
     db: AsyncSession = Depends(get_db),
     current_user: dict = Depends(get_current_user),
     estabelecimento_id: Annotated[int, Depends(require_estabelecimento)] = ...,
-) -> ConsultaResponse:
+) -> AtendimentoOut:
     service = AgendaService(db)
     try:
         return await service.agendar_consulta(dados, estabelecimento_id)
@@ -96,16 +96,16 @@ async def agendar_consulta(
 
 @router.patch(
     "/consultas/{consulta_id}/cancelar",
-    response_model=ConsultaResponse,
-    summary="Cancelar consulta",
+    response_model=AtendimentoOut,
+    summary="Cancelar atendimento",
 )
 async def cancelar_consulta(
     consulta_id: int,
-    dados: ConsultaCancelar,
+    dados: AtendimentoCancelar,
     db: AsyncSession = Depends(get_db),
     current_user: dict = Depends(get_current_user),
     estabelecimento_id: Annotated[int, Depends(require_estabelecimento)] = ...,
-) -> ConsultaResponse:
+) -> AtendimentoOut:
     service = AgendaService(db)
     try:
         return await service.cancelar_consulta(consulta_id, dados.motivo, estabelecimento_id)
@@ -117,32 +117,32 @@ async def cancelar_consulta(
 
 @router.get(
     "/consultas/{consulta_id}",
-    response_model=ConsultaResponse,
-    summary="Buscar consulta por ID",
+    response_model=AtendimentoOut,
+    summary="Buscar atendimento por ID",
 )
 async def buscar_consulta(
     consulta_id: int,
     db: AsyncSession = Depends(get_db),
     current_user: dict = Depends(get_current_user),
     estabelecimento_id: Annotated[int, Depends(require_estabelecimento)] = ...,
-) -> ConsultaResponse:
+) -> AtendimentoOut:
     service = AgendaService(db)
-    consulta = await service.buscar_consulta_por_id(consulta_id, estabelecimento_id)
-    if not consulta:
-        raise HTTPException(status_code=404, detail="Consulta nao encontrada")
-    return consulta
+    atendimento = await service.buscar_consulta_por_id(consulta_id, estabelecimento_id)
+    if not atendimento:
+        raise HTTPException(status_code=404, detail="Atendimento nao encontrado")
+    return atendimento
 
 
 @router.get(
-    "/consultas/paciente/{paciente_id}",
-    response_model=list[ConsultaResponse],
-    summary="Listar consultas do paciente",
+    "/consultas/paciente/{cliente_id}",
+    response_model=list[AtendimentoOut],
+    summary="Listar atendimentos do cliente",
 )
 async def listar_consultas_paciente(
-    paciente_id: int,
+    cliente_id: int,
     db: AsyncSession = Depends(get_db),
     current_user: dict = Depends(get_current_user),
     estabelecimento_id: Annotated[int, Depends(require_estabelecimento)] = ...,
-) -> list[ConsultaResponse]:
+) -> list[AtendimentoOut]:
     service = AgendaService(db)
-    return await service.listar_consultas_paciente(paciente_id, estabelecimento_id)
+    return await service.listar_consultas_paciente(cliente_id, estabelecimento_id)

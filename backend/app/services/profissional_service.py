@@ -4,15 +4,15 @@ import structlog
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models.medico import Medico
-from app.models.medico_estabelecimento import MedicoEstabelecimento
+from app.models.profissional import Profissional
+from app.models.profissional_estabelecimento import ProfissionalEstabelecimento
 from app.models.slot import Slot, SlotStatus
-from app.schemas.medico import MedicoCreate, MedicoUpdate
+from app.schemas.profissional import ProfissionalCreate, ProfissionalUpdate
 
 log = structlog.get_logger(__name__)
 
 
-class MedicoService:
+class ProfissionalService:
     def __init__(self, db: AsyncSession) -> None:
         self.db = db
 
@@ -20,90 +20,90 @@ class MedicoService:
         self,
         estabelecimento_id: int,
         apenas_ativos: bool = True,
-    ) -> list[Medico]:
-        """Lista médicos que atendem no estabelecimento (via junction N:N)."""
+    ) -> list[Profissional]:
+        """Lista profissionais que atendem no estabelecimento (via junction N:N)."""
         query = (
-            select(Medico)
+            select(Profissional)
             .join(
-                MedicoEstabelecimento,
-                MedicoEstabelecimento.medico_id == Medico.id,
+                ProfissionalEstabelecimento,
+                ProfissionalEstabelecimento.profissional_id == Profissional.id,
             )
-            .where(MedicoEstabelecimento.estabelecimento_id == estabelecimento_id)
-            .order_by(Medico.nome)
+            .where(ProfissionalEstabelecimento.estabelecimento_id == estabelecimento_id)
+            .order_by(Profissional.nome)
         )
         if apenas_ativos:
             query = query.where(
-                Medico.ativo == True,  # noqa: E712
-                MedicoEstabelecimento.ativo == True,  # noqa: E712
+                Profissional.ativo == True,  # noqa: E712
+                ProfissionalEstabelecimento.ativo == True,  # noqa: E712
             )
         result = await self.db.execute(query)
         return list(result.scalars().all())
 
-    async def buscar_por_id(self, medico_id: int) -> Medico | None:
-        """Busca medico por ID global (sem filtro de tenant)."""
+    async def buscar_por_id(self, profissional_id: int) -> Profissional | None:
+        """Busca profissional por ID global (sem filtro de tenant)."""
         result = await self.db.execute(
-            select(Medico).where(Medico.id == medico_id)
+            select(Profissional).where(Profissional.id == profissional_id)
         )
         return result.scalar_one_or_none()
 
     async def criar(
         self,
-        dados: MedicoCreate,
+        dados: ProfissionalCreate,
         estabelecimento_id: int,
-    ) -> Medico:
-        """Cria médico e vincula ao estabelecimento via junction."""
-        medico = Medico(**dados.model_dump())
-        self.db.add(medico)
+    ) -> Profissional:
+        """Cria profissional e vincula ao estabelecimento via junction."""
+        profissional = Profissional(**dados.model_dump())
+        self.db.add(profissional)
         await self.db.flush()
 
-        vinculo = MedicoEstabelecimento(
-            medico_id=medico.id,
+        vinculo = ProfissionalEstabelecimento(
+            profissional_id=profissional.id,
             estabelecimento_id=estabelecimento_id,
-            duracao_consulta_min=medico.duracao_consulta_min,
+            duracao_atendimento_min=profissional.duracao_atendimento_min,
             ativo=True,
         )
         self.db.add(vinculo)
         await self.db.flush()
-        await self.db.refresh(medico)
+        await self.db.refresh(profissional)
         log.info(
-            "medico_criado",
-            nome=medico.nome,
-            crm=medico.crm,
-            id=medico.id,
+            "profissional_criado",
+            nome=profissional.nome,
+            registro_profissional=profissional.registro_profissional,
+            id=profissional.id,
             estabelecimento_id=estabelecimento_id,
         )
-        return medico
+        return profissional
 
-    async def atualizar(self, medico_id: int, dados: MedicoUpdate) -> Medico | None:
-        """Atualiza dados globais do médico."""
-        medico = await self.buscar_por_id(medico_id)
-        if not medico:
+    async def atualizar(self, profissional_id: int, dados: ProfissionalUpdate) -> Profissional | None:
+        """Atualiza dados globais do profissional."""
+        profissional = await self.buscar_por_id(profissional_id)
+        if not profissional:
             return None
 
         update_data = dados.model_dump(exclude_unset=True)
         for campo, valor in update_data.items():
-            setattr(medico, campo, valor)
+            setattr(profissional, campo, valor)
 
         await self.db.flush()
-        await self.db.refresh(medico)
-        log.info("medico_atualizado", id=medico_id)
-        return medico
+        await self.db.refresh(profissional)
+        log.info("profissional_atualizado", id=profissional_id)
+        return profissional
 
-    async def desativar(self, medico_id: int) -> Medico | None:
-        """Desativa médico globalmente (soft delete)."""
-        medico = await self.buscar_por_id(medico_id)
-        if not medico:
+    async def desativar(self, profissional_id: int) -> Profissional | None:
+        """Desativa profissional globalmente (soft delete)."""
+        profissional = await self.buscar_por_id(profissional_id)
+        if not profissional:
             return None
 
-        medico.ativo = False
+        profissional.ativo = False
         await self.db.flush()
-        await self.db.refresh(medico)
-        log.info("medico_desativado", id=medico_id)
-        return medico
+        await self.db.refresh(profissional)
+        log.info("profissional_desativado", id=profissional_id)
+        return profissional
 
     async def gerar_slots(
         self,
-        medico_id: int,
+        profissional_id: int,
         data_inicio: date,
         data_fim: date,
         hora_inicio: time = time(8, 0),
@@ -113,15 +113,15 @@ class MedicoService:
         dias_semana: list[int] | None = None,
         estabelecimento_id: int | None = None,
     ) -> list[Slot]:
-        """Gera slots de agenda para o médico no período especificado."""
+        """Gera slots de agenda para o profissional no período especificado."""
         if dias_semana is None:
             dias_semana = [0, 1, 2, 3, 4]  # seg-sex
 
-        medico = await self.buscar_por_id(medico_id)
-        if not medico:
-            raise ValueError("Medico nao encontrado")
+        profissional = await self.buscar_por_id(profissional_id)
+        if not profissional:
+            raise ValueError("Profissional nao encontrado")
 
-        duracao = timedelta(minutes=medico.duracao_consulta_min)
+        duracao = timedelta(minutes=profissional.duracao_atendimento_min)
         slots_criados: list[Slot] = []
         dia_atual = data_inicio
 
@@ -146,7 +146,7 @@ class MedicoService:
                         continue
 
                     slot = Slot(
-                        medico_id=medico_id,
+                        profissional_id=profissional_id,
                         data=dia_atual,
                         hora_inicio=slot_time,
                         hora_fim=slot_time_fim,
@@ -163,7 +163,7 @@ class MedicoService:
         await self.db.flush()
         log.info(
             "slots_gerados",
-            medico_id=medico_id,
+            profissional_id=profissional_id,
             quantidade=len(slots_criados),
             periodo=f"{data_inicio} a {data_fim}",
             estabelecimento_id=estabelecimento_id,

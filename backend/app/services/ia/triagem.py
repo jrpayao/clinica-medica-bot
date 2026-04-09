@@ -7,7 +7,7 @@ REGRA: Emergencia detectada bloqueia agendamento e exibe SAMU 192.
 import structlog
 
 from app.core.config import EMERGENCY_KEYWORDS
-from app.models.consulta import ConsultaUrgencia
+from app.models.atendimento import AtendimentoUrgencia as ConsultaUrgencia
 
 log = structlog.get_logger(__name__)
 

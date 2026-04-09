@@ -11,7 +11,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.especialidade import Especialidade
-from app.models.medico import Medico
+from app.models.profissional import Profissional
 from app.models.slot import Slot, SlotStatus
 
 log = structlog.get_logger(__name__)
@@ -97,14 +97,14 @@ async def buscar_slots_para_sugestao(
 
     query = (
         select(Slot)
-        .join(Medico, Slot.medico_id == Medico.id)
-        .join(Especialidade, Medico.especialidade_id == Especialidade.id)
+        .join(Profissional, Slot.profissional_id == Profissional.id)
+        .join(Especialidade, Profissional.especialidade_id == Especialidade.id)
         .where(
             Slot.status == SlotStatus.DISPONIVEL,
             Slot.data >= hoje,
             Slot.data <= limite,
             Especialidade.nome == especialidade_nome,
-            Medico.ativo == True,  # noqa: E712
+            Profissional.ativo == True,  # noqa: E712
             Especialidade.ativo == True,  # noqa: E712
         )
         .order_by(Slot.data, Slot.hora_inicio)

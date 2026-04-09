@@ -4,12 +4,12 @@ import structlog
 from sqlalchemy import outerjoin, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models.consulta import Consulta, ConsultaStatus
+from app.models.atendimento import Atendimento, AtendimentoStatus
 from app.models.especialidade import Especialidade
-from app.models.medico import Medico
-from app.models.paciente import Paciente
+from app.models.profissional import Profissional
+from app.models.cliente import Cliente
 from app.models.slot import Slot, SlotStatus
-from app.schemas.consulta import ConsultaCreate
+from app.schemas.atendimento import AtendimentoCreate
 
 log = structlog.get_logger(__name__)
 
@@ -22,13 +22,13 @@ class AgendaService:
         self,
         estabelecimento_id: int,
         especialidade_id: int | None = None,
-        medico_id: int | None = None,
+        profissional_id: int | None = None,
         data_inicio: date | None = None,
         data_fim: date | None = None,
         convenio_id: int | None = None,
     ) -> list[Slot]:
         """Busca slots disponíveis do estabelecimento com filtros opcionais."""
-        from app.models.medico import Medico
+        from app.models.profissional import Profissional
 
         if data_inicio is None:
             data_inicio = date.today()
@@ -42,17 +42,17 @@ class AgendaService:
             Slot.data <= data_fim,
         )
 
-        if medico_id:
-            query = query.where(Slot.medico_id == medico_id)
+        if profissional_id:
+            query = query.where(Slot.profissional_id == profissional_id)
 
         if especialidade_id:
-            query = query.join(Medico, Slot.medico_id == Medico.id).where(
-                Medico.especialidade_id == especialidade_id,
-                Medico.ativo == True,  # noqa: E712
+            query = query.join(Profissional, Slot.profissional_id == Profissional.id).where(
+                Profissional.especialidade_id == especialidade_id,
+                Profissional.ativo == True,  # noqa: E712
             )
 
         if convenio_id is not None:
-            # Convênios são por estabelecimento — todos os médicos do estabelecimento
+            # Convênios são por estabelecimento — todos os profissionais do estabelecimento
             # atendem os convênios cadastrados para ele. Validar que o convenio_id
             # pertence ao estabelecimento via subquery.
             from app.models.convenio import Convenio as ConvenioModel
@@ -72,9 +72,9 @@ class AgendaService:
 
     async def agendar_consulta(
         self,
-        dados: ConsultaCreate,
+        dados: AtendimentoCreate,
         estabelecimento_id: int,
-    ) -> Consulta:
+    ) -> Atendimento:
         """Cria agendamento reservando o slot."""
         result = await self.db.execute(
             select(Slot).where(
@@ -94,82 +94,82 @@ class AgendaService:
 
         data = dados.model_dump()
         data["estabelecimento_id"] = estabelecimento_id
-        consulta = Consulta(**data)
-        self.db.add(consulta)
+        atendimento = Atendimento(**data)
+        self.db.add(atendimento)
         await self.db.flush()
-        await self.db.refresh(consulta)
+        await self.db.refresh(atendimento)
 
         log.info(
-            "consulta_agendada",
-            consulta_id=consulta.id,
+            "atendimento_agendado",
+            atendimento_id=atendimento.id,
             slot_id=dados.slot_id,
-            paciente_id=dados.paciente_id,
+            cliente_id=dados.cliente_id,
             estabelecimento_id=estabelecimento_id,
         )
-        return consulta
+        return atendimento
 
     async def cancelar_consulta(
         self,
-        consulta_id: int,
+        atendimento_id: int,
         motivo: str,
         estabelecimento_id: int | None = None,
-    ) -> Consulta:
-        """Cancela consulta e libera o slot."""
-        query = select(Consulta).where(Consulta.id == consulta_id)
+    ) -> Atendimento:
+        """Cancela atendimento e libera o slot."""
+        query = select(Atendimento).where(Atendimento.id == atendimento_id)
         if estabelecimento_id is not None:
-            query = query.where(Consulta.estabelecimento_id == estabelecimento_id)
+            query = query.where(Atendimento.estabelecimento_id == estabelecimento_id)
 
         result = await self.db.execute(query)
-        consulta = result.scalar_one_or_none()
+        atendimento = result.scalar_one_or_none()
 
-        if not consulta:
-            raise ConsultaNaoEncontradaError("Consulta nao encontrada")
+        if not atendimento:
+            raise ConsultaNaoEncontradaError("Atendimento nao encontrado")
 
-        if consulta.status == ConsultaStatus.CANCELADA:
-            raise ConsultaJaCanceladaError("Consulta ja esta cancelada")
+        if atendimento.status == AtendimentoStatus.CANCELADA:
+            raise ConsultaJaCanceladaError("Atendimento ja esta cancelado")
 
-        if consulta.status == ConsultaStatus.REALIZADA:
-            raise ConsultaJaRealizadaError("Nao e possivel cancelar consulta ja realizada")
+        if atendimento.status == AtendimentoStatus.REALIZADA:
+            raise ConsultaJaRealizadaError("Nao e possivel cancelar atendimento ja realizado")
 
-        consulta.status = ConsultaStatus.CANCELADA
-        consulta.observacoes = f"Cancelada: {motivo}"
+        atendimento.status = AtendimentoStatus.CANCELADA
+        atendimento.observacoes = f"Cancelada: {motivo}"
 
         slot_result = await self.db.execute(
-            select(Slot).where(Slot.id == consulta.slot_id)
+            select(Slot).where(Slot.id == atendimento.slot_id)
         )
         slot = slot_result.scalar_one_or_none()
         if slot:
             slot.status = SlotStatus.DISPONIVEL
 
         await self.db.flush()
-        await self.db.refresh(consulta)
+        await self.db.refresh(atendimento)
 
-        log.info("consulta_cancelada", consulta_id=consulta_id, motivo=motivo)
-        return consulta
+        log.info("atendimento_cancelado", atendimento_id=atendimento_id, motivo=motivo)
+        return atendimento
 
     async def buscar_consulta_por_id(
         self,
-        consulta_id: int,
+        atendimento_id: int,
         estabelecimento_id: int | None = None,
-    ) -> Consulta | None:
-        """Busca consulta por ID."""
-        query = select(Consulta).where(Consulta.id == consulta_id)
+    ) -> Atendimento | None:
+        """Busca atendimento por ID."""
+        query = select(Atendimento).where(Atendimento.id == atendimento_id)
         if estabelecimento_id is not None:
-            query = query.where(Consulta.estabelecimento_id == estabelecimento_id)
+            query = query.where(Atendimento.estabelecimento_id == estabelecimento_id)
         result = await self.db.execute(query)
         return result.scalar_one_or_none()
 
     async def listar_consultas_paciente(
         self,
-        paciente_id: int,
+        cliente_id: int,
         estabelecimento_id: int | None = None,
-    ) -> list[Consulta]:
-        """Lista consultas de um paciente."""
-        query = select(Consulta).where(Consulta.paciente_id == paciente_id)
+    ) -> list[Atendimento]:
+        """Lista atendimentos de um cliente."""
+        query = select(Atendimento).where(Atendimento.cliente_id == cliente_id)
         if estabelecimento_id is not None:
-            query = query.where(Consulta.estabelecimento_id == estabelecimento_id)
+            query = query.where(Atendimento.estabelecimento_id == estabelecimento_id)
         result = await self.db.execute(
-            query.order_by(Consulta.created_at.desc())
+            query.order_by(Atendimento.created_at.desc())
         )
         return list(result.scalars().all())
 
@@ -185,49 +185,49 @@ async def listar_slots_dia(
     db: AsyncSession,
     data: date,
     estabelecimento_id: int,
-    medico_id: int | None = None,
+    profissional_id: int | None = None,
 ) -> list[dict]:
-    """Lista todos os slots de um dia com consulta embutida (LEFT JOIN).
+    """Lista todos os slots de um dia com atendimento embutido (LEFT JOIN).
 
     Retorna slots DISPONÍVEIS, AGENDADOS, BLOQUEADOS, ENCAIXES e RESERVADOS.
-    Consulta é None para slots livres.
-    CPF do paciente é sempre mascarado.
+    Atendimento é None para slots livres.
+    CPF do cliente é sempre mascarado.
     """
     q = (
         select(
             Slot.id,
-            Slot.medico_id,
-            Medico.nome,
+            Slot.profissional_id,
+            Profissional.nome,
             Especialidade.nome,
             Slot.data,
             Slot.hora_inicio,
             Slot.hora_fim,
             Slot.status,
-            # Consulta (nullable — LEFT JOIN)
-            Consulta.id,
-            Paciente.nome,
-            Paciente.cpf,
-            Consulta.urgencia,
-            Consulta.status,
-            Consulta.canal_origem,
-            Consulta.triagem_resumo,
-            Consulta.observacoes,
-            Consulta.created_at,
+            # Atendimento (nullable — LEFT JOIN)
+            Atendimento.id,
+            Cliente.nome,
+            Cliente.cpf,
+            Atendimento.urgencia,
+            Atendimento.status,
+            Atendimento.canal_origem,
+            Atendimento.triagem_resumo,
+            Atendimento.observacoes,
+            Atendimento.created_at,
         )
         .select_from(
-            outerjoin(Slot, Medico,        Slot.medico_id       == Medico.id)
-            .outerjoin(Especialidade,      Medico.especialidade_id == Especialidade.id)
-            .outerjoin(Consulta,           Consulta.slot_id     == Slot.id)
-            .outerjoin(Paciente,           Consulta.paciente_id == Paciente.id)
+            outerjoin(Slot, Profissional,   Slot.profissional_id       == Profissional.id)
+            .outerjoin(Especialidade,       Profissional.especialidade_id == Especialidade.id)
+            .outerjoin(Atendimento,         Atendimento.slot_id        == Slot.id)
+            .outerjoin(Cliente,             Atendimento.cliente_id     == Cliente.id)
         )
         .where(
             Slot.data == data,
             Slot.estabelecimento_id == estabelecimento_id,
         )
-        .order_by(Slot.hora_inicio, Medico.nome)
+        .order_by(Slot.hora_inicio, Profissional.nome)
     )
-    if medico_id is not None:
-        q = q.where(Slot.medico_id == medico_id)
+    if profissional_id is not None:
+        q = q.where(Slot.profissional_id == profissional_id)
 
     result = await db.execute(q)
     rows = result.all()
@@ -235,20 +235,20 @@ async def listar_slots_dia(
     slots: list[dict] = []
     for row in rows:
         (
-            slot_id, med_id, med_nome, esp_nome,
+            slot_id, prof_id, prof_nome, esp_nome,
             slot_data, hora_ini, hora_fim, slot_status,
-            consulta_id, pac_nome, cpf,
-            urgencia, cons_status, canal, triagem, obs, created_at,
+            atendimento_id, cli_nome, cpf,
+            urgencia, atend_status, canal, triagem, obs, created_at,
         ) = row
 
-        consulta = None
-        if consulta_id is not None:
-            consulta = {
-                "id":                    consulta_id,
-                "paciente_nome":         pac_nome or "",
-                "paciente_cpf_mascarado": _mascarar_cpf(cpf),
+        atendimento = None
+        if atendimento_id is not None:
+            atendimento = {
+                "id":                    atendimento_id,
+                "cliente_nome":          cli_nome or "",
+                "cliente_cpf_mascarado": _mascarar_cpf(cpf),
                 "urgencia":              urgencia.value if hasattr(urgencia, "value") else urgencia,
-                "status":                cons_status.value if hasattr(cons_status, "value") else cons_status,
+                "status":                atend_status.value if hasattr(atend_status, "value") else atend_status,
                 "canal_origem":          canal.value if hasattr(canal, "value") else canal,
                 "triagem_resumo":        triagem,
                 "observacoes":           obs,
@@ -256,15 +256,15 @@ async def listar_slots_dia(
             }
 
         slots.append({
-            "id":                slot_id,
-            "medico_id":         med_id,
-            "medico_nome":       med_nome or "",
-            "especialidade_nome": esp_nome or "",
-            "data":              str(slot_data),
-            "hora_inicio":       hora_ini.strftime("%H:%M") if hora_ini else "",
-            "hora_fim":          hora_fim.strftime("%H:%M") if hora_fim else "",
-            "status":            slot_status.value if hasattr(slot_status, "value") else slot_status,
-            "consulta":          consulta,
+            "id":                  slot_id,
+            "profissional_id":     prof_id,
+            "profissional_nome":   prof_nome or "",
+            "especialidade_nome":  esp_nome or "",
+            "data":                str(slot_data),
+            "hora_inicio":         hora_ini.strftime("%H:%M") if hora_ini else "",
+            "hora_fim":            hora_fim.strftime("%H:%M") if hora_fim else "",
+            "status":              slot_status.value if hasattr(slot_status, "value") else slot_status,
+            "atendimento":         atendimento,
         })
 
     return slots

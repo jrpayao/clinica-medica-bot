@@ -26,10 +26,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.api.v1.dependencies import get_estabelecimento_id_opcional, require_role
 from app.core.config import settings
 from app.core.database import get_db
-from app.models.consulta import Consulta, ConsultaStatus, ConsultaUrgencia
+from app.models.atendimento import Atendimento, AtendimentoStatus, AtendimentoUrgencia
 from app.models.especialidade import Especialidade
-from app.models.medico import Medico
-from app.models.paciente import Paciente
+from app.models.profissional import Profissional
+from app.models.cliente import Cliente
 from app.models.slot import Slot, SlotStatus
 from app.services.ia.billing import obter_custo_diario_total, obter_resumo_por_modelo
 
@@ -58,22 +58,22 @@ async def obter_proximas_consultas(
 
     q = (
         select(
-            Consulta.id,
+            Atendimento.id,
             Slot.hora_inicio,
-            Paciente.nome,
-            Medico.nome,
+            Cliente.nome,
+            Profissional.nome,
             Especialidade.nome,
-            Consulta.urgencia,
-            Consulta.status,
+            Atendimento.urgencia,
+            Atendimento.status,
         )
-        .join(Slot,         Consulta.slot_id         == Slot.id)
-        .join(Paciente,     Consulta.paciente_id     == Paciente.id)
-        .join(Medico,       Consulta.medico_id       == Medico.id)
-        .join(Especialidade, Consulta.especialidade_id == Especialidade.id)
+        .join(Slot,          Atendimento.slot_id          == Slot.id)
+        .join(Cliente,       Atendimento.cliente_id       == Cliente.id)
+        .join(Profissional,  Atendimento.profissional_id  == Profissional.id)
+        .join(Especialidade, Atendimento.especialidade_id == Especialidade.id)
         .where(
             Slot.data == data,
             Slot.hora_inicio >= hora_atual,
-            Consulta.status == ConsultaStatus.AGENDADA,
+            Atendimento.status == AtendimentoStatus.AGENDADA,
             Slot.estabelecimento_id == estabelecimento_id,
         )
         .order_by(Slot.hora_inicio)
@@ -83,10 +83,10 @@ async def obter_proximas_consultas(
     result = await db.execute(q)
     return [
         {
-            "consulta_id":        row[0],
+            "atendimento_id":     row[0],
             "hora_inicio":        row[1].strftime("%H:%M"),
-            "paciente_nome":      row[2],
-            "medico_nome":        row[3],
+            "cliente_nome":       row[2],
+            "profissional_nome":  row[3],
             "especialidade_nome": row[4],
             "urgencia":           row[5].value if hasattr(row[5], "value") else row[5],
             "status":             row[6].value if hasattr(row[6], "value") else row[6],
@@ -193,31 +193,31 @@ async def admin_dashboard(
 
     # ── Contagens de consultas ────────────────────────────────────
     q_status = (
-        select(Consulta.status, func.count(Consulta.id))
-        .where(cast(Consulta.created_at, Date) == data)
-        .group_by(Consulta.status)
+        select(Atendimento.status, func.count(Atendimento.id))
+        .where(cast(Atendimento.created_at, Date) == data)
+        .group_by(Atendimento.status)
     )
     if est_id is not None:
-        q_status = q_status.where(Consulta.estabelecimento_id == est_id)
+        q_status = q_status.where(Atendimento.estabelecimento_id == est_id)
 
     res_status = await db.execute(q_status)
     contagens: dict[str, int] = {row[0]: row[1] for row in res_status.all()}
 
-    agendadas  = contagens.get(ConsultaStatus.AGENDADA,  0)
-    realizadas = contagens.get(ConsultaStatus.REALIZADA, 0)
-    canceladas = contagens.get(ConsultaStatus.CANCELADA, 0)
+    agendadas  = contagens.get(AtendimentoStatus.AGENDADA,  0)
+    realizadas = contagens.get(AtendimentoStatus.REALIZADA, 0)
+    canceladas = contagens.get(AtendimentoStatus.CANCELADA, 0)
 
     # ── Urgências críticas (ALTA + EMERGENCIA, não canceladas) ────
     q_urg = (
-        select(func.count(Consulta.id))
+        select(func.count(Atendimento.id))
         .where(
-            cast(Consulta.created_at, Date) == data,
-            Consulta.urgencia.in_([ConsultaUrgencia.ALTA, ConsultaUrgencia.EMERGENCIA]),
-            Consulta.status != ConsultaStatus.CANCELADA,
+            cast(Atendimento.created_at, Date) == data,
+            Atendimento.urgencia.in_([AtendimentoUrgencia.ALTA, AtendimentoUrgencia.EMERGENCIA]),
+            Atendimento.status != AtendimentoStatus.CANCELADA,
         )
     )
     if est_id is not None:
-        q_urg = q_urg.where(Consulta.estabelecimento_id == est_id)
+        q_urg = q_urg.where(Atendimento.estabelecimento_id == est_id)
     urgencias_criticas = (await db.execute(q_urg)).scalar() or 0
 
     # ── Billing ───────────────────────────────────────────────────
