@@ -20,6 +20,7 @@ from app.api.v1.endpoints import (
     licenca,
     profissionais,
     rag,
+    tipo_atendimentos,
 )
 from app.core.database import get_db
 from app.schemas.cliente_convenio import ClienteConvenioCreate, ClienteConvenioOut, ClienteConvenioUpdate
@@ -48,6 +49,7 @@ api_router.include_router(profissionais.router,  dependencies=_LICENCA_DEP)
 api_router.include_router(clientes.router,       dependencies=_LICENCA_DEP)
 api_router.include_router(agenda.router,         dependencies=_LICENCA_DEP)
 api_router.include_router(chat.router,           dependencies=_LICENCA_DEP)
+api_router.include_router(tipo_atendimentos.router, dependencies=_LICENCA_DEP)
 
 # WebSocket sem dependency de licença (HTTPBearer é incompatível com WebSocket)
 api_router.include_router(chat.ws_router)
@@ -90,3 +92,48 @@ async def atualizar_carteirinha(
 
 
 api_router.include_router(_cc_router, dependencies=_LICENCA_DEP)
+
+# ── Vínculos profissional ↔ tipo-atendimento ──────────────────────────
+from app.services.tipo_atendimento_service import TipoAtendimentoService as _TASvc
+from app.schemas.tipo_atendimento import TipoAtendimentoOut as _TAOut
+
+_prof_ta_router = APIRouter(
+    prefix="/profissionais/{profissional_id}/tipo-atendimentos",
+    tags=["Vínculos Profissional↔Catálogo"],
+)
+
+
+@_prof_ta_router.get("", response_model=list[_TAOut])
+async def listar_tipos_profissional(
+    profissional_id: int,
+    db: Annotated[AsyncSession, Depends(get_db)],
+    _: Annotated[dict, Depends(require_role("ADMIN_GLOBAL", "ADMIN_ESTABELECIMENTO", "RECEPCIONISTA"))],
+):
+    return await _TASvc(db).listar_tipos_do_profissional(profissional_id)
+
+
+@_prof_ta_router.post("/{tipo_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def vincular_tipo_profissional(
+    profissional_id: int,
+    tipo_id: int,
+    db: Annotated[AsyncSession, Depends(get_db)],
+    _: Annotated[dict, Depends(require_role("ADMIN_GLOBAL", "ADMIN_ESTABELECIMENTO"))],
+):
+    ok = await _TASvc(db).vincular_profissional(profissional_id, tipo_id)
+    if not ok:
+        raise HTTPException(status_code=404, detail="Profissional ou tipo não encontrado")
+
+
+@_prof_ta_router.delete("/{tipo_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def desvincular_tipo_profissional(
+    profissional_id: int,
+    tipo_id: int,
+    db: Annotated[AsyncSession, Depends(get_db)],
+    _: Annotated[dict, Depends(require_role("ADMIN_GLOBAL", "ADMIN_ESTABELECIMENTO"))],
+):
+    ok = await _TASvc(db).desvincular_profissional(profissional_id, tipo_id)
+    if not ok:
+        raise HTTPException(status_code=404, detail="Profissional ou tipo não encontrado")
+
+
+api_router.include_router(_prof_ta_router, dependencies=_LICENCA_DEP)

@@ -16,7 +16,9 @@ import structlog
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.v1.dependencies import require_role
+from typing import Annotated
+
+from app.api.v1.dependencies import get_current_user, require_estabelecimento, require_role
 from app.core.database import get_db
 from app.core.security import create_access_token
 from app.schemas.estabelecimento import (
@@ -216,3 +218,38 @@ async def voltar_modo_global(
     log.info("admin_global_voltou_modo_global", sub=current_user["sub"])
 
     return ModoGlobalResponse(access_token=access_token)
+
+
+# ──────────────────────────────────────────────────────────
+# GET/PATCH /v1/estabelecimentos/meu/vocabulario
+# ──────────────────────────────────────────────────────────
+
+from app.schemas.vocabulario import VocabularioOut, VocabularioUpdate  # noqa: E402
+from app.services.tipo_atendimento_service import TipoAtendimentoService  # noqa: E402
+
+
+@router.get("/estabelecimentos/meu/vocabulario", response_model=VocabularioOut)
+async def obter_vocabulario(
+    estabelecimento_id: Annotated[int, Depends(require_estabelecimento)],
+    db: AsyncSession = Depends(get_db),
+    _: dict = Depends(get_current_user),
+):
+    from app.models.estabelecimento import EstabelecimentoSaude
+
+    est = await db.get(EstabelecimentoSaude, estabelecimento_id)
+    if not est:
+        raise HTTPException(status_code=404, detail="Estabelecimento não encontrado")
+    return est
+
+
+@router.patch("/estabelecimentos/meu/vocabulario", response_model=VocabularioOut)
+async def atualizar_vocabulario(
+    dados: VocabularioUpdate,
+    estabelecimento_id: Annotated[int, Depends(require_estabelecimento)],
+    db: AsyncSession = Depends(get_db),
+    _: dict = Depends(require_role("ADMIN_GLOBAL", "ADMIN_ESTABELECIMENTO")),
+):
+    est = await TipoAtendimentoService(db).atualizar_vocabulario(estabelecimento_id, dados)
+    if not est:
+        raise HTTPException(status_code=404, detail="Estabelecimento não encontrado")
+    return est
