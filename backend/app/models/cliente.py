@@ -7,13 +7,13 @@ from sqlalchemy.orm import Mapped, mapped_column
 from app.models.base import Base
 
 
-class TipoAtendimento(str, enum.Enum):
-    CONVENIO = "CONVENIO"
-    PARTICULAR = "PARTICULAR"
+class ModalidadePagamento(str, enum.Enum):
+    CONVENIO    = "CONVENIO"
+    PARTICULAR  = "PARTICULAR"
 
 
-class Paciente(Base):
-    __tablename__ = "pacientes"
+class Cliente(Base):
+    __tablename__ = "clientes"
 
     id: Mapped[int] = mapped_column(primary_key=True)
     cpf: Mapped[str] = mapped_column(String(11), index=True, nullable=False)
@@ -23,8 +23,8 @@ class Paciente(Base):
     email: Mapped[str | None] = mapped_column(String(254), nullable=True)
     convenio: Mapped[str | None] = mapped_column(String(100), nullable=True)
     numero_carteirinha: Mapped[str | None] = mapped_column(String(50), nullable=True)
-    tipo_atendimento: Mapped[TipoAtendimento | None] = mapped_column(
-        Enum(TipoAtendimento, name="tipo_atendimento"), nullable=True
+    modalidade_pagamento: Mapped[ModalidadePagamento | None] = mapped_column(
+        Enum(ModalidadePagamento, name="modalidade_pagamento"), nullable=True
     )
     convenio_id: Mapped[int | None] = mapped_column(
         ForeignKey("convenios.id"), nullable=True, index=True

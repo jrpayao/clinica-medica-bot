@@ -19,7 +19,7 @@ class Slot(Base):
     __tablename__ = "slots"
 
     id: Mapped[int] = mapped_column(primary_key=True)
-    medico_id: Mapped[int] = mapped_column(ForeignKey("medicos.id"), nullable=False)
+    profissional_id: Mapped[int] = mapped_column(ForeignKey("profissionais.id"), nullable=False)
     data: Mapped[date] = mapped_column(Date, nullable=False)
     hora_inicio: Mapped[time] = mapped_column(Time, nullable=False)
     hora_fim: Mapped[time] = mapped_column(Time, nullable=False)
@@ -41,4 +41,4 @@ class Slot(Base):
         nullable=False,
     )
 
-    medico: Mapped["Medico"] = relationship(back_populates="slots")  # noqa: F821
+    profissional: Mapped["Profissional"] = relationship(back_populates="slots")  # noqa: F821

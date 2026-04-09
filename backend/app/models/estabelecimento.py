@@ -79,7 +79,7 @@ class EstabelecimentoSaude(Base):
     rede: Mapped["RedeEstabelecimentos | None"] = relationship(  # noqa: F821
         back_populates="estabelecimentos"
     )
-    medico_vinculos: Mapped[list["MedicoEstabelecimento"]] = relationship(  # noqa: F821
+    profissional_vinculos: Mapped[list["ProfissionalEstabelecimento"]] = relationship(  # noqa: F821
         back_populates="estabelecimento"
     )
     licenca: Mapped["Licenca | None"] = relationship(  # noqa: F821

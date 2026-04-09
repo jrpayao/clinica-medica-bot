@@ -24,4 +24,4 @@ class Especialidade(Base):
         ForeignKey("estabelecimentos.id"), nullable=False, index=True
     )
 
-    medicos: Mapped[list["Medico"]] = relationship(back_populates="especialidade")  # noqa: F821
+    profissionais: Mapped[list["Profissional"]] = relationship(back_populates="especialidade")  # noqa: F821

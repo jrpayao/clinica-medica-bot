@@ -4,44 +4,60 @@ os relacionamentos lazy (strings em relationship()).
 Ordem importa: base → entidades sem FK → entidades com FK → junction tables.
 """
 
+from app.models.atendimento import (
+    Atendimento,
+    AtendimentoCanal,
+    AtendimentoStatus,
+    AtendimentoTipo,
+    AtendimentoUrgencia,
+)
+from app.models.atendimento_historico import AtendimentoStatusHistorico
+from app.models.auditoria import AuditoriaAcao, TipoAuditoria
 from app.models.base import Base, TimestampMixin
-from app.models.consulta import Consulta
+from app.models.cliente import Cliente, ModalidadePagamento
 from app.models.convenio import Convenio
 from app.models.especialidade import Especialidade
-from app.models.estabelecimento import EstabelecimentoSaude
-from app.models.licenca import Licenca, LicencaStatus
-from app.models.medico import Medico
-from app.models.medico_estabelecimento import MedicoEstabelecimento
-from app.models.paciente import Paciente
-from app.models.rede_estabelecimento import RedeEstabelecimentos
+from app.models.estabelecimento import EstabelecimentoSaude, TipoEstabelecimento
 from app.models.fila_espera import FilaEspera, FilaEsperaStatus
+from app.models.licenca import Licenca, LicencaStatus
+from app.models.profissional import Profissional
+from app.models.profissional_estabelecimento import ProfissionalEstabelecimento
+from app.models.rede_estabelecimento import RedeEstabelecimentos
 from app.models.sessao_chat import SessaoChat
 from app.models.sessao_historico import SessaoHistorico
-from app.models.auditoria import AuditoriaAcao, TipoAuditoria
-from app.models.slot import Slot
+from app.models.slot import Slot, SlotStatus
 from app.models.token_usage import TokenUsage
-from app.models.usuario import Usuario
+from app.models.usuario import Usuario, UsuarioRole
 
 __all__ = [
-    "Base",
-    "TimestampMixin",
-    "Convenio",
-    "Especialidade",
-    "RedeEstabelecimentos",
-    "EstabelecimentoSaude",
-    "Licenca",
-    "LicencaStatus",
-    "Medico",
-    "MedicoEstabelecimento",
-    "Paciente",
-    "Slot",
-    "Consulta",
-    "FilaEspera",
-    "FilaEsperaStatus",
-    "SessaoChat",
-    "SessaoHistorico",
+    "Atendimento",
+    "AtendimentoCanal",
+    "AtendimentoStatus",
+    "AtendimentoTipo",
+    "AtendimentoUrgencia",
+    "AtendimentoStatusHistorico",
     "AuditoriaAcao",
     "TipoAuditoria",
+    "Base",
+    "TimestampMixin",
+    "Cliente",
+    "ModalidadePagamento",
+    "Convenio",
+    "Especialidade",
+    "EstabelecimentoSaude",
+    "TipoEstabelecimento",
+    "FilaEspera",
+    "FilaEsperaStatus",
+    "Licenca",
+    "LicencaStatus",
+    "Profissional",
+    "ProfissionalEstabelecimento",
+    "RedeEstabelecimentos",
+    "SessaoChat",
+    "SessaoHistorico",
+    "Slot",
+    "SlotStatus",
     "TokenUsage",
     "Usuario",
+    "UsuarioRole",
 ]
