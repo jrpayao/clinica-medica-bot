@@ -29,7 +29,7 @@ export class AgendamentoService {
     this.carregando.set(true);
     try {
       const res = await firstValueFrom(
-        this.api.get<Consulta[]>(`/agenda/consultas/paciente/${pacienteId}`)
+        this.api.get<Consulta[]>(`/agenda/atendimentos/cliente/${pacienteId}`)
       );
       this.consultas.set(res);
     } finally {
@@ -39,7 +39,7 @@ export class AgendamentoService {
 
   async cancelar(consultaId: number, motivo: string): Promise<void> {
     await firstValueFrom(
-      this.api.patch(`/agenda/consultas/${consultaId}/cancelar`, { motivo })
+      this.api.patch(`/agenda/atendimentos/${consultaId}/cancelar`, { motivo })
     );
     this.consultas.update((list) =>
       list.map((c) =>

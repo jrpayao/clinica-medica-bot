@@ -74,12 +74,12 @@ async def buscar_disponibilidade(
 
 
 @router.post(
-    "/consultas",
+    "/atendimentos",
     response_model=AtendimentoOut,
     status_code=status.HTTP_201_CREATED,
     summary="Agendar atendimento",
 )
-async def agendar_consulta(
+async def agendar_atendimento(
     dados: AtendimentoCreate,
     db: AsyncSession = Depends(get_db),
     current_user: dict = Depends(get_current_user),
@@ -95,12 +95,12 @@ async def agendar_consulta(
 
 
 @router.patch(
-    "/consultas/{consulta_id}/cancelar",
+    "/atendimentos/{atendimento_id}/cancelar",
     response_model=AtendimentoOut,
     summary="Cancelar atendimento",
 )
-async def cancelar_consulta(
-    consulta_id: int,
+async def cancelar_atendimento(
+    atendimento_id: int,
     dados: AtendimentoCancelar,
     db: AsyncSession = Depends(get_db),
     current_user: dict = Depends(get_current_user),
@@ -108,7 +108,7 @@ async def cancelar_consulta(
 ) -> AtendimentoOut:
     service = AgendaService(db)
     try:
-        return await service.cancelar_consulta(consulta_id, dados.motivo, estabelecimento_id)
+        return await service.cancelar_consulta(atendimento_id, dados.motivo, estabelecimento_id)
     except ConsultaNaoEncontradaError as e:
         raise HTTPException(status_code=404, detail=str(e))
     except (ConsultaJaCanceladaError, ConsultaJaRealizadaError) as e:
@@ -116,29 +116,29 @@ async def cancelar_consulta(
 
 
 @router.get(
-    "/consultas/{consulta_id}",
+    "/atendimentos/{atendimento_id}",
     response_model=AtendimentoOut,
     summary="Buscar atendimento por ID",
 )
-async def buscar_consulta(
-    consulta_id: int,
+async def buscar_atendimento(
+    atendimento_id: int,
     db: AsyncSession = Depends(get_db),
     current_user: dict = Depends(get_current_user),
     estabelecimento_id: Annotated[int, Depends(require_estabelecimento)] = ...,
 ) -> AtendimentoOut:
     service = AgendaService(db)
-    atendimento = await service.buscar_consulta_por_id(consulta_id, estabelecimento_id)
+    atendimento = await service.buscar_consulta_por_id(atendimento_id, estabelecimento_id)
     if not atendimento:
         raise HTTPException(status_code=404, detail="Atendimento nao encontrado")
     return atendimento
 
 
 @router.get(
-    "/consultas/paciente/{cliente_id}",
+    "/atendimentos/cliente/{cliente_id}",
     response_model=list[AtendimentoOut],
     summary="Listar atendimentos do cliente",
 )
-async def listar_consultas_paciente(
+async def listar_atendimentos_cliente(
     cliente_id: int,
     db: AsyncSession = Depends(get_db),
     current_user: dict = Depends(get_current_user),

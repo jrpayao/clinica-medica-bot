@@ -140,7 +140,7 @@ export class AtendimentosComponent implements OnInit {
       if (!ok) return;
       try {
         await firstValueFrom(
-          this.api.patch(`/agenda/consultas/${slot.consulta!.id}/cancelar`, {
+          this.api.patch(`/agenda/atendimentos/${slot.consulta!.id}/cancelar`, {
             motivo: 'Cancelado pelo administrador',
           }),
         );
