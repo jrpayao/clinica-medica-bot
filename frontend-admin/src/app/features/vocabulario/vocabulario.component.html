@@ -1,0 +1,43 @@
+<app-page-header titulo="Vocabulário" subtitulo="Personalize os termos exibidos na interface" />
+
+@if (loading()) {
+  <mat-spinner diameter="40" />
+} @else {
+  <mat-card class="max-w-xl">
+    <mat-card-header>
+      <mat-card-title>Rótulos da interface</mat-card-title>
+      <mat-card-subtitle>
+        Ex: "Médico" → "Esteticista" para uma clínica de estética
+      </mat-card-subtitle>
+    </mat-card-header>
+    <mat-card-content>
+      <form [formGroup]="form" (ngSubmit)="salvar()" class="grid gap-4 mt-4">
+        <mat-form-field>
+          <mat-label>Profissional</mat-label>
+          <input matInput formControlName="label_profissional" placeholder="Médico" />
+          <mat-hint>Ex: Esteticista, Dentista, Biomédico</mat-hint>
+        </mat-form-field>
+        <mat-form-field>
+          <mat-label>Atendimento</mat-label>
+          <input matInput formControlName="label_atendimento" placeholder="Consulta" />
+          <mat-hint>Ex: Sessão, Procedimento, Consulta</mat-hint>
+        </mat-form-field>
+        <mat-form-field>
+          <mat-label>Cliente</mat-label>
+          <input matInput formControlName="label_cliente" placeholder="Paciente" />
+          <mat-hint>Ex: Cliente, Aluno, Paciente</mat-hint>
+        </mat-form-field>
+        <mat-form-field>
+          <mat-label>Especialidade</mat-label>
+          <input matInput formControlName="label_especialidade" placeholder="Especialidade" />
+          <mat-hint>Ex: Área, Serviço, Especialidade</mat-hint>
+        </mat-form-field>
+        <div>
+          <button mat-raised-button color="primary" type="submit" [disabled]="salvando()">
+            {{ salvando() ? 'Salvando...' : 'Salvar vocabulário' }}
+          </button>
+        </div>
+      </form>
+    </mat-card-content>
+  </mat-card>
+}

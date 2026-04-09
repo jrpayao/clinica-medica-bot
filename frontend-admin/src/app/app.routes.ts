@@ -124,6 +124,18 @@ export const routes: Routes = [
         loadComponent: () =>
           import('./features/convenios/convenios.component').then((m) => m.ConveniosComponent),
       },
+
+      // ── G27: Vocabulário + Catálogo de Serviços ──────────────────
+      {
+        path: 'catalogo',
+        loadComponent: () =>
+          import('./features/catalogo/catalogo.component').then((m) => m.CatalogoComponent),
+      },
+      {
+        path: 'vocabulario',
+        loadComponent: () =>
+          import('./features/vocabulario/vocabulario.component').then((m) => m.VocabularioComponent),
+      },
     ],
   },
   { path: '**', redirectTo: '' },

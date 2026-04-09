@@ -1,0 +1,71 @@
+<app-page-header titulo="Catálogo de Serviços" subtitulo="Tipos de atendimento oferecidos pela clínica" />
+
+@if (loading()) {
+  <mat-spinner diameter="40" />
+} @else {
+  <mat-card class="mb-4">
+    <mat-card-header><mat-card-title>Novo Serviço</mat-card-title></mat-card-header>
+    <mat-card-content>
+      <form [formGroup]="form" (ngSubmit)="salvar()" class="grid grid-cols-2 gap-3 mt-3">
+        <mat-form-field class="col-span-2">
+          <mat-label>Nome *</mat-label>
+          <input matInput formControlName="nome" placeholder="Ex: Botox, Limpeza de Pele" />
+        </mat-form-field>
+        <mat-form-field class="col-span-2">
+          <mat-label>Descrição</mat-label>
+          <textarea matInput formControlName="descricao" rows="2"></textarea>
+        </mat-form-field>
+        <mat-form-field>
+          <mat-label>Duração (min) *</mat-label>
+          <input matInput type="number" formControlName="duracao_min" />
+        </mat-form-field>
+        <mat-form-field>
+          <mat-label>Preço (R$)</mat-label>
+          <input matInput type="number" step="0.01" formControlName="preco" />
+        </mat-form-field>
+        <div class="col-span-2">
+          <button mat-raised-button color="primary" type="submit" [disabled]="form.invalid">
+            Adicionar Serviço
+          </button>
+        </div>
+      </form>
+    </mat-card-content>
+  </mat-card>
+
+  @if (tipos().length === 0) {
+    <app-empty-state title="Nenhum serviço cadastrado" />
+  } @else {
+    <mat-card>
+      <mat-card-content>
+        <table mat-table [dataSource]="tipos()" class="w-full">
+          <ng-container matColumnDef="nome">
+            <th mat-header-cell *matHeaderCellDef>Nome</th>
+            <td mat-cell *matCellDef="let t">{{ t.nome }}</td>
+          </ng-container>
+          <ng-container matColumnDef="duracao_min">
+            <th mat-header-cell *matHeaderCellDef>Duração</th>
+            <td mat-cell *matCellDef="let t">{{ t.duracao_min }} min</td>
+          </ng-container>
+          <ng-container matColumnDef="preco">
+            <th mat-header-cell *matHeaderCellDef>Preço</th>
+            <td mat-cell *matCellDef="let t">{{ t.preco ? ('R$ ' + t.preco) : '—' }}</td>
+          </ng-container>
+          <ng-container matColumnDef="ativo">
+            <th mat-header-cell *matHeaderCellDef>Status</th>
+            <td mat-cell *matCellDef="let t">{{ t.ativo ? 'Ativo' : 'Inativo' }}</td>
+          </ng-container>
+          <ng-container matColumnDef="acoes">
+            <th mat-header-cell *matHeaderCellDef></th>
+            <td mat-cell *matCellDef="let t">
+              <button mat-icon-button (click)="toggle(t)" [title]="t.ativo ? 'Desativar' : 'Reativar'">
+                <mat-icon>{{ t.ativo ? 'block' : 'check_circle' }}</mat-icon>
+              </button>
+            </td>
+          </ng-container>
+          <tr mat-header-row *matHeaderRowDef="colunas"></tr>
+          <tr mat-row *matRowDef="let row; columns: colunas;"></tr>
+        </table>
+      </mat-card-content>
+    </mat-card>
+  }
+}
