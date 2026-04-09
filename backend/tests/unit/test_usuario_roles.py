@@ -82,8 +82,8 @@ def test_usuario_medico_tem_estabelecimento_id_principal() -> None:
         email="carlos@clinica.com",
         senha_hash="hash",
         role=UsuarioRole.MEDICO,
-        medico_id=1,
+        profissional_id=1,
         estabelecimento_id=1,
     )
     assert u.estabelecimento_id == 1
-    assert u.medico_id == 1
+    assert u.profissional_id == 1

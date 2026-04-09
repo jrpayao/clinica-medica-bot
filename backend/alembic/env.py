@@ -10,10 +10,10 @@ from app.models.base import Base
 
 # Importar todos os models para que Alembic os detecte
 import app.models.especialidade  # noqa: F401
-import app.models.medico  # noqa: F401
-import app.models.paciente  # noqa: F401
+import app.models.profissional  # noqa: F401
+import app.models.cliente  # noqa: F401
 import app.models.slot  # noqa: F401
-import app.models.consulta  # noqa: F401
+import app.models.atendimento  # noqa: F401
 import app.models.sessao_chat  # noqa: F401
 import app.models.token_usage  # noqa: F401
 import app.models.usuario  # noqa: F401

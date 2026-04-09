@@ -1,8 +1,8 @@
 import pytest
 from unittest.mock import AsyncMock, MagicMock
 
-from app.services.paciente_service import PacienteService
-from app.schemas.paciente import PacienteCreate, PacienteUpdate
+from app.services.cliente_service import ClienteService
+from app.schemas.cliente import ClienteCreate, ClienteUpdate
 
 
 @pytest.fixture
@@ -19,12 +19,12 @@ def mock_db():
 
 @pytest.fixture
 def service(mock_db):
-    return PacienteService(mock_db)
+    return ClienteService(mock_db)
 
 
 async def test_criar_paciente(service, mock_db):
     """RF: CRUD criar paciente."""
-    dados = PacienteCreate(nome="Maria Silva", cpf="12345678901")
+    dados = ClienteCreate(nome="Maria Silva", cpf="12345678901")
     mock_db.refresh.side_effect = lambda obj: setattr(obj, "id", 1)
 
     resultado = await service.criar(dados, estabelecimento_id=1)
@@ -54,7 +54,7 @@ async def test_desativar_paciente(service, mock_db):
 
 async def test_nao_expoe_cpf_completo_em_log(service, mock_db, caplog):
     """Seguranca: CPF completo nao aparece nos logs."""
-    dados = PacienteCreate(nome="Teste", cpf="98765432100")
+    dados = ClienteCreate(nome="Teste", cpf="98765432100")
     mock_db.refresh.side_effect = lambda obj: setattr(obj, "id", 1)
 
     await service.criar(dados, estabelecimento_id=1)
@@ -64,7 +64,7 @@ async def test_nao_expoe_cpf_completo_em_log(service, mock_db, caplog):
 
 async def test_cpf_mascarado_no_response():
     """Seguranca: CPF mascarado na resposta da API."""
-    from app.schemas.paciente import PacienteResponse
+    from app.schemas.cliente import ClienteOut as PacienteResponse
     from datetime import datetime
 
     resp = PacienteResponse(
@@ -76,6 +76,9 @@ async def test_cpf_mascarado_no_response():
         email=None,
         convenio=None,
         numero_carteirinha=None,
+        modalidade_pagamento=None,
+        convenio_id=None,
+        estabelecimento_id=1,
         ativo=True,
         created_at=datetime.now(),
     )

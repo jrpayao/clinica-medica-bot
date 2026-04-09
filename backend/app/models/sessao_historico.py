@@ -13,8 +13,8 @@ class SessaoHistorico(Base):
     __tablename__ = "sessoes_historico"
 
     id: Mapped[int] = mapped_column(primary_key=True)
-    paciente_id: Mapped[int] = mapped_column(
-        ForeignKey("pacientes.id"), nullable=False, index=True
+    cliente_id: Mapped[int] = mapped_column(
+        ForeignKey("clientes.id"), nullable=False, index=True
     )
     sessao_id: Mapped[int | None] = mapped_column(
         ForeignKey("sessoes_chat.id"), nullable=True

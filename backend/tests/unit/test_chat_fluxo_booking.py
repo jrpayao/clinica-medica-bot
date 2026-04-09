@@ -4,7 +4,7 @@ Cobre (TDAD retroativo — código já implementado, testes escritos após):
 - APRESENTANDO_SLOTS + confirmar:ID → COLETANDO_CONTATO + pede telefone
 - COLETANDO_CONTATO step=telefone → salva telefone, pede e-mail
 - COLETANDO_CONTATO step=email → salva e-mail, mostra resumo, avança CONFIRMANDO
-- CONFIRMANDO + "Sim" → cria Consulta no banco, retorna confirmacao
+- CONFIRMANDO + "Sim" → cria Atendimento no banco, retorna confirmacao
 - CONFIRMANDO + "Não" → cancela, vai FINALIZADO sem criar consulta
 - Prompt dinâmico usa especialidades da sessão (não lista hardcoded)
 - _extrair_especialidade_do_texto usa lista da sessão como prioridade
@@ -82,7 +82,7 @@ _SLOT_TEMP = {
     "data": "08/04/2026",
     "hora_inicio": "09:00",
     "hora_fim": "09:40",
-    "medico_nome": "Dr. Ricardo Nunes",
+    "profissional_nome": "Dr. Ricardo Nunes",
 }
 
 
@@ -248,12 +248,12 @@ class TestColetaContato:
 
 class TestCriarAgendamento:
     def _mock_db_para_agendamento(self, db: AsyncMock) -> None:
-        """Configura mocks de DB para simular Slot, Medico, Paciente e Consulta."""
+        """Configura mocks de DB para simular Slot, Profissional, Cliente e Atendimento."""
         from unittest.mock import MagicMock
 
         slot_mock = MagicMock()
         slot_mock.id = 42
-        slot_mock.medico_id = 10
+        slot_mock.profissional_id = 10
         slot_mock.status = "DISPONIVEL"
         slot_mock.estabelecimento_id = 1
 
@@ -273,10 +273,10 @@ class TestCriarAgendamento:
             sql = str(stmt)
             if "slots" in sql.lower():
                 result.scalar_one_or_none = MagicMock(return_value=slot_mock)
-            elif "medico" in sql.lower():
+            elif "profissional" in sql.lower():
                 result.scalar_one_or_none = MagicMock(return_value=medico_mock)
-            elif "paciente" in sql.lower():
-                result.scalar_one_or_none = MagicMock(return_value=None)  # paciente novo
+            elif "cliente" in sql.lower():
+                result.scalar_one_or_none = MagicMock(return_value=None)  # cliente novo
             else:
                 result.scalar_one_or_none = MagicMock(return_value=None)
             return result

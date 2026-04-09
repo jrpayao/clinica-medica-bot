@@ -79,8 +79,8 @@ async def test_require_role_paciente_externo_sem_acesso_admin():
 async def test_require_role_medico_acessa_rota_medico():
     """RBAC: MEDICO acessa rotas que incluem MEDICO."""
     checker = require_role("MEDICO", "ADMIN")
-    user = {"sub": "5", "role": "MEDICO", "medico_id": 10, "type": "access"}
+    user = {"sub": "5", "role": "MEDICO", "profissional_id": 10, "type": "access"}
 
     result = await checker(user)
     assert result["role"] == "MEDICO"
-    assert result["medico_id"] == 10
+    assert result["profissional_id"] == 10

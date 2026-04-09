@@ -25,11 +25,11 @@ def mock_redis():
 # ============================================================
 
 async def test_confirmar_agendamento_sucesso(mock_db, mock_redis):
-    """RF: Paciente confirma slot no chat, consulta e criada."""
+    """RF: Cliente confirma slot no chat, consulta e criada."""
     # Mock slot disponivel
     mock_slot = MagicMock()
     mock_slot.id = 10
-    mock_slot.medico_id = 5
+    mock_slot.profissional_id = 5
     mock_slot.status = "DISPONIVEL"
 
     mock_result = MagicMock()
@@ -41,7 +41,7 @@ async def test_confirmar_agendamento_sucesso(mock_db, mock_redis):
         redis=mock_redis,
         session_token="test-token",
         slot_id=10,
-        paciente_id=1,
+        cliente_id=1,
         especialidade_id=3,
         triagem_resumo={"sintomas": "dor de cabeca", "urgencia": "BAIXA"},
         canal="PORTAL",
@@ -68,7 +68,7 @@ async def test_confirmar_agendamento_slot_indisponivel(mock_db, mock_redis):
         redis=mock_redis,
         session_token="test-token",
         slot_id=10,
-        paciente_id=1,
+        cliente_id=1,
         especialidade_id=3,
     )
 
@@ -87,7 +87,7 @@ async def test_confirmar_agendamento_slot_inexistente(mock_db, mock_redis):
         redis=mock_redis,
         session_token="test-token",
         slot_id=999,
-        paciente_id=1,
+        cliente_id=1,
         especialidade_id=3,
     )
 
@@ -99,7 +99,7 @@ async def test_confirmar_agendamento_encerra_sessao(mock_db, mock_redis):
     """RF: Apos confirmacao, sessao encerrada com status AGENDOU."""
     mock_slot = MagicMock()
     mock_slot.id = 10
-    mock_slot.medico_id = 5
+    mock_slot.profissional_id = 5
     mock_slot.status = "DISPONIVEL"
 
     mock_result = MagicMock()
@@ -111,7 +111,7 @@ async def test_confirmar_agendamento_encerra_sessao(mock_db, mock_redis):
         redis=mock_redis,
         session_token="test-token",
         slot_id=10,
-        paciente_id=1,
+        cliente_id=1,
         especialidade_id=3,
     )
 
@@ -122,7 +122,7 @@ async def test_confirmar_agendamento_salva_triagem(mock_db, mock_redis):
     """RF: Triagem resumo e salva na consulta."""
     mock_slot = MagicMock()
     mock_slot.id = 10
-    mock_slot.medico_id = 5
+    mock_slot.profissional_id = 5
     mock_slot.status = "DISPONIVEL"
 
     mock_result = MagicMock()
@@ -136,7 +136,7 @@ async def test_confirmar_agendamento_salva_triagem(mock_db, mock_redis):
         redis=mock_redis,
         session_token="test-token",
         slot_id=10,
-        paciente_id=1,
+        cliente_id=1,
         especialidade_id=3,
         triagem_resumo=triagem,
     )

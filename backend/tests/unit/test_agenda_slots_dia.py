@@ -3,7 +3,7 @@
 Cobre:
 - listar_slots_dia: retorna slots do dia com consulta embutida
 - listar_slots_dia: retorna slots livres (consulta = None)
-- listar_slots_dia: filtro por medico_id
+- listar_slots_dia: filtro por profissional_id
 - listar_slots_dia: CPF mascarado no retorno
 - listar_slots_dia: dia sem slots retorna lista vazia
 """
@@ -23,7 +23,7 @@ def mock_db():
 
 def _row(
     slot_id=1,
-    medico_id=10,
+    profissional_id=10,
     medico_nome="Dr. Carlos",
     especialidade_nome="Cardiologia",
     data=date(2026, 4, 8),
@@ -41,7 +41,7 @@ def _row(
     created_at=None,
 ):
     return (
-        slot_id, medico_id, medico_nome, especialidade_nome,
+        slot_id, profissional_id, medico_nome, especialidade_nome,
         data, hora_inicio, hora_fim, slot_status,
         consulta_id, paciente_nome, cpf,
         urgencia, consulta_status, canal_origem,
@@ -67,9 +67,9 @@ async def test_slots_dia_retorna_slot_com_consulta(mock_db):
     assert len(slots) == 1
     assert slots[0]["id"] == 1
     assert slots[0]["status"] == "AGENDADO"
-    assert slots[0]["consulta"] is not None
-    assert slots[0]["consulta"]["id"] == 42
-    assert slots[0]["consulta"]["paciente_nome"] == "João Silva"
+    assert slots[0]["atendimento"] is not None
+    assert slots[0]["atendimento"]["id"] == 42
+    assert slots[0]["atendimento"]["cliente_nome"] == "João Silva"
 
 
 async def test_slots_dia_retorna_slot_livre(mock_db):
@@ -82,7 +82,7 @@ async def test_slots_dia_retorna_slot_livre(mock_db):
 
     slots = await listar_slots_dia(mock_db, data=date(2026, 4, 8), estabelecimento_id=1)
 
-    assert slots[0]["consulta"] is None
+    assert slots[0]["atendimento"] is None
 
 
 async def test_slots_dia_cpf_mascarado(mock_db):
@@ -95,7 +95,7 @@ async def test_slots_dia_cpf_mascarado(mock_db):
 
     slots = await listar_slots_dia(mock_db, data=date(2026, 4, 8), estabelecimento_id=1)
 
-    cpf_retornado = slots[0]["consulta"]["paciente_cpf_mascarado"]
+    cpf_retornado = slots[0]["atendimento"]["cliente_cpf_mascarado"]
     assert "12345678901" not in cpf_retornado
     assert "*" in cpf_retornado
 
@@ -112,13 +112,13 @@ async def test_slots_dia_vazio(mock_db):
 
 
 async def test_slots_dia_filtro_medico(mock_db):
-    """RF-01: ?medico_id=N aplica filtro na query."""
+    """RF-01: ?profissional_id=N aplica filtro na query."""
     mock_result = MagicMock()
     mock_result.all.return_value = []
     mock_db.execute = AsyncMock(return_value=mock_result)
 
     await listar_slots_dia(
-        mock_db, data=date(2026, 4, 8), estabelecimento_id=1, medico_id=5
+        mock_db, data=date(2026, 4, 8), estabelecimento_id=1, profissional_id=5
     )
 
     mock_db.execute.assert_called_once()

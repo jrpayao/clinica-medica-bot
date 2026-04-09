@@ -20,8 +20,8 @@ class FilaEspera(Base):
     __tablename__ = "fila_espera"
 
     id: Mapped[int] = mapped_column(primary_key=True)
-    paciente_id: Mapped[int] = mapped_column(
-        ForeignKey("pacientes.id"), nullable=False, index=True
+    cliente_id: Mapped[int] = mapped_column(
+        ForeignKey("clientes.id"), nullable=False, index=True
     )
     estabelecimento_id: Mapped[int] = mapped_column(
         ForeignKey("estabelecimentos.id"), nullable=False, index=True

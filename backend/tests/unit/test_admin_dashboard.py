@@ -42,10 +42,10 @@ async def test_proximas_consultas_retorna_formato_correto(mock_db):
     )
 
     assert len(resultado) == 2
-    assert resultado[0]["consulta_id"] == 42
+    assert resultado[0]["atendimento_id"] == 42
     assert resultado[0]["hora_inicio"] == "14:30"
-    assert resultado[0]["paciente_nome"] == "João Silva"
-    assert resultado[0]["medico_nome"] == "Dr. Carlos"
+    assert resultado[0]["cliente_nome"] == "João Silva"
+    assert resultado[0]["profissional_nome"] == "Dr. Carlos"
     assert resultado[0]["especialidade_nome"] == "Cardiologia"
     assert resultado[0]["urgencia"] == "MEDIA"
     assert resultado[0]["status"] == "AGENDADA"

@@ -2,7 +2,7 @@
 
 import pytest
 
-from app.models.consulta import ConsultaUrgencia
+from app.models.atendimento import AtendimentoUrgencia as ConsultaUrgencia
 from app.services.ia.triagem import (
     MENSAGEM_EMERGENCIA,
     classificar_urgencia,

@@ -1,4 +1,4 @@
-"""Testes TDAD para EstabelecimentoSaude, RedeEstabelecimentos e MedicoEstabelecimento.
+"""Testes TDAD para EstabelecimentoSaude, RedeEstabelecimentos e ProfissionalEstabelecimento.
 
 Ciclo RED → GREEN:
   Estes testes são escritos ANTES da implementação (RED).
@@ -10,7 +10,7 @@ from unittest.mock import AsyncMock, MagicMock
 import pytest
 
 from app.models.estabelecimento import EstabelecimentoSaude, TipoEstabelecimento
-from app.models.medico_estabelecimento import MedicoEstabelecimento
+from app.models.profissional_estabelecimento import ProfissionalEstabelecimento
 from app.models.rede_estabelecimento import RedeEstabelecimentos
 from app.schemas.estabelecimento import (
     EstabelecimentoCreate,
@@ -300,46 +300,46 @@ def test_estabelecimento_aceita_rede_id_preenchido() -> None:
 
 
 # ============================================================
-# T57-F: MedicoEstabelecimento (junction N:N)
+# T57-F: ProfissionalEstabelecimento (junction N:N)
 # ============================================================
 
 
-def test_medico_estabelecimento_tem_tablename_correto() -> None:
-    """Tabela deve ser 'medico_estabelecimentos'."""
-    assert MedicoEstabelecimento.__tablename__ == "medico_estabelecimentos"
+def test_profissional_estabelecimento_tem_tablename_correto() -> None:
+    """Tabela deve ser 'profissional_estabelecimentos'."""
+    assert ProfissionalEstabelecimento.__tablename__ == "profissional_estabelecimentos"
 
 
-def test_medico_estabelecimento_instancia_com_ids() -> None:
-    """Junction deve aceitar medico_id, estabelecimento_id e duracao."""
-    vinculo = MedicoEstabelecimento(
-        medico_id=1,
+def test_profissional_estabelecimento_instancia_com_ids() -> None:
+    """Junction deve aceitar profissional_id, estabelecimento_id e duracao."""
+    vinculo = ProfissionalEstabelecimento(
+        profissional_id=1,
         estabelecimento_id=2,
-        duracao_consulta_min=45,
+        duracao_atendimento_min=45,
         ativo=True,
     )
-    assert vinculo.medico_id == 1
+    assert vinculo.profissional_id == 1
     assert vinculo.estabelecimento_id == 2
-    assert vinculo.duracao_consulta_min == 45
+    assert vinculo.duracao_atendimento_min == 45
 
 
-def test_medico_estabelecimento_tem_unique_constraint() -> None:
-    """Deve existir UniqueConstraint em (medico_id, estabelecimento_id)."""
-    constraints = {c.name for c in MedicoEstabelecimento.__table__.constraints}
-    assert "uq_medico_estabelecimento" in constraints
+def test_profissional_estabelecimento_tem_unique_constraint() -> None:
+    """Deve existir UniqueConstraint em (profissional_id, estabelecimento_id)."""
+    constraints = {c.name for c in ProfissionalEstabelecimento.__table__.constraints}
+    assert "uq_profissional_estabelecimento" in constraints
 
 
 def test_medico_pode_ter_duracao_diferente_por_unidade() -> None:
     """O mesmo médico pode ter 30min na unidade A e 45min na unidade B."""
-    vinculo_asa_sul = MedicoEstabelecimento(
-        medico_id=1,
+    vinculo_asa_sul = ProfissionalEstabelecimento(
+        profissional_id=1,
         estabelecimento_id=1,
-        duracao_consulta_min=30,
+        duracao_atendimento_min=30,
         ativo=True,
     )
-    vinculo_asa_norte = MedicoEstabelecimento(
-        medico_id=1,
+    vinculo_asa_norte = ProfissionalEstabelecimento(
+        profissional_id=1,
         estabelecimento_id=2,
-        duracao_consulta_min=45,
+        duracao_atendimento_min=45,
         ativo=True,
     )
-    assert vinculo_asa_sul.duracao_consulta_min != vinculo_asa_norte.duracao_consulta_min
+    assert vinculo_asa_sul.duracao_atendimento_min != vinculo_asa_norte.duracao_atendimento_min

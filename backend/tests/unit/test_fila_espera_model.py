@@ -44,7 +44,7 @@ def test_model_tem_campos_obrigatorios():
     """RF: FilaEspera deve ter os campos da spec."""
     colunas = {c.name for c in FilaEspera.__table__.columns}
     assert "id" in colunas
-    assert "paciente_id" in colunas
+    assert "cliente_id" in colunas
     assert "estabelecimento_id" in colunas
     assert "especialidade_id" in colunas
     assert "convenio_id" in colunas
@@ -71,11 +71,11 @@ def test_notificado_em_e_nullable():
     assert col.nullable is True
 
 
-def test_paciente_id_e_fk():
-    """paciente_id deve ser FK para pacientes."""
-    col = FilaEspera.__table__.columns["paciente_id"]
+def test_cliente_id_e_fk():
+    """cliente_id deve ser FK para clientes."""
+    col = FilaEspera.__table__.columns["cliente_id"]
     fks = {fk.target_fullname for fk in col.foreign_keys}
-    assert "pacientes.id" in fks
+    assert "clientes.id" in fks
 
 
 def test_estabelecimento_id_e_fk():
@@ -95,7 +95,7 @@ async def test_entrar_cria_registro_aguardando():
     svc = FilaEsperaService(db)
 
     await svc.entrar(
-        paciente_id=1,
+        cliente_id=1,
         estabelecimento_id=1,
         especialidade_id=2,
         convenio_id=None,
@@ -106,7 +106,7 @@ async def test_entrar_cria_registro_aguardando():
     entrada = db.add.call_args[0][0]
     assert isinstance(entrada, FilaEspera)
     assert entrada.status == FilaEsperaStatus.AGUARDANDO
-    assert entrada.paciente_id == 1
+    assert entrada.cliente_id == 1
 
 
 async def test_sair_atualiza_status_cancelado():
@@ -120,7 +120,7 @@ async def test_sair_atualiza_status_cancelado():
     )
     db.execute.return_value = mock_result
 
-    await svc.sair(fila_id=5, paciente_id=1)
+    await svc.sair(fila_id=5, cliente_id=1)
 
     db.flush.assert_called_once()
 

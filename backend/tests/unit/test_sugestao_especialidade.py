@@ -79,7 +79,7 @@ async def test_buscar_slots_retorna_max_3():
         slot.data = date(2026, 4, 10)
         slot.hora_inicio = time(8 + i, 0)
         slot.hora_fim = time(8 + i, 30)
-        slot.medico_id = 1
+        slot.profissional_id = 1
         mock_slots.append(slot)
 
     mock_result = MagicMock()

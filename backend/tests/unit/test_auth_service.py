@@ -83,7 +83,7 @@ async def test_verificar_codigo_sms_correto(service, mock_redis, mock_db):
 
 
 async def test_verificar_codigo_sms_com_paciente_existente(service, mock_redis, mock_db):
-    """RF: Se paciente existe, incluir paciente_id no token."""
+    """RF: Se paciente existe, incluir cliente_id no token."""
     mock_redis.get.return_value = "123456"
     paciente_mock = MagicMock()
     paciente_mock.id = 42
@@ -95,7 +95,7 @@ async def test_verificar_codigo_sms_com_paciente_existente(service, mock_redis, 
     assert "access_token" in resultado
     from app.core.security import verify_token
     payload = verify_token(resultado["access_token"])
-    assert payload["paciente_id"] == 42
+    assert payload["cliente_id"] == 42
     assert payload["role"] == "PACIENTE_EXTERNO"
 
 
@@ -136,7 +136,7 @@ async def test_login_interno_sucesso(service, mock_db):
     usuario_mock.email = "recep@clinica.com"
     usuario_mock.senha_hash = hash_password("senha123")
     usuario_mock.role = UsuarioRole.RECEPCIONISTA
-    usuario_mock.medico_id = None
+    usuario_mock.profissional_id = None
     usuario_mock.estabelecimento_id = 1
     usuario_mock.ativo = True
 
@@ -172,7 +172,7 @@ async def test_login_interno_senha_incorreta(service, mock_db):
     usuario_mock.email = "admin@clinica.com"
     usuario_mock.senha_hash = hash_password("correta123")
     usuario_mock.role = UsuarioRole.ADMIN_ESTABELECIMENTO
-    usuario_mock.medico_id = None
+    usuario_mock.profissional_id = None
     usuario_mock.estabelecimento_id = 1
     usuario_mock.ativo = True
 
@@ -182,8 +182,8 @@ async def test_login_interno_senha_incorreta(service, mock_db):
         await service.login_interno("admin@clinica.com", "errada123")
 
 
-async def test_login_medico_inclui_medico_id(service, mock_db):
-    """RF: SE role MEDICO, token inclui medico_id."""
+async def test_login_medico_inclui_profissional_id(service, mock_db):
+    """RF: SE role MEDICO, token inclui profissional_id."""
     from app.core.security import hash_password
     from app.models.usuario import UsuarioRole
 
@@ -192,7 +192,7 @@ async def test_login_medico_inclui_medico_id(service, mock_db):
     usuario_mock.email = "dr@clinica.com"
     usuario_mock.senha_hash = hash_password("senha123")
     usuario_mock.role = UsuarioRole.MEDICO
-    usuario_mock.medico_id = 10
+    usuario_mock.profissional_id = 10
     usuario_mock.estabelecimento_id = 1
     usuario_mock.ativo = True
 
@@ -202,7 +202,7 @@ async def test_login_medico_inclui_medico_id(service, mock_db):
 
     from app.core.security import verify_token
     payload = verify_token(resultado["access_token"])
-    assert payload["medico_id"] == 10
+    assert payload["profissional_id"] == 10
     assert payload["role"] == "MEDICO"
 
 

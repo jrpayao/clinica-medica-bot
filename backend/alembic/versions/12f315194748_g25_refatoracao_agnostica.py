@@ -109,6 +109,8 @@ def upgrade() -> None:
 
     # 12. Renomear enum tipo_atendimento → modalidade_pagamento (era CONVENIO/PARTICULAR em clientes)
     op.execute("ALTER TYPE tipo_atendimento RENAME TO modalidade_pagamento")
+    # 12b. Renomear coluna tipo_atendimento → modalidade_pagamento em clientes
+    op.alter_column("clientes", "tipo_atendimento", new_column_name="modalidade_pagamento")
 
     # 13. Criar tabela atendimento_status_historico
     op.create_table(
@@ -156,6 +158,7 @@ def downgrade() -> None:
     op.execute("ALTER TYPE atendimento_urgencia RENAME TO consulta_urgencia")
     op.execute("ALTER TYPE atendimento_canal RENAME TO consulta_canal")
     op.execute("ALTER TYPE modalidade_pagamento RENAME TO tipo_atendimento")
+    op.alter_column("clientes", "modalidade_pagamento", new_column_name="tipo_atendimento")
     op.alter_column('slots', 'profissional_id', new_column_name='medico_id')
     op.alter_column('atendimentos', 'cliente_id', new_column_name='paciente_id')
     op.alter_column('atendimentos', 'profissional_id', new_column_name='medico_id')

@@ -68,7 +68,7 @@ async def test_enviar_email_sucesso():
 
         resultado = await enviar_email(
             destinatario="paciente@email.com",
-            assunto="Consulta confirmada",
+            assunto="Atendimento confirmada",
             corpo_html="<p>Sua consulta foi confirmada</p>",
         )
 

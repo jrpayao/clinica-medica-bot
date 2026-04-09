@@ -141,8 +141,8 @@ class AuthService:
             "role": usuario.role.value,
         }
 
-        if usuario.medico_id:
-            token_data["medico_id"] = usuario.medico_id
+        if usuario.profissional_id:
+            token_data["profissional_id"] = usuario.profissional_id
 
         # ADMIN_GLOBAL opera cross-tenant — sem estabelecimento_id no token base
         if usuario.estabelecimento_id is not None:

@@ -17,7 +17,7 @@ class SessaoHistoricoService:
 
     async def salvar(
         self,
-        paciente_id: int,
+        cliente_id: int,
         sessao_id: int | None,
         sintomas_relatados: list,
         especialidade_sugerida: str | None,
@@ -26,7 +26,7 @@ class SessaoHistoricoService:
     ) -> SessaoHistorico:
         """Persiste o histórico de triagem de uma sessão."""
         historico = SessaoHistorico(
-            paciente_id=paciente_id,
+            cliente_id=cliente_id,
             sessao_id=sessao_id,
             sintomas_relatados=sintomas_relatados,
             especialidade_sugerida=especialidade_sugerida,
@@ -35,14 +35,14 @@ class SessaoHistoricoService:
         )
         self.db.add(historico)
         await self.db.flush()
-        log.info("historico_salvo", paciente_id=paciente_id)
+        log.info("historico_salvo", cliente_id=cliente_id)
         return historico
 
-    async def buscar_por_paciente(self, paciente_id: int) -> list[SessaoHistorico]:
-        """Retorna as últimas MAX_HISTORICO sessões do paciente (mais recentes primeiro)."""
+    async def buscar_por_paciente(self, cliente_id: int) -> list[SessaoHistorico]:
+        """Retorna as últimas MAX_HISTORICO sessões do cliente (mais recentes primeiro)."""
         result = await self.db.execute(
             select(SessaoHistorico)
-            .where(SessaoHistorico.paciente_id == paciente_id)
+            .where(SessaoHistorico.cliente_id == cliente_id)
             .order_by(SessaoHistorico.created_at.desc())
             .limit(MAX_HISTORICO)
         )

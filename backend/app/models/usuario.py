@@ -35,8 +35,8 @@ class Usuario(Base):
         Enum(UsuarioRole, name="usuario_role", create_constraint=True),
         nullable=False,
     )
-    medico_id: Mapped[int | None] = mapped_column(
-        ForeignKey("medicos.id"), nullable=True
+    profissional_id: Mapped[int | None] = mapped_column(
+        ForeignKey("profissionais.id"), nullable=True
     )
     # Null somente para ADMIN_GLOBAL (acessa todos os estabelecimentos)
     estabelecimento_id: Mapped[int | None] = mapped_column(

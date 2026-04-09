@@ -1,9 +1,9 @@
 import pytest
 from unittest.mock import AsyncMock, MagicMock
 
-from app.models.consulta import ConsultaStatus
+from app.models.atendimento import AtendimentoStatus
 from app.models.slot import SlotStatus
-from app.schemas.consulta import ConsultaCreate
+from app.schemas.atendimento import AtendimentoCreate
 from app.services.agenda_service import (
     AgendaService,
     ConsultaJaCanceladaError,
@@ -52,10 +52,10 @@ async def test_agendar_consulta_sucesso(service, mock_db):
     slot_mock.status = SlotStatus.DISPONIVEL
     mock_db.execute.return_value.scalar_one_or_none.return_value = slot_mock
 
-    dados = ConsultaCreate(
+    dados = AtendimentoCreate(
         slot_id=1,
-        paciente_id=1,
-        medico_id=1,
+        cliente_id=1,
+        profissional_id=1,
         especialidade_id=1,
     )
     mock_db.refresh.side_effect = lambda obj: setattr(obj, "id", 1)
@@ -68,8 +68,8 @@ async def test_agendar_consulta_sucesso(service, mock_db):
 
 async def test_agendar_consulta_slot_inexistente(service, mock_db):
     """Edge case: slot inexistente lanca erro."""
-    dados = ConsultaCreate(
-        slot_id=999, paciente_id=1, medico_id=1, especialidade_id=1,
+    dados = AtendimentoCreate(
+        slot_id=999, cliente_id=1, profissional_id=1, especialidade_id=1,
     )
 
     with pytest.raises(SlotNaoEncontradoError):
@@ -83,8 +83,8 @@ async def test_agendar_consulta_slot_ja_ocupado(service, mock_db):
     slot_mock.status = SlotStatus.AGENDADO
     mock_db.execute.return_value.scalar_one_or_none.return_value = slot_mock
 
-    dados = ConsultaCreate(
-        slot_id=1, paciente_id=2, medico_id=1, especialidade_id=1,
+    dados = AtendimentoCreate(
+        slot_id=1, cliente_id=2, profissional_id=1, especialidade_id=1,
     )
 
     with pytest.raises(SlotIndisponivelError):
@@ -100,7 +100,7 @@ async def test_cancelar_consulta_libera_slot(service, mock_db):
     consulta_mock = MagicMock()
     consulta_mock.id = 1
     consulta_mock.slot_id = 10
-    consulta_mock.status = ConsultaStatus.AGENDADA
+    consulta_mock.status = AtendimentoStatus.AGENDADA
 
     slot_mock = MagicMock()
     slot_mock.id = 10
@@ -112,11 +112,11 @@ async def test_cancelar_consulta_libera_slot(service, mock_db):
         slot_mock,
     ]
 
-    resultado = await service.cancelar_consulta(1, "Paciente desistiu")
+    resultado = await service.cancelar_consulta(1, "Cliente desistiu")
 
-    assert consulta_mock.status == ConsultaStatus.CANCELADA
+    assert consulta_mock.status == AtendimentoStatus.CANCELADA
     assert slot_mock.status == SlotStatus.DISPONIVEL
-    assert "Cancelada: Paciente desistiu" in consulta_mock.observacoes
+    assert "Cancelada: Cliente desistiu" in consulta_mock.observacoes
 
 
 async def test_cancelar_consulta_inexistente(service, mock_db):
@@ -128,7 +128,7 @@ async def test_cancelar_consulta_inexistente(service, mock_db):
 async def test_cancelar_consulta_ja_cancelada(service, mock_db):
     """Edge case: consulta ja cancelada lanca erro."""
     consulta_mock = MagicMock()
-    consulta_mock.status = ConsultaStatus.CANCELADA
+    consulta_mock.status = AtendimentoStatus.CANCELADA
     mock_db.execute.return_value.scalar_one_or_none.return_value = consulta_mock
 
     with pytest.raises(ConsultaJaCanceladaError):
@@ -138,7 +138,7 @@ async def test_cancelar_consulta_ja_cancelada(service, mock_db):
 async def test_cancelar_consulta_ja_realizada(service, mock_db):
     """Edge case: consulta realizada nao pode ser cancelada."""
     consulta_mock = MagicMock()
-    consulta_mock.status = ConsultaStatus.REALIZADA
+    consulta_mock.status = AtendimentoStatus.REALIZADA
     mock_db.execute.return_value.scalar_one_or_none.return_value = consulta_mock
 
     with pytest.raises(ConsultaJaRealizadaError):

@@ -4,7 +4,7 @@ Cobre:
 - Model SessaoHistorico existe com os campos obrigatórios
 - Campos JSONB, TEXT, FK, created_at presentes
 - SessaoHistoricoService.salvar() persiste o registro
-- SessaoHistoricoService.buscar_por_paciente() filtra por paciente_id
+- SessaoHistoricoService.buscar_por_paciente() filtra por cliente_id
 - Máximo 3 registros retornados (mais recentes primeiro)
 """
 
@@ -25,7 +25,7 @@ def test_model_tem_campos_obrigatorios():
     """RF: SessaoHistorico deve ter todos os campos da spec."""
     colunas = {c.name for c in SessaoHistorico.__table__.columns}
     assert "id" in colunas
-    assert "paciente_id" in colunas
+    assert "cliente_id" in colunas
     assert "sessao_id" in colunas
     assert "sintomas_relatados" in colunas
     assert "especialidade_sugerida" in colunas
@@ -34,11 +34,11 @@ def test_model_tem_campos_obrigatorios():
     assert "created_at" in colunas
 
 
-def test_paciente_id_e_fk():
-    """paciente_id deve ser FK para pacientes."""
-    col = SessaoHistorico.__table__.columns["paciente_id"]
+def test_cliente_id_e_fk():
+    """cliente_id deve ser FK para clientes."""
+    col = SessaoHistorico.__table__.columns["cliente_id"]
     fks = {fk.target_fullname for fk in col.foreign_keys}
-    assert "pacientes.id" in fks
+    assert "clientes.id" in fks
 
 
 def test_sessao_id_e_nullable():
@@ -65,19 +65,19 @@ async def test_salvar_persiste_historico():
     svc = SessaoHistoricoService(db)
 
     await svc.salvar(
-        paciente_id=1,
+        cliente_id=1,
         sessao_id=None,
         sintomas_relatados=["dor de cabeça", "febre"],
         especialidade_sugerida="Clínica Geral",
         urgencia="baixa",
-        resumo_triagem="Paciente relata dor de cabeça e febre há 2 dias.",
+        resumo_triagem="Cliente relata dor de cabeça e febre há 2 dias.",
     )
 
     db.add.assert_called_once()
     db.flush.assert_called_once()
     historico = db.add.call_args[0][0]
     assert isinstance(historico, SessaoHistorico)
-    assert historico.paciente_id == 1
+    assert historico.cliente_id == 1
     assert historico.especialidade_sugerida == "Clínica Geral"
 
 
@@ -86,7 +86,7 @@ async def test_salvar_aceita_sintomas_lista_vazia():
     db = AsyncMock()
     svc = SessaoHistoricoService(db)
 
-    await svc.salvar(paciente_id=2, sessao_id=None, sintomas_relatados=[],
+    await svc.salvar(cliente_id=2, sessao_id=None, sintomas_relatados=[],
                      especialidade_sugerida=None, urgencia=None, resumo_triagem=None)
 
     db.add.assert_called_once()
@@ -106,7 +106,7 @@ async def test_buscar_por_paciente_retorna_ultimos_3():
     mock_result.scalars.return_value.all.return_value = registros
     db.execute.return_value = mock_result
 
-    resultado = await svc.buscar_por_paciente(paciente_id=1)
+    resultado = await svc.buscar_por_paciente(cliente_id=1)
 
     assert len(resultado) == 3
     db.execute.assert_called_once()
@@ -121,6 +121,6 @@ async def test_buscar_por_paciente_sem_historico_retorna_lista_vazia():
     mock_result.scalars.return_value.all.return_value = []
     db.execute.return_value = mock_result
 
-    resultado = await svc.buscar_por_paciente(paciente_id=99)
+    resultado = await svc.buscar_por_paciente(cliente_id=99)
 
     assert resultado == []
