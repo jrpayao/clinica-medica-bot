@@ -5,8 +5,8 @@ import { firstValueFrom } from 'rxjs';
 export interface Consulta {
   id: number;
   slot_id: number;
-  paciente_id: number;
-  medico_id: number;
+  cliente_id: number;
+  profissional_id: number;
   especialidade_id: number;
   tipo: string;
   status: string;

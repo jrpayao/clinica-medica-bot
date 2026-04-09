@@ -15,7 +15,7 @@ export interface SlotSugerido {
   data: string;
   hora_inicio: string;
   hora_fim: string;
-  medico_nome: string;
+  profissional_nome: string;
 }
 
 export interface Convenio {
