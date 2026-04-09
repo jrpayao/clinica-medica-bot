@@ -3,28 +3,28 @@ from datetime import datetime
 from pydantic import BaseModel, ConfigDict, Field
 
 
-class MedicoBase(BaseModel):
-    crm: str = Field(..., min_length=4, max_length=20)
+class ProfissionalBase(BaseModel):
+    registro_profissional: str = Field(..., min_length=4, max_length=20)
     nome: str = Field(..., min_length=2, max_length=200)
     especialidade_id: int
     email: str | None = None
     telefone: str | None = None
-    duracao_consulta_min: int = Field(default=30, ge=10, le=120)
+    duracao_atendimento_min: int = Field(default=30, ge=10, le=120)
 
 
-class MedicoCreate(MedicoBase):
+class ProfissionalCreate(ProfissionalBase):
     pass
 
 
-class MedicoUpdate(BaseModel):
+class ProfissionalUpdate(BaseModel):
     nome: str | None = Field(None, min_length=2, max_length=200)
     email: str | None = None
     telefone: str | None = None
-    duracao_consulta_min: int | None = Field(None, ge=10, le=120)
+    duracao_atendimento_min: int | None = Field(None, ge=10, le=120)
     ativo: bool | None = None
 
 
-class MedicoResponse(MedicoBase):
+class ProfissionalResponse(ProfissionalBase):
     model_config = ConfigDict(from_attributes=True)
 
     id: int
@@ -32,8 +32,24 @@ class MedicoResponse(MedicoBase):
     created_at: datetime
 
 
+class ProfissionalOut(ProfissionalBase):
+    id: int
+    ativo: bool
+    created_at: datetime
+    model_config = ConfigDict(from_attributes=True)
+
+
+class ProfissionalResumo(BaseModel):
+    id: int
+    nome: str
+    registro_profissional: str
+    especialidade_id: int
+    duracao_atendimento_min: int
+    model_config = ConfigDict(from_attributes=True)
+
+
 class GerarSlotsRequest(BaseModel):
-    """Request para gerar slots de agenda para um medico."""
+    """Request para gerar slots de agenda para um profissional."""
 
     data_inicio: str = Field(..., description="Data inicio YYYY-MM-DD")
     data_fim: str = Field(..., description="Data fim YYYY-MM-DD")
