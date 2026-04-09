@@ -46,12 +46,50 @@ def upgrade() -> None:
     op.alter_column('atendimentos', 'paciente_id',
                     new_column_name='cliente_id')
 
+    # 7b. Renomear FK paciente_id → cliente_id em sessoes_chat (se existir)
+    op.execute("""
+        DO $$ BEGIN
+            IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='sessoes_chat' AND column_name='paciente_id') THEN
+                ALTER TABLE sessoes_chat RENAME COLUMN paciente_id TO cliente_id;
+            END IF;
+        END $$
+    """)
+    # 7c. Renomear FK paciente_id → cliente_id em sessoes_historico (se existir)
+    op.execute("""
+        DO $$ BEGIN
+            IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='sessoes_historico' AND column_name='paciente_id') THEN
+                ALTER TABLE sessoes_historico RENAME COLUMN paciente_id TO cliente_id;
+            END IF;
+        END $$
+    """)
+    # 7d. Renomear FK paciente_id → cliente_id em fila_espera (se existir)
+    op.execute("""
+        DO $$ BEGIN
+            IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='fila_espera' AND column_name='paciente_id') THEN
+                ALTER TABLE fila_espera RENAME COLUMN paciente_id TO cliente_id;
+            END IF;
+        END $$
+    """)
+
     # 8. Renomear FK medico_id → profissional_id em slots
     op.alter_column('slots', 'medico_id',
                     new_column_name='profissional_id')
 
+    # 8b. Renomear FK medico_id → profissional_id em usuarios (se existir)
+    op.execute("""
+        DO $$ BEGIN
+            IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='usuarios' AND column_name='medico_id') THEN
+                ALTER TABLE usuarios RENAME COLUMN medico_id TO profissional_id;
+            END IF;
+        END $$
+    """)
+
     # 9. Renomear unique constraint em profissional_estabelecimentos
     op.execute('ALTER TABLE profissional_estabelecimentos RENAME CONSTRAINT uq_medico_estabelecimento TO uq_profissional_estabelecimento')
+
+    # 9b. Renomear indexes de profissional_estabelecimentos
+    op.execute('ALTER INDEX IF EXISTS ix_medico_estabelecimentos_medico_id RENAME TO ix_profissional_estabelecimentos_profissional_id')
+    op.execute('ALTER INDEX IF EXISTS ix_medico_estabelecimentos_estabelecimento_id RENAME TO ix_profissional_estabelecimentos_estabelecimento_id')
 
     # 10. Renomear enum consulta_status → atendimento_status e adicionar novos valores
     op.execute("ALTER TYPE consulta_status RENAME TO atendimento_status")
@@ -109,6 +147,9 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
+    # NOTE: Novos valores de enum (PRESENTE, AGUARDANDO_ANAMNESE, etc.)
+    # NÃO são removidos pois PostgreSQL não suporta DROP VALUE em enums.
+    # O downgrade restaura apenas o nome do tipo.
     op.drop_table('atendimento_status_historico')
     op.execute("ALTER TYPE atendimento_status RENAME TO consulta_status")
     op.execute("ALTER TYPE atendimento_tipo RENAME TO consulta_tipo")
@@ -118,6 +159,37 @@ def downgrade() -> None:
     op.alter_column('slots', 'profissional_id', new_column_name='medico_id')
     op.alter_column('atendimentos', 'cliente_id', new_column_name='paciente_id')
     op.alter_column('atendimentos', 'profissional_id', new_column_name='medico_id')
+    op.execute("""
+        DO $$ BEGIN
+            IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='fila_espera' AND column_name='cliente_id') THEN
+                ALTER TABLE fila_espera RENAME COLUMN cliente_id TO paciente_id;
+            END IF;
+        END $$
+    """)
+    op.execute("""
+        DO $$ BEGIN
+            IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='sessoes_historico' AND column_name='cliente_id') THEN
+                ALTER TABLE sessoes_historico RENAME COLUMN cliente_id TO paciente_id;
+            END IF;
+        END $$
+    """)
+    op.execute("""
+        DO $$ BEGIN
+            IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='sessoes_chat' AND column_name='cliente_id') THEN
+                ALTER TABLE sessoes_chat RENAME COLUMN cliente_id TO paciente_id;
+            END IF;
+        END $$
+    """)
+    op.execute("""
+        DO $$ BEGIN
+            IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='usuarios' AND column_name='profissional_id') THEN
+                ALTER TABLE usuarios RENAME COLUMN profissional_id TO medico_id;
+            END IF;
+        END $$
+    """)
+    op.execute('ALTER INDEX IF EXISTS ix_profissional_estabelecimentos_profissional_id RENAME TO ix_medico_estabelecimentos_medico_id')
+    op.execute('ALTER INDEX IF EXISTS ix_profissional_estabelecimentos_estabelecimento_id RENAME TO ix_medico_estabelecimentos_estabelecimento_id')
+    op.execute('ALTER TABLE profissional_estabelecimentos RENAME CONSTRAINT uq_profissional_estabelecimento TO uq_medico_estabelecimento')
     op.alter_column('profissional_estabelecimentos', 'profissional_id', new_column_name='medico_id')
     op.alter_column('profissional_estabelecimentos', 'duracao_atendimento_min', new_column_name='duracao_consulta_min')
     op.alter_column('profissionais', 'duracao_atendimento_min', new_column_name='duracao_consulta_min')
