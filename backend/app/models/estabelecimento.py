@@ -76,6 +76,20 @@ class EstabelecimentoSaude(Base):
         index=True,
     )
 
+    # Vocabulário configurável por tipo de estabelecimento
+    label_profissional: Mapped[str] = mapped_column(
+        String(50), nullable=False, default="Médico", server_default="Médico"
+    )
+    label_atendimento: Mapped[str] = mapped_column(
+        String(50), nullable=False, default="Consulta", server_default="Consulta"
+    )
+    label_cliente: Mapped[str] = mapped_column(
+        String(50), nullable=False, default="Paciente", server_default="Paciente"
+    )
+    label_especialidade: Mapped[str] = mapped_column(
+        String(50), nullable=False, default="Especialidade", server_default="Especialidade"
+    )
+
     rede: Mapped["RedeEstabelecimentos | None"] = relationship(  # noqa: F821
         back_populates="estabelecimentos"
     )

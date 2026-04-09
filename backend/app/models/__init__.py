@@ -28,6 +28,7 @@ from app.models.rede_estabelecimento import RedeEstabelecimentos
 from app.models.sessao_chat import SessaoChat
 from app.models.sessao_historico import SessaoHistorico
 from app.models.slot import Slot, SlotStatus
+from app.models.tipo_atendimento import TipoAtendimento, profissional_tipo_atendimentos
 from app.models.token_usage import TokenUsage
 from app.models.usuario import Usuario, UsuarioRole
 
@@ -61,6 +62,7 @@ __all__ = [
     "SessaoHistorico",
     "Slot",
     "SlotStatus",
+    "TipoAtendimento",
     "TokenUsage",
     "Usuario",
     "UsuarioRole",

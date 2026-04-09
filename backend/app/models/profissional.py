@@ -44,3 +44,7 @@ class Profissional(Base):
     estabelecimento_vinculos: Mapped[list["ProfissionalEstabelecimento"]] = relationship(  # noqa: F821
         back_populates="profissional"
     )
+    tipos_atendimento: Mapped[list["TipoAtendimento"]] = relationship(  # noqa: F821
+        secondary="profissional_tipo_atendimentos",
+        back_populates="profissionais",
+    )
