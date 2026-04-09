@@ -54,8 +54,8 @@ def upgrade() -> None:
 
 def downgrade() -> None:
     op.drop_table('profissional_tipo_atendimentos')
-    op.drop_table('tipo_atendimentos')
     op.drop_index('ix_tipo_atendimentos_estabelecimento', table_name='tipo_atendimentos')
+    op.drop_table('tipo_atendimentos')
     op.drop_column('estabelecimentos', 'label_especialidade')
     op.drop_column('estabelecimentos', 'label_cliente')
     op.drop_column('estabelecimentos', 'label_atendimento')
