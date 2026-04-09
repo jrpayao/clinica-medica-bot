@@ -1,0 +1,88 @@
+@if (ps.loading()) {
+  <div style="display:flex;justify-content:center;padding:48px">
+    <mat-spinner diameter="40" />
+  </div>
+}
+
+@if (ps.erro()) {
+  <div style="padding:24px;color:#ef4444">{{ ps.erro() }}</div>
+}
+
+@if (ps.kpi(); as kpi) {
+  <div style="padding:24px;display:flex;flex-direction:column;gap:20px">
+
+    <!-- Linha 1: estabelecimentos + licenças -->
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px">
+
+      <mat-card>
+        <mat-card-header>
+          <mat-icon mat-card-avatar>business</mat-icon>
+          <mat-card-title>Estabelecimentos</mat-card-title>
+        </mat-card-header>
+        <mat-card-content style="padding-top:12px">
+          <div style="font-size:2rem;font-weight:700">{{ kpi.estabelecimentos.total }}</div>
+          <div style="font-size:13px;color:#64748b">{{ kpi.estabelecimentos.ativos }} ativos · {{ kpi.estabelecimentos.inativos }} inativos</div>
+        </mat-card-content>
+      </mat-card>
+
+      @for (entry of objectEntries(kpi.licencas_por_status); track entry[0]) {
+        <mat-card>
+          <mat-card-header>
+            <mat-icon mat-card-avatar>verified</mat-icon>
+            <mat-card-title>{{ entry[0] }}</mat-card-title>
+          </mat-card-header>
+          <mat-card-content style="padding-top:12px">
+            <div style="font-size:2rem;font-weight:700">{{ entry[1] }}</div>
+            <div style="font-size:13px;color:#64748b">licenças</div>
+          </mat-card-content>
+        </mat-card>
+      }
+    </div>
+
+    <!-- Linha 2: usuários + consultas -->
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px">
+
+      <mat-card>
+        <mat-card-header>
+          <mat-icon mat-card-avatar>manage_accounts</mat-icon>
+          <mat-card-title>Usuários por perfil</mat-card-title>
+        </mat-card-header>
+        <mat-card-content style="padding-top:12px;display:flex;flex-direction:column;gap:6px">
+          @for (entry of objectEntries(kpi.usuarios_por_role); track entry[0]) {
+            <div style="display:flex;justify-content:space-between;font-size:13px">
+              <span>{{ entry[0] }}</span><strong>{{ entry[1] }}</strong>
+            </div>
+          }
+        </mat-card-content>
+      </mat-card>
+
+      <mat-card>
+        <mat-card-header>
+          <mat-icon mat-card-avatar>event_note</mat-icon>
+          <mat-card-title>Consultas hoje</mat-card-title>
+        </mat-card-header>
+        <mat-card-content style="padding-top:12px;display:flex;flex-direction:column;gap:6px">
+          <div style="display:flex;justify-content:space-between;font-size:13px"><span>Agendadas</span><strong>{{ kpi.consultas_hoje.agendadas }}</strong></div>
+          <div style="display:flex;justify-content:space-between;font-size:13px"><span>Realizadas</span><strong>{{ kpi.consultas_hoje.realizadas }}</strong></div>
+          <div style="display:flex;justify-content:space-between;font-size:13px"><span>Canceladas</span><strong>{{ kpi.consultas_hoje.canceladas }}</strong></div>
+        </mat-card-content>
+      </mat-card>
+
+    </div>
+
+    <!-- Alertas -->
+    @if (kpi.alertas.length > 0) {
+      <mat-card>
+        <mat-card-header><mat-card-title>Alertas de plataforma</mat-card-title></mat-card-header>
+        <mat-card-content style="padding-top:12px;display:flex;flex-direction:column;gap:8px">
+          @for (a of kpi.alertas; track a.tipo) {
+            <div style="padding:10px;background:rgba(234,179,8,.1);border-radius:6px;border-left:3px solid #ca8a04;font-size:13px">
+              {{ a.mensagem }}
+            </div>
+          }
+        </mat-card-content>
+      </mat-card>
+    }
+
+  </div>
+}

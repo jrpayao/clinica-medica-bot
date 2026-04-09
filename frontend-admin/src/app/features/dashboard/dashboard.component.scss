@@ -1,0 +1,291 @@
+// ── Header filters ────────────────────────────────────────────
+.header-filters {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.date-picker { width: 180px; }
+.est-picker  { width: 220px; }
+
+// ── Filter badge ──────────────────────────────────────────────
+.filter-badge {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+  border-radius: var(--border-radius-sm);
+  margin-bottom: 16px;
+  font-size: 13px;
+  color: var(--color-text);
+
+  mat-icon { font-size: 16px; width: 16px; height: 16px; color: var(--color-primary-light); }
+}
+
+.filter-clear {
+  margin-left: auto;
+  width: 24px !important;
+  height: 24px !important;
+  line-height: 24px !important;
+  mat-icon { font-size: 16px !important; width: 16px !important; height: 16px !important; }
+}
+
+// ── Loading ───────────────────────────────────────────────────
+.loading-center {
+  display: flex;
+  justify-content: center;
+  padding: 64px 0;
+}
+
+// ── Alertas ───────────────────────────────────────────────────
+.alertas-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 20px;
+}
+
+.alerta {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  border-radius: var(--border-radius-sm);
+  cursor: pointer;
+  transition: filter .15s;
+  border-left: 4px solid transparent;
+
+  &:hover { filter: brightness(.97); }
+
+  &--danger {
+    background: #fef2f2;
+    border-left-color: var(--color-danger);
+    .alerta__icon { color: var(--color-danger); }
+  }
+  &--warning {
+    background: #fffbeb;
+    border-left-color: #d97706;
+    .alerta__icon { color: #d97706; }
+  }
+  &--info {
+    background: #eff6ff;
+    border-left-color: var(--color-primary-light);
+    .alerta__icon { color: var(--color-primary-light); }
+  }
+
+  &__icon  { font-size: 20px; width: 20px; height: 20px; flex-shrink: 0; }
+  &__msg   { flex: 1; font-size: 14px; font-weight: 500; color: var(--color-text); }
+  &__arrow { font-size: 18px; width: 18px; height: 18px; color: var(--color-text-secondary); }
+}
+
+// ── Quick actions ─────────────────────────────────────────────
+.quick-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 20px;
+
+  button {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    mat-icon { font-size: 18px; width: 18px; height: 18px; }
+  }
+}
+
+// ── KPI Grid ─────────────────────────────────────────────────
+.kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.kpi-card {
+  transition: box-shadow .2s, transform .15s;
+
+  &--clickable {
+    cursor: pointer;
+    &:hover {
+      box-shadow: var(--shadow-md) !important;
+      transform: translateY(-2px);
+    }
+  }
+
+  &--success { border-top: 3px solid #16a34a; }
+  &--warning { border-top: 3px solid #d97706; }
+  &--danger  { border-top: 3px solid #dc2626; }
+
+  &__inner {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    margin-bottom: 4px;
+  }
+
+  &__label {
+    display: block;
+    font-size: 12px;
+    color: var(--color-text-secondary);
+    margin-bottom: 4px;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: .3px;
+  }
+
+  &__value {
+    font-size: 30px;
+    font-weight: 800;
+    color: var(--color-text);
+    line-height: 1;
+  }
+
+  &__icon {
+    font-size: 32px;
+    width: 32px;
+    height: 32px;
+    opacity: .6;
+  }
+
+  &__cta {
+    font-size: 12px;
+    color: var(--color-primary-light);
+    display: flex;
+    align-items: center;
+    gap: 2px;
+  }
+
+  &__sub {
+    font-size: 12px;
+    color: var(--color-text-secondary);
+  }
+}
+
+// ── Section cards ─────────────────────────────────────────────
+.section-card {
+  margin-bottom: 20px;
+
+  mat-card-title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 16px !important;
+  }
+
+  &--clickable {
+    cursor: pointer;
+    transition: box-shadow .2s;
+    &:hover { box-shadow: var(--shadow-md) !important; }
+  }
+}
+
+.spacer-header { flex: 1; }
+
+.ver-todas-btn {
+  font-size: 13px;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.card-link-icon {
+  font-size: 14px !important;
+  vertical-align: middle;
+  opacity: .6;
+  margin-left: 4px;
+}
+
+// ── Billing bar ───────────────────────────────────────────────
+.billing-bar {
+  height: 10px !important;
+  border-radius: 5px !important;
+  margin-top: 8px;
+}
+
+// ── Próximas consultas ────────────────────────────────────────
+.proximas-lista {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.proxima-item {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 10px 12px;
+  border-radius: var(--border-radius-sm);
+  cursor: pointer;
+  transition: background .15s;
+
+  &:hover { background: var(--color-bg-alt, #f8fafc); }
+}
+
+.proxima-hora {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--color-text);
+  min-width: 44px;
+  font-variant-numeric: tabular-nums;
+}
+
+.proxima-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.proxima-paciente {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+.proxima-meta {
+  font-size: 12px;
+  color: var(--color-text-secondary);
+}
+
+// ── Urgência badges ───────────────────────────────────────────
+.urgencia-badge {
+  font-size: 11px;
+  font-weight: 700;
+  padding: 3px 8px;
+  border-radius: 999px;
+  text-transform: uppercase;
+  letter-spacing: .3px;
+  flex-shrink: 0;
+
+  &--baixa      { background: #dcfce7; color: #15803d; }
+  &--media      { background: #fef9c3; color: #a16207; }
+  &--alta       { background: #fed7aa; color: #c2410c; }
+  &--emergencia { background: #fecaca; color: #b91c1c; }
+}
+
+// ── Gráfico ───────────────────────────────────────────────────
+.chart-canvas { max-height: 260px; }
+
+// ── Empty states ──────────────────────────────────────────────
+.empty-text {
+  color: var(--color-text-secondary);
+  font-size: 14px;
+  padding: 12px 0;
+  margin: 0;
+}
+
+.empty-day {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: 80px 0;
+  text-align: center;
+  color: var(--color-text-secondary);
+
+  mat-icon { font-size: 56px; width: 56px; height: 56px; opacity: .3; }
+  p        { margin: 0; font-size: 15px; }
+}

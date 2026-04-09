@@ -1,0 +1,94 @@
+<app-page-header titulo="Consultas" subtitulo="Gerenciamento de consultas agendadas">
+  <mat-form-field appearance="outline" class="filtro">
+    <mat-label>Status</mat-label>
+    <mat-select [formControl]="filtroStatus">
+      <mat-option value="">Todos</mat-option>
+      <mat-option value="AGENDADA">Agendada</mat-option>
+      <mat-option value="CONFIRMADA">Confirmada</mat-option>
+      <mat-option value="REALIZADA">Realizada</mat-option>
+      <mat-option value="CANCELADA">Cancelada</mat-option>
+      <mat-option value="FALTA">Falta</mat-option>
+    </mat-select>
+  </mat-form-field>
+  <mat-form-field appearance="outline" class="filtro">
+    <mat-label>Urgência</mat-label>
+    <mat-select [formControl]="filtroUrgencia">
+      <mat-option value="">Todas</mat-option>
+      <mat-option value="BAIXA">Baixa</mat-option>
+      <mat-option value="MEDIA">Média</mat-option>
+      <mat-option value="ALTA">Alta</mat-option>
+      <mat-option value="EMERGENCIA">Emergência</mat-option>
+    </mat-select>
+  </mat-form-field>
+</app-page-header>
+
+@if (carregando()) {
+  <div class="loading-center"><mat-spinner diameter="40" /></div>
+}
+
+@if (!carregando()) {
+  @if (slotsFiltrados.length === 0) {
+    <app-empty-state icon="event_note" title="Nenhuma consulta encontrada"
+      description="Não há consultas para os filtros selecionados." />
+  } @else {
+    @for (slot of slotsPaginados; track slot.id) {
+    <mat-expansion-panel class="consulta-panel">
+      <mat-expansion-panel-header>
+        <mat-panel-title>
+          <span class="data-hora">{{ slot.data | date:'dd/MM' }} {{ slot.hora_inicio.slice(0,5) }}</span>
+          <span class="medico-nome">{{ slot.medico_nome }}</span>
+        </mat-panel-title>
+        <mat-panel-description>
+          <span class="paciente-nome">{{ slot.consulta!.paciente_nome }}</span>
+          <span class="badge badge--{{ slot.consulta!.urgencia.toLowerCase() }}">
+            {{ slot.consulta!.urgencia }}
+          </span>
+          <span class="badge badge--{{ slot.consulta!.status.toLowerCase() }}">
+            {{ slot.consulta!.status }}
+          </span>
+        </mat-panel-description>
+      </mat-expansion-panel-header>
+
+      <!-- Detalhe expandido -->
+      <div class="consulta-detail">
+        <div class="detail-grid">
+          <div><strong>CPF:</strong> {{ slot.consulta!.paciente_cpf_mascarado }}</div>
+          <div><strong>Canal:</strong> {{ slot.consulta!.canal_origem }}</div>
+          <div><strong>Especialidade:</strong> {{ slot.especialidade_nome }}</div>
+          @if (slot.consulta!.observacoes) {
+            <div class="full"><strong>Observações:</strong> {{ slot.consulta!.observacoes }}</div>
+          }
+        </div>
+
+        @if (triagemItens(slot.consulta!.triagem_resumo).length) {
+          <div class="triagem-section">
+            <strong>Triagem IA:</strong>
+            <ul class="triagem-list">
+              @for (item of triagemItens(slot.consulta!.triagem_resumo); track item.chave) {
+                <li><em>{{ item.chave }}:</em> {{ item.valor }}</li>
+              }
+            </ul>
+          </div>
+        }
+
+        <div class="detail-actions">
+          @if (slot.consulta!.status === 'AGENDADA' || slot.consulta!.status === 'CONFIRMADA') {
+            <button mat-stroked-button color="warn" (click)="confirmarCancelar(slot)">
+              <mat-icon>cancel</mat-icon>
+              Cancelar Consulta
+            </button>
+          }
+        </div>
+      </div>
+    </mat-expansion-panel>
+    }
+
+    <mat-paginator
+      [length]="slotsFiltrados.length"
+      [pageSize]="tamanhoPagina()"
+      [pageSizeOptions]="[10, 20, 50]"
+      [pageIndex]="pagina()"
+      (page)="onPageChange($event)"
+      showFirstLastButtons />
+  }
+}

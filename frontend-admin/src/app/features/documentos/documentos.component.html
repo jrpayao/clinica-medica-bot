@@ -1,0 +1,77 @@
+<app-page-header
+  titulo="Documentos RAG"
+  subtitulo="Indexe protocolos e diretrizes para a IA usar nas respostas">
+
+  <!-- Badge de health do Qdrant -->
+  @if (health(); as h) {
+    <div class="health-badge" [class.health-badge--ok]="h.status === 'ok'" [class.health-badge--err]="h.status !== 'ok'">
+      <mat-icon>{{ h.status === 'ok' ? 'check_circle' : 'error' }}</mat-icon>
+      Qdrant: {{ h.status === 'ok' ? 'Online' : 'Offline' }}
+      @if (h.vectors_count !== undefined) {
+        · {{ h.vectors_count }} vetores
+      }
+    </div>
+  }
+</app-page-header>
+
+<div class="doc-layout">
+
+  <!-- Formulário de indexação -->
+  <mat-card class="form-card">
+    <mat-card-header>
+      <mat-card-title><mat-icon>upload_file</mat-icon> Indexar Documento</mat-card-title>
+      <mat-card-subtitle>O texto será dividido em chunks e indexado no banco vetorial</mat-card-subtitle>
+    </mat-card-header>
+    <mat-card-content>
+      <form [formGroup]="form" (ngSubmit)="indexar()" class="doc-form">
+
+        <mat-form-field appearance="outline">
+          <mat-label>Título do documento *</mat-label>
+          <input matInput formControlName="titulo" placeholder="Ex: Protocolo de Triagem COVID-19" />
+        </mat-form-field>
+
+        <mat-form-field appearance="outline">
+          <mat-label>ID único *</mat-label>
+          <input matInput formControlName="documento_id" placeholder="Ex: protocolo-covid-2024" />
+          <mat-hint>Identificador único (letras, números e hífens)</mat-hint>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline">
+          <mat-label>Conteúdo do documento *</mat-label>
+          <textarea matInput formControlName="texto" rows="10"
+            placeholder="Cole aqui o texto do protocolo, diretriz ou documento..."></textarea>
+          <mat-hint>Mínimo 50 caracteres</mat-hint>
+        </mat-form-field>
+
+        <button mat-raised-button color="primary" type="submit"
+          [disabled]="form.invalid || indexando()">
+          <span class="btn-content">
+            @if (indexando()) {
+              <mat-spinner diameter="18" />
+              <span>Indexando...</span>
+            } @else {
+              <mat-icon>psychology</mat-icon>
+              <span>Indexar com IA</span>
+            }
+          </span>
+        </button>
+
+      </form>
+    </mat-card-content>
+  </mat-card>
+
+  <!-- Resultado da indexação -->
+  @if (ultimoResultado(); as r) {
+    <mat-card class="result-card">
+      <mat-card-header>
+        <mat-card-title><mat-icon>check_circle</mat-icon> Indexado com sucesso!</mat-card-title>
+      </mat-card-header>
+      <mat-card-content>
+        <p><strong>Título:</strong> {{ r.titulo }}</p>
+        <p><strong>ID:</strong> {{ r.documento_id }}</p>
+        <p><strong>Chunks criados:</strong> <span class="chunks-count">{{ r.chunks_indexados }}</span></p>
+      </mat-card-content>
+    </mat-card>
+  }
+
+</div>

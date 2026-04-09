@@ -1,0 +1,128 @@
+<app-page-header
+  titulo="Especialidades"
+  subtitulo="Gerencie as especialidades médicas da clínica">
+  <button mat-raised-button color="primary" (click)="abrirNova()">
+    <mat-icon>add</mat-icon>
+    Nova Especialidade
+  </button>
+</app-page-header>
+
+@if (carregando()) {
+  <div class="loading-center"><mat-spinner diameter="40" /></div>
+}
+
+@if (!carregando()) {
+  @if (especialidades().length === 0) {
+    <app-empty-state
+      icon="category"
+      title="Nenhuma especialidade cadastrada"
+      description="Crie especialidades para poder cadastrar médicos."
+      ctaLabel="Nova Especialidade"
+      (ctaClick)="abrirNova()" />
+  } @else {
+    <div class="cards-grid">
+      @for (esp of especialidades(); track esp.id) {
+        <mat-card class="esp-card" [class.esp-card--inativa]="!esp.ativo">
+
+          <!-- Cabeçalho colorido -->
+          <div class="esp-card__header" [style.background]="esp.cor_hex ?? '#64748b'">
+            <mat-icon class="esp-card__icon" [style.color]="textColor(esp.cor_hex)">
+              {{ esp.icone ?? 'medical_services' }}
+            </mat-icon>
+            @if (!esp.ativo) {
+              <span class="esp-card__inativo-badge">Inativo</span>
+            }
+          </div>
+
+          <mat-card-content class="esp-card__content">
+            <h3 class="esp-card__nome">{{ esp.nome }}</h3>
+            @if (esp.descricao) {
+              <p class="esp-card__desc">{{ esp.descricao }}</p>
+            }
+          </mat-card-content>
+
+          <mat-card-actions class="esp-card__actions">
+            <button mat-icon-button color="primary" (click)="abrirEditar(esp)" matTooltip="Editar">
+              <mat-icon>edit</mat-icon>
+            </button>
+            @if (esp.ativo) {
+              <button mat-icon-button color="warn" (click)="confirmarDesativar(esp)" matTooltip="Desativar">
+                <mat-icon>block</mat-icon>
+              </button>
+            }
+          </mat-card-actions>
+        </mat-card>
+      }
+    </div>
+  }
+}
+
+<!-- Drawer lateral de criação/edição -->
+@if (mostrarForm()) {
+  <div class="form-overlay" (click)="fecharForm()">
+    <div class="form-drawer" (click)="$event.stopPropagation()">
+
+      <header class="form-drawer__header">
+        <h3>{{ editando() ? 'Editar' : 'Nova' }} Especialidade</h3>
+        <button mat-icon-button (click)="fecharForm()" aria-label="Fechar">
+          <mat-icon>close</mat-icon>
+        </button>
+      </header>
+
+      <form [formGroup]="form" (ngSubmit)="salvar()" class="form-drawer__body">
+
+        <mat-form-field appearance="outline">
+          <mat-label>Nome *</mat-label>
+          <input matInput formControlName="nome" placeholder="Ex: Cardiologia" />
+          @if (form.controls.nome.hasError('required') && form.controls.nome.touched) {
+            <mat-error>Nome é obrigatório.</mat-error>
+          }
+        </mat-form-field>
+
+        <mat-form-field appearance="outline">
+          <mat-label>Descrição</mat-label>
+          <textarea matInput formControlName="descricao" rows="3"
+            placeholder="Breve descrição da especialidade"></textarea>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline">
+          <mat-label>Ícone Material</mat-label>
+          <input matInput formControlName="icone" placeholder="medical_services" />
+          <mat-hint>
+            Nome do ícone Material:
+            <a href="https://fonts.google.com/icons" target="_blank">ver lista</a>
+          </mat-hint>
+          <mat-icon matSuffix>{{ form.controls.icone.value || 'medical_services' }}</mat-icon>
+        </mat-form-field>
+
+        <div class="color-field">
+          <label class="color-field__label">Cor da especialidade</label>
+          <div class="color-field__row">
+            <input
+              type="color"
+              formControlName="cor_hex"
+              class="color-input"
+              aria-label="Selecionar cor" />
+            <span class="color-hex">{{ form.controls.cor_hex.value }}</span>
+            <div
+              class="color-preview"
+              [style.background]="form.controls.cor_hex.value ?? '#2563eb'">
+              <mat-icon [style.color]="textColor(form.controls.cor_hex.value)">
+                {{ form.controls.icone.value || 'medical_services' }}
+              </mat-icon>
+            </div>
+          </div>
+        </div>
+
+        <div class="form-actions">
+          <button type="button" mat-button (click)="fecharForm()">Cancelar</button>
+          <button type="submit" mat-raised-button color="primary" [disabled]="form.invalid">
+            <mat-icon>save</mat-icon>
+            Salvar
+          </button>
+        </div>
+
+      </form>
+    </div>
+  </div>
+}

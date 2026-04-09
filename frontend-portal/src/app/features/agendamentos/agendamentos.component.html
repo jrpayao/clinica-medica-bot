@@ -1,0 +1,60 @@
+<div class="agendamentos-container">
+  <h2>Meus Agendamentos</h2>
+
+  @if (agendamentos.carregando()) {
+    <p class="loading">Carregando...</p>
+  }
+
+  @if (!agendamentos.carregando() && agendamentos.consultas().length === 0) {
+    <p class="empty">Nenhum agendamento encontrado.</p>
+  }
+
+  <div class="lista">
+    @for (consulta of agendamentos.consultas(); track consulta.id) {
+      <div class="card" [class]="'status-' + consulta.status.toLowerCase()">
+        <div class="card-header">
+          <span class="badge">{{ consulta.status }}</span>
+          <span class="data">{{ consulta.created_at | date:'dd/MM/yyyy HH:mm' }}</span>
+        </div>
+        <div class="card-body">
+          <p><strong>Tipo:</strong> {{ consulta.tipo }}</p>
+          <p><strong>Urgencia:</strong> {{ consulta.urgencia }}</p>
+          @if (consulta.observacoes) {
+            <p class="obs">{{ consulta.observacoes }}</p>
+          }
+        </div>
+        @if (consulta.status === 'AGENDADA') {
+          <div class="card-actions">
+            @if (confirmarCancelarId() === consulta.id) {
+              <div class="cancelar-form">
+                <input
+                  type="text"
+                  name="motivo"
+                  placeholder="Motivo do cancelamento"
+                  [value]="motivoCancelar()"
+                  (input)="onMotivoInput($event)"
+                />
+                <div class="cancelar-btns">
+                  <button
+                    class="btn-cancelar"
+                    (click)="confirmarCancelamento(consulta.id)"
+                    [disabled]="!motivoCancelar().trim() || cancelandoId() === consulta.id"
+                  >Confirmar</button>
+                  <button class="btn-ghost" type="button" (click)="fecharCancelamento()">Cancelar</button>
+                </div>
+              </div>
+            } @else {
+              <button
+                class="btn-cancelar"
+                (click)="abrirCancelamento(consulta.id)"
+                [disabled]="cancelandoId() === consulta.id"
+              >
+                {{ cancelandoId() === consulta.id ? 'Cancelando...' : 'Cancelar consulta' }}
+              </button>
+            }
+          </div>
+        }
+      </div>
+    }
+  </div>
+</div>

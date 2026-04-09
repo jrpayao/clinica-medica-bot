@@ -1,0 +1,21 @@
+.health-badge {
+  display: flex; align-items: center; gap: 6px; font-size: 13px;
+  padding: 6px 12px; border-radius: 999px; font-weight: 600;
+
+  &--ok { background: #dcfce7; color: #166534; }
+  &--err { background: #fee2e2; color: #991b1b; }
+
+  mat-icon { font-size: 16px; width: 16px; height: 16px; }
+}
+
+.doc-layout { display: grid; grid-template-columns: 1fr 360px; gap: 20px; align-items: start;
+  @media (max-width: 900px) { grid-template-columns: 1fr; }
+}
+
+.form-card mat-card-title { display: flex; align-items: center; gap: 8px; font-size: 16px !important; }
+.doc-form { display: flex; flex-direction: column; gap: 8px; padding-top: 12px; }
+.doc-form button { align-self: flex-start; }
+.btn-content { display: flex; align-items: center; gap: 8px; }
+
+.result-card mat-card-title { display: flex; align-items: center; gap: 8px; color: #166534; }
+.chunks-count { font-size: 24px; font-weight: 800; color: var(--color-primary); }

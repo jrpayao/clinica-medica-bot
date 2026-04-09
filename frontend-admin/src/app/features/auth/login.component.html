@@ -1,0 +1,101 @@
+<div class="login-page">
+
+  <!-- Painel esquerdo — branding -->
+  <div class="login-brand">
+    <mat-icon class="login-brand__icon">local_hospital</mat-icon>
+    <h1 class="login-brand__title">MedBot Admin</h1>
+    <p class="login-brand__subtitle">
+      Sistema inteligente de agendamento médico com IA
+    </p>
+    <ul class="login-brand__features">
+      <li><mat-icon>check_circle</mat-icon> Agenda automatizada com IA</li>
+      <li><mat-icon>check_circle</mat-icon> Triagem clínica inteligente</li>
+      <li><mat-icon>check_circle</mat-icon> Gestão multi-clínica</li>
+      <li><mat-icon>check_circle</mat-icon> WhatsApp integrado</li>
+    </ul>
+  </div>
+
+  <!-- Painel direito — formulário -->
+  <div class="login-form-panel">
+    <mat-card class="login-card">
+      <mat-card-header>
+        <mat-card-title>Acesso ao Painel</mat-card-title>
+        <mat-card-subtitle>Entre com suas credenciais de administrador</mat-card-subtitle>
+      </mat-card-header>
+
+      <mat-card-content>
+        <form [formGroup]="form" (ngSubmit)="login()" class="login-form">
+
+          <!-- Email -->
+          <mat-form-field appearance="outline">
+            <mat-label>E-mail</mat-label>
+            <input
+              matInput
+              type="email"
+              formControlName="email"
+              placeholder="admin@clinica.com.br"
+              autocomplete="email" />
+            <mat-icon matPrefix>email</mat-icon>
+            @if (form.controls.email.hasError('required') && form.controls.email.touched) {
+              <mat-error>E-mail é obrigatório.</mat-error>
+            }
+            @if (form.controls.email.hasError('email') && form.controls.email.touched) {
+              <mat-error>Informe um e-mail válido.</mat-error>
+            }
+          </mat-form-field>
+
+          <!-- Senha -->
+          <mat-form-field appearance="outline">
+            <mat-label>Senha</mat-label>
+            <input
+              matInput
+              [type]="mostrarSenha() ? 'text' : 'password'"
+              formControlName="senha"
+              placeholder="••••••••"
+              autocomplete="current-password" />
+            <mat-icon matPrefix>lock</mat-icon>
+            <button
+              mat-icon-button
+              matSuffix
+              type="button"
+              [attr.aria-label]="mostrarSenha() ? 'Ocultar senha' : 'Exibir senha'"
+              (click)="mostrarSenha.update(v => !v)">
+              <mat-icon>{{ mostrarSenha() ? 'visibility_off' : 'visibility' }}</mat-icon>
+            </button>
+            @if (form.controls.senha.hasError('required') && form.controls.senha.touched) {
+              <mat-error>Senha é obrigatória.</mat-error>
+            }
+          </mat-form-field>
+
+          <!-- Erro global -->
+          @if (erro()) {
+            <div class="login-error" role="alert">
+              <mat-icon>error_outline</mat-icon>
+              {{ erro() }}
+            </div>
+          }
+
+          <!-- Botão -->
+          <button
+            mat-raised-button
+            color="primary"
+            type="submit"
+            class="login-btn"
+            [disabled]="form.invalid || carregando()">
+            <span class="login-btn__content">
+              @if (carregando()) {
+                <mat-spinner diameter="18" />
+                <span>Entrando...</span>
+              } @else {
+                <mat-icon>login</mat-icon>
+                <span>Entrar</span>
+              }
+            </span>
+          </button>
+
+        </form>
+      </mat-card-content>
+    </mat-card>
+  </div>
+
+</div>

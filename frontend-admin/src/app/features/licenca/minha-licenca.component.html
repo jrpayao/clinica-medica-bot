@@ -1,0 +1,95 @@
+<app-page-header titulo="Minha Licença" subtitulo="Plano e quotas da sua clínica" />
+
+@if (carregando()) {
+  <div class="loading-center"><mat-spinner diameter="40" /></div>
+}
+
+@if (!carregando() && licenca(); as lic) {
+
+  <!-- Alerta de expiração -->
+  @if (alertaExpiracao) {
+    <div class="alerta-expiracao" role="alert">
+      <mat-icon>warning</mat-icon>
+      Sua licença expira em <strong>{{ lic.dias_restantes }} dia(s)</strong>.
+      Entre em contato com o suporte para renovar.
+    </div>
+  }
+
+  <div class="licenca-grid">
+
+    <!-- Status geral -->
+    <mat-card class="status-card">
+      <mat-card-content>
+        <div class="status-card__inner">
+          <div>
+            <p class="label">Plano</p>
+            <h2 class="plano">{{ lic.plano | uppercase }}</h2>
+          </div>
+          <div class="status-badge" [style.color]="corLicenca">
+            <mat-icon>verified</mat-icon>
+            <span class="badge badge--{{ lic.status.toLowerCase() }}">{{ lic.status }}</span>
+          </div>
+        </div>
+        <div class="info-row">
+          <mat-icon>calendar_today</mat-icon>
+          @if (lic.dias_restantes >= 0) {
+            <span>{{ lic.dias_restantes }} dias restantes</span>
+          } @else {
+            <span class="expirada-text">Licença expirada</span>
+          }
+        </div>
+        @if (lic.modalidade) {
+          <div class="info-row">
+            <mat-icon>autorenew</mat-icon>
+            <span>Modalidade: {{ lic.modalidade }}</span>
+          </div>
+        }
+        <div class="info-row">
+          <mat-icon>smartphone</mat-icon>
+          <span>WhatsApp: {{ lic.quota_info.whatsapp ? 'Incluído' : 'Não incluído' }}</span>
+        </div>
+      </mat-card-content>
+    </mat-card>
+
+    <!-- Quota médicos -->
+    <mat-card class="quota-card">
+      <mat-card-header>
+        <mat-card-title>
+          <mat-icon>medical_services</mat-icon>
+          Médicos
+        </mat-card-title>
+        <mat-card-subtitle>
+          {{ lic.quota_info.medicos_ativos }} / {{ lic.quota_info.max_medicos }} utilizados
+        </mat-card-subtitle>
+      </mat-card-header>
+      <mat-card-content>
+        <mat-progress-bar
+          mode="determinate"
+          [value]="quotaMedicos * 100"
+          [color]="quotaMedicos >= 0.9 ? 'warn' : 'primary'" />
+        <p class="quota-pct">{{ quotaMedicos | percent:'1.0-1' }} da quota</p>
+      </mat-card-content>
+    </mat-card>
+
+    <!-- Quota consultas -->
+    <mat-card class="quota-card">
+      <mat-card-header>
+        <mat-card-title>
+          <mat-icon>event_note</mat-icon>
+          Consultas este mês
+        </mat-card-title>
+        <mat-card-subtitle>
+          {{ lic.quota_info.consultas_mes_atual }} / {{ lic.quota_info.max_consultas_mes }} realizadas
+        </mat-card-subtitle>
+      </mat-card-header>
+      <mat-card-content>
+        <mat-progress-bar
+          mode="determinate"
+          [value]="quotaConsultas * 100"
+          [color]="quotaConsultas >= 0.9 ? 'warn' : 'primary'" />
+        <p class="quota-pct">{{ quotaConsultas | percent:'1.0-1' }} da quota mensal</p>
+      </mat-card-content>
+    </mat-card>
+
+  </div>
+}

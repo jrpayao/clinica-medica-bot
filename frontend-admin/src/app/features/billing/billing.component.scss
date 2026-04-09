@@ -1,0 +1,177 @@
+.billing-tabs {
+  margin-top: 8px;
+}
+
+.tab-icon {
+  margin-right: 6px;
+  font-size: 18px;
+  width: 18px;
+  height: 18px;
+  vertical-align: middle;
+}
+
+.tab-content {
+  padding: 20px 0;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+// Filtro
+.filter-card mat-card-content { padding: 12px 16px 8px !important; }
+.filter-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+
+  .date-field { width: 200px; margin-bottom: 0; }
+  .est-field  { width: 260px; margin-bottom: 0; }
+}
+
+.filter-badge {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--color-primary);
+  padding: 4px 0 4px;
+
+  mat-icon { font-size: 14px; width: 14px; height: 14px; }
+}
+
+// Ranking
+.ranking-row { cursor: pointer; }
+.ranking-row--selected { background: #eff6ff !important; }
+.est-link { font-size: 13px; padding: 0 4px; min-width: unset; }
+
+// Loading
+.loading-center {
+  display: flex;
+  justify-content: center;
+  padding: 40px 0;
+}
+
+// Erro
+.error-card { border-color: var(--color-danger) !important; }
+.error-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--color-danger);
+}
+
+// KPI grid
+.kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+
+  @media (max-width: 1024px) { grid-template-columns: repeat(2, 1fr); }
+  @media (max-width: 600px)  { grid-template-columns: 1fr; }
+}
+
+.kpi-card {
+  mat-card-content {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 16px !important;
+  }
+
+  &--warn   { border-color: var(--color-warning) !important; }
+  &--danger { border-color: var(--color-danger) !important; }
+}
+
+.kpi-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: var(--border-radius-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+
+  mat-icon { font-size: 24px; width: 24px; height: 24px; }
+
+  &--blue   { background: #dbeafe; color: var(--color-primary-light); }
+  &--green  { background: #dcfce7; color: var(--color-success); }
+  &--orange { background: #fef3c7; color: var(--color-warning); }
+  &--red    { background: #fee2e2; color: var(--color-danger); }
+}
+
+.kpi-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.kpi-value {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--color-text);
+  line-height: 1.2;
+}
+.kpi-label {
+  font-size: 12px;
+  color: var(--color-text-secondary);
+}
+
+// Barra de progresso
+.progress-card mat-card-content { padding: 16px !important; }
+.progress-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+.progress-label { font-size: 14px; font-weight: 500; }
+.progress-value { font-size: 14px; font-weight: 700; }
+.text-warn   { color: var(--color-warning); }
+.text-danger { color: var(--color-danger); }
+.main-progress { height: 10px !important; border-radius: 999px; }
+.progress-alert {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 10px 0 0;
+  font-size: 13px;
+  color: var(--color-danger);
+
+  .alert-icon { font-size: 16px; width: 16px; height: 16px; }
+}
+
+// Charts
+.charts-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+
+  @media (max-width: 800px) { grid-template-columns: 1fr; }
+}
+
+mat-card-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 15px !important;
+
+  mat-icon { font-size: 20px; width: 20px; height: 20px; color: var(--color-text-secondary); }
+}
+
+.chart-content {
+  padding: 8px 16px 16px !important;
+  min-height: 200px;
+}
+
+.empty-chart {
+  color: var(--color-text-secondary);
+  text-align: center;
+  padding: 40px 0;
+  font-size: 14px;
+}
+
+// Tabela
+.table-content { padding: 0 !important; }
+.billing-table { width: 100%; }
+.cell-mono { font-family: monospace; font-size: 13px; }
+.cell-cost { font-weight: 600; color: var(--color-primary); font-family: monospace; }

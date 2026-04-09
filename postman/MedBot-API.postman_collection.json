@@ -1,0 +1,581 @@
+{
+  "info": {
+    "name": "MedBot API v1",
+    "description": "API do MedBot — Sistema de Agendamento Médico com IA.\n\nBase URL: http://localhost:8000/v1\n\n## Autenticação\n- **Paciente externo:** CPF + SMS → JWT\n- **Usuário interno:** Email + Senha → JWT com RBAC\n- Header: `Authorization: Bearer {{access_token}}`\n\n## Roles\n- PACIENTE_EXTERNO\n- RECEPCIONISTA\n- MEDICO\n- ADMIN",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "base_url", "value": "http://localhost:8000/v1" },
+    { "key": "access_token", "value": "" },
+    { "key": "refresh_token", "value": "" }
+  ],
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      { "key": "token", "value": "{{access_token}}", "type": "string" }
+    ]
+  },
+  "item": [
+    {
+      "name": "Health",
+      "item": [
+        {
+          "name": "Health Check",
+          "request": {
+            "method": "GET",
+            "url": "http://localhost:8000/health",
+            "header": [],
+            "description": "Verifica se a API está rodando."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "Solicitar SMS",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    var data = pm.response.json();",
+                  "    console.log('SMS enviado:', data.mensagem);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/auth/sms/request",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"cpf\": \"12345678901\"\n}"
+            },
+            "description": "Solicita código SMS de 6 dígitos para o CPF. Rate limit: 1/min.\n\nResponse: `{ mensagem, ttl_segundos: 300 }`",
+            "auth": { "type": "noauth" }
+          }
+        },
+        {
+          "name": "Verificar SMS",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    var data = pm.response.json();",
+                  "    pm.collectionVariables.set('access_token', data.access_token);",
+                  "    pm.collectionVariables.set('refresh_token', data.refresh_token);",
+                  "    console.log('Token salvo automaticamente');",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/auth/sms/verify",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"cpf\": \"12345678901\",\n  \"codigo\": \"123456\"\n}"
+            },
+            "description": "Verifica código SMS e retorna JWT.\n\nO access_token e refresh_token são salvos automaticamente nas variáveis da collection.",
+            "auth": { "type": "noauth" }
+          }
+        },
+        {
+          "name": "Login Interno",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    var data = pm.response.json();",
+                  "    pm.collectionVariables.set('access_token', data.access_token);",
+                  "    pm.collectionVariables.set('refresh_token', data.refresh_token);",
+                  "    console.log('Token ADMIN salvo automaticamente');",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/auth/login",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"admin@medbot.com.br\",\n  \"senha\": \"admin123\"\n}"
+            },
+            "description": "Login para usuários internos (RECEPCIONISTA, MEDICO, ADMIN).\n\nO access_token e refresh_token são salvos automaticamente.",
+            "auth": { "type": "noauth" }
+          }
+        },
+        {
+          "name": "Refresh Token",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    var data = pm.response.json();",
+                  "    pm.collectionVariables.set('access_token', data.access_token);",
+                  "    pm.collectionVariables.set('refresh_token', data.refresh_token);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/auth/refresh",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"refresh_token\": \"{{refresh_token}}\"\n}"
+            },
+            "description": "Renova access_token usando o refresh_token (válido por 7 dias).",
+            "auth": { "type": "noauth" }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Especialidades",
+      "item": [
+        {
+          "name": "Listar Especialidades",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/especialidades/",
+            "description": "Lista todas as especialidades ativas. Acesso público.",
+            "auth": { "type": "noauth" }
+          }
+        },
+        {
+          "name": "Buscar Especialidade por ID",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/especialidades/1",
+            "description": "Busca especialidade por ID. Acesso público.",
+            "auth": { "type": "noauth" }
+          }
+        },
+        {
+          "name": "Criar Especialidade",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/especialidades/",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nome\": \"Cardiologia\",\n  \"descricao\": \"Especialidade do coração e sistema cardiovascular\",\n  \"cor_hex\": \"#E53935\",\n  \"icone\": \"heart\"\n}"
+            },
+            "description": "Cria nova especialidade. Requer role ADMIN."
+          }
+        },
+        {
+          "name": "Atualizar Especialidade",
+          "request": {
+            "method": "PATCH",
+            "url": "{{base_url}}/especialidades/1",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"descricao\": \"Descrição atualizada\",\n  \"cor_hex\": \"#1E88E5\"\n}"
+            },
+            "description": "Atualiza parcialmente uma especialidade. Requer role ADMIN."
+          }
+        },
+        {
+          "name": "Desativar Especialidade",
+          "request": {
+            "method": "DELETE",
+            "url": "{{base_url}}/especialidades/1",
+            "description": "Desativa uma especialidade (soft delete). Requer role ADMIN."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Médicos",
+      "item": [
+        {
+          "name": "Listar Médicos",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/medicos/",
+            "description": "Lista todos os médicos ativos. Acesso público.",
+            "auth": { "type": "noauth" }
+          }
+        },
+        {
+          "name": "Buscar Médico por ID",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/medicos/1",
+            "description": "Busca médico por ID. Acesso público.",
+            "auth": { "type": "noauth" }
+          }
+        },
+        {
+          "name": "Criar Médico",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/medicos/",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"crm\": \"CRM/DF 12345\",\n  \"nome\": \"Dr. João Silva\",\n  \"especialidade_id\": 1,\n  \"email\": \"joao.silva@medbot.com.br\",\n  \"telefone\": \"61999990001\",\n  \"duracao_consulta_min\": 30\n}"
+            },
+            "description": "Cria novo médico. Requer role ADMIN."
+          }
+        },
+        {
+          "name": "Atualizar Médico",
+          "request": {
+            "method": "PATCH",
+            "url": "{{base_url}}/medicos/1",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"telefone\": \"61999990002\",\n  \"duracao_consulta_min\": 45\n}"
+            },
+            "description": "Atualiza parcialmente um médico. Requer role ADMIN."
+          }
+        },
+        {
+          "name": "Desativar Médico",
+          "request": {
+            "method": "DELETE",
+            "url": "{{base_url}}/medicos/1",
+            "description": "Desativa um médico (soft delete). Requer role ADMIN."
+          }
+        },
+        {
+          "name": "Gerar Slots de Agenda",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/medicos/1/slots",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"data_inicio\": \"2026-04-07\",\n  \"data_fim\": \"2026-04-11\",\n  \"hora_inicio\": \"08:00\",\n  \"hora_fim\": \"18:00\",\n  \"intervalo_almoco_inicio\": \"12:00\",\n  \"intervalo_almoco_fim\": \"13:00\",\n  \"dias_semana\": [0, 1, 2, 3, 4]\n}"
+            },
+            "description": "Gera slots de 30min para o médico no período. Requer role ADMIN ou RECEPCIONISTA.\n\ndias_semana: 0=seg, 1=ter, ..., 4=sex, 5=sab, 6=dom"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Pacientes",
+      "item": [
+        {
+          "name": "Listar Pacientes",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/pacientes/",
+            "description": "Lista todos os pacientes. Requer role ADMIN ou RECEPCIONISTA."
+          }
+        },
+        {
+          "name": "Buscar Paciente por ID",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/pacientes/1",
+            "description": "Busca paciente por ID. Requer autenticação.\n\nNota: CPF é mascarado na resposta (123.***.***-01)."
+          }
+        },
+        {
+          "name": "Criar Paciente",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/pacientes/",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nome\": \"Maria Santos\",\n  \"cpf\": \"98765432100\",\n  \"data_nascimento\": \"1990-05-15\",\n  \"telefone\": \"61988887777\",\n  \"email\": \"maria@email.com\",\n  \"convenio\": \"Unimed\",\n  \"numero_carteirinha\": \"0012345678\"\n}"
+            },
+            "description": "Cria novo paciente. Acesso público (auto-cadastro via chat/portal).",
+            "auth": { "type": "noauth" }
+          }
+        },
+        {
+          "name": "Atualizar Paciente",
+          "request": {
+            "method": "PATCH",
+            "url": "{{base_url}}/pacientes/1",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"telefone\": \"61977776666\",\n  \"convenio\": \"Amil\"\n}"
+            },
+            "description": "Atualiza parcialmente um paciente. Requer autenticação."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Agenda",
+      "item": [
+        {
+          "name": "Buscar Slots Disponíveis",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/agenda/disponivel?especialidade_id=1&data_inicio=2026-04-07&data_fim=2026-04-11",
+              "host": ["{{base_url}}"],
+              "path": ["agenda", "disponivel"],
+              "query": [
+                { "key": "especialidade_id", "value": "1", "description": "Filtrar por especialidade (opcional)" },
+                { "key": "medico_id", "value": "", "description": "Filtrar por médico (opcional)", "disabled": true },
+                { "key": "data_inicio", "value": "2026-04-07", "description": "Data início (opcional)" },
+                { "key": "data_fim", "value": "2026-04-11", "description": "Data fim (opcional)" }
+              ]
+            },
+            "description": "Busca slots disponíveis para agendamento. Acesso público.\n\nTodos os query params são opcionais.",
+            "auth": { "type": "noauth" }
+          }
+        },
+        {
+          "name": "Agendar Consulta",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/agenda/consultas",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"slot_id\": 1,\n  \"paciente_id\": 1,\n  \"medico_id\": 1,\n  \"especialidade_id\": 1,\n  \"tipo\": \"EXTERNO\",\n  \"canal_origem\": \"PORTAL\",\n  \"urgencia\": \"BAIXA\",\n  \"triagem_resumo\": {\n    \"sintomas\": [\"dor no peito\", \"falta de ar\"],\n    \"duracao\": \"3 dias\",\n    \"classificacao\": \"MEDIA\"\n  },\n  \"observacoes\": \"Paciente relata dor no peito há 3 dias\"\n}"
+            },
+            "description": "Agenda uma consulta vinculando paciente a um slot. Requer autenticação.\n\ntipos: EXTERNO, INTERNO, ENCAIXE, RETORNO\ncanais: PORTAL, WHATSAPP, INTERNO\nurgencias: BAIXA, MEDIA, ALTA, EMERGENCIA"
+          }
+        },
+        {
+          "name": "Buscar Consulta por ID",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/agenda/consultas/1",
+            "description": "Busca detalhes de uma consulta. Requer autenticação."
+          }
+        },
+        {
+          "name": "Listar Consultas do Paciente",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/agenda/consultas/paciente/1",
+            "description": "Lista todas as consultas de um paciente. Requer autenticação."
+          }
+        },
+        {
+          "name": "Cancelar Consulta",
+          "request": {
+            "method": "PATCH",
+            "url": "{{base_url}}/agenda/consultas/1/cancelar",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"motivo\": \"Paciente solicitou reagendamento por conflito de horário\"\n}"
+            },
+            "description": "Cancela uma consulta e libera o slot. Requer autenticação.\n\nMotivo obrigatório (3-500 caracteres)."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Chat IA",
+      "item": [
+        {
+          "name": "Criar Sessão de Chat",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "    var data = pm.response.json();",
+                  "    pm.collectionVariables.set('session_token', data.session_token);",
+                  "    console.log('session_token salvo:', data.session_token);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/chat/sessao",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"canal\": \"PORTAL\"\n}"
+            },
+            "description": "Cria nova sessão de chat. Salva session_token automaticamente.\n\ncanais: PORTAL, WHATSAPP",
+            "auth": { "type": "noauth" }
+          }
+        },
+        {
+          "name": "Encerrar Sessão",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/chat/encerrar",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"session_token\": \"{{session_token}}\",\n  \"status\": \"ENCERRADA\"\n}"
+            },
+            "description": "Encerra uma sessão de chat.\n\nstatus: ENCERRADA, AGENDOU, ABANDONOU",
+            "auth": { "type": "noauth" }
+          }
+        },
+        {
+          "name": "WebSocket Chat (info)",
+          "request": {
+            "method": "GET",
+            "url": "ws://localhost:8000/v1/chat/ws/{{session_token}}",
+            "description": "⚠️ WebSocket — não funciona via Postman REST.\n\nUse o Postman WebSocket Request ou wscat:\n```\nwscat -c ws://localhost:8000/v1/chat/ws/{session_token}\n```\n\nEnviar: `{\"mensagem\": \"Olá, estou com dor de cabeça\"}`\nReceber: `{\"resposta\": \"...\", \"sessao_expirada\": false}`",
+            "auth": { "type": "noauth" }
+          }
+        },
+        {
+          "name": "Webhook WhatsApp (Evolution API)",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/chat/webhook/whatsapp",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"data\": {\n    \"key\": {\n      \"remoteJid\": \"5561999990001@s.whatsapp.net\"\n    },\n    \"message\": {\n      \"conversation\": \"Olá, preciso agendar uma consulta\"\n    }\n  }\n}"
+            },
+            "description": "Webhook que recebe mensagens do WhatsApp via Evolution API.\n\nSimula o payload da Evolution API para testes.",
+            "auth": { "type": "noauth" }
+          }
+        }
+      ]
+    },
+    {
+      "name": "RAG",
+      "item": [
+        {
+          "name": "Health Check Qdrant",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/rag/health",
+            "description": "Verifica saúde do Qdrant e da collection de protocolos.",
+            "auth": { "type": "noauth" }
+          }
+        },
+        {
+          "name": "Ingerir Documento",
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/rag/documentos",
+            "header": [],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                { "key": "titulo", "value": "Protocolo Dor Torácica", "type": "text" },
+                { "key": "documento_id", "value": "proto-dor-toracica-001", "type": "text" },
+                { "key": "texto", "value": "Pacientes com dor torácica devem ser avaliados quanto a sinais de síndrome coronariana aguda. Critérios de urgência: dor retroesternal, irradiação para membro superior esquerdo, sudorese, náusea. Se presente 2 ou mais critérios, classificar como EMERGÊNCIA e encaminhar SAMU 192.", "type": "text" }
+              ]
+            },
+            "description": "Ingere documento de texto para indexação no Qdrant. Requer role ADMIN.\n\nO texto é chunkeado, embeddings são gerados e indexados automaticamente."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Billing",
+      "item": [
+        {
+          "name": "Dashboard de Billing",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/billing/dashboard?data=2026-04-03",
+              "host": ["{{base_url}}"],
+              "path": ["billing", "dashboard"],
+              "query": [
+                { "key": "data", "value": "2026-04-03", "description": "Data do resumo (default: hoje)" }
+              ]
+            },
+            "description": "Dashboard com resumo de custos IA. Requer role ADMIN.\n\nRetorna: resumo diário, breakdown por modelo, por feature, limites configurados e % usado."
+          }
+        },
+        {
+          "name": "Exportar CSV",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/billing/export?inicio=2026-04-01&fim=2026-04-30",
+              "host": ["{{base_url}}"],
+              "path": ["billing", "export"],
+              "query": [
+                { "key": "inicio", "value": "2026-04-01", "description": "Data início (opcional)" },
+                { "key": "fim", "value": "2026-04-30", "description": "Data fim (opcional)" }
+              ]
+            },
+            "description": "Exporta registros de token_usage em CSV. Requer role ADMIN.\n\nColunas: id, session_id, modelo, feature, prompt_tokens, completion_tokens, total_tokens, cost_usd, user_type, created_at"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Ações (Links Tokenizados)",
+      "item": [
+        {
+          "name": "Confirmar Consulta via Link",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/acoes/TOKEN_JWT_AQUI",
+            "description": "Executa ação de confirmação ou cancelamento via token JWT.\n\nO token é gerado pelo sistema e enviado por WhatsApp/Email.\nContém: consulta_id + ação (confirmar|cancelar) + expiração.\n\nSubstituir TOKEN_JWT_AQUI pelo token real.",
+            "auth": { "type": "noauth" }
+          }
+        }
+      ]
+    }
+  ]
+}

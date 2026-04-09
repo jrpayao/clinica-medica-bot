@@ -1,0 +1,62 @@
+<div class="modal-overlay" (click)="fechar.emit()">
+  <div class="modal-card" (click)="$event.stopPropagation()">
+    <header class="modal-header">
+      <h3>Consulta — {{ slot.hora_inicio | slice:0:5 }} às {{ slot.hora_fim | slice:0:5 }}</h3>
+      <button class="btn-close" (click)="fechar.emit()" aria-label="Fechar">✕</button>
+    </header>
+
+    <section class="modal-section">
+      <h4>Médico</h4>
+      <p>{{ slot.medico_nome }}</p>
+      <p class="secondary">{{ slot.especialidade_nome }}</p>
+    </section>
+
+    @if (slot.consulta; as c) {
+      <section class="modal-section">
+        <h4>Paciente</h4>
+        <p>{{ c.paciente_nome }}</p>
+        <p class="secondary">CPF: {{ c.paciente_cpf_mascarado }}</p>
+      </section>
+
+      <section class="modal-section">
+        <h4>Status da Consulta</h4>
+        <div class="badges">
+          <span class="badge" [class]="'status-' + c.status.toLowerCase()">{{ c.status }}</span>
+          @if (c.urgencia) {
+            <span class="badge urgencia" [class]="urgenciaClass">{{ c.urgencia }}</span>
+          }
+          <span class="badge canal">{{ c.canal_origem }}</span>
+        </div>
+      </section>
+
+      @if (triagemItens.length) {
+        <section class="modal-section">
+          <h4>Triagem IA</h4>
+          <dl class="triagem-list">
+            @for (item of triagemItens; track item.chave) {
+              <div class="triagem-item">
+                <dt>{{ item.chave }}</dt>
+                <dd>{{ item.valor }}</dd>
+              </div>
+            }
+          </dl>
+        </section>
+      }
+
+      @if (c.observacoes) {
+        <section class="modal-section">
+          <h4>Observações</h4>
+          <p>{{ c.observacoes }}</p>
+        </section>
+      }
+
+      <section class="modal-section secondary-info">
+        <p>Agendado em: {{ c.created_at | date:'dd/MM/yyyy HH:mm' }}</p>
+      </section>
+    } @else {
+      <section class="modal-section">
+        <p class="empty">Slot disponível — sem consulta agendada.</p>
+      </section>
+    }
+  </div>
+</div>

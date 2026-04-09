@@ -1,0 +1,31 @@
+.loading-center { display: flex; justify-content: center; padding: 64px 0; }
+.table-container { overflow-x: auto; }
+.acoes { display: flex; gap: 4px; }
+.est-nome { font-weight: 500; font-size: 14px; }
+.est-slug { font-size: 11px; color: var(--color-text-secondary); font-family: monospace; }
+
+.form-overlay {
+  position: fixed; inset: 0; background: rgba(0,0,0,.4);
+  z-index: 1000; display: flex; justify-content: flex-end;
+}
+.form-drawer {
+  width: min(520px, 100vw); background: #fff; height: 100%;
+  overflow-y: auto; box-shadow: var(--shadow-lg); display: flex; flex-direction: column;
+
+  &__header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 20px 24px; border-bottom: 1px solid var(--color-border);
+    h3 { margin: 0; font-size: 17px; font-weight: 700; }
+  }
+
+  &__body {
+    display: flex; flex-direction: column; gap: 8px; padding: 24px; flex: 1;
+  }
+}
+.section-label {
+  font-size: 11px; font-weight: 700; text-transform: uppercase;
+  color: var(--color-text-secondary); letter-spacing: .8px; margin: 8px 0 0;
+}
+.form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.uf-field { max-width: 80px; }
+.form-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 8px; }

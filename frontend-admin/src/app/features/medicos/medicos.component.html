@@ -1,0 +1,118 @@
+<app-page-header
+  titulo="Médicos"
+  subtitulo="Gerencie os médicos e especialidades da clínica">
+  <button mat-raised-button color="primary" (click)="abrirNovo()">
+    <mat-icon>add</mat-icon>
+    Novo Médico
+  </button>
+</app-page-header>
+
+@if (svc.carregando()) {
+  <div class="loading-center">
+    <mat-spinner diameter="40" />
+  </div>
+}
+
+@if (!svc.carregando()) {
+  @if (svc.medicos().length === 0) {
+    <app-empty-state
+      icon="medical_services"
+      title="Nenhum médico cadastrado"
+      description="Adicione o primeiro médico para habilitar o agendamento."
+      ctaLabel="Novo Médico"
+      (ctaClick)="abrirNovo()" />
+  } @else {
+    <div class="table-container">
+      <table mat-table [dataSource]="svc.medicos()" class="mat-elevation-z0">
+
+        <!-- Avatar -->
+        <ng-container matColumnDef="avatar">
+          <th mat-header-cell *matHeaderCellDef></th>
+          <td mat-cell *matCellDef="let m">
+            <div
+              class="avatar"
+              [style.background]="corEspecialidade(m.especialidade_id)">
+              {{ iniciais(m.nome) }}
+            </div>
+          </td>
+        </ng-container>
+
+        <!-- Nome -->
+        <ng-container matColumnDef="nome">
+          <th mat-header-cell *matHeaderCellDef>Nome</th>
+          <td mat-cell *matCellDef="let m">
+            <span class="nome" [class.inativo]="!m.ativo">{{ m.nome }}</span>
+          </td>
+        </ng-container>
+
+        <!-- CRM -->
+        <ng-container matColumnDef="crm">
+          <th mat-header-cell *matHeaderCellDef>CRM</th>
+          <td mat-cell *matCellDef="let m">
+            <span class="mono">{{ m.crm }}</span>
+          </td>
+        </ng-container>
+
+        <!-- Especialidade -->
+        <ng-container matColumnDef="especialidade">
+          <th mat-header-cell *matHeaderCellDef>Especialidade</th>
+          <td mat-cell *matCellDef="let m">
+            <span
+              class="chip-especialidade"
+              [style.background]="corEspecialidade(m.especialidade_id) + '22'"
+              [style.color]="corEspecialidade(m.especialidade_id)">
+              {{ svc.nomeEspecialidade(m.especialidade_id) }}
+            </span>
+          </td>
+        </ng-container>
+
+        <!-- Duração -->
+        <ng-container matColumnDef="duracao">
+          <th mat-header-cell *matHeaderCellDef>Duração</th>
+          <td mat-cell *matCellDef="let m">{{ m.duracao_consulta_min }} min</td>
+        </ng-container>
+
+        <!-- Status -->
+        <ng-container matColumnDef="status">
+          <th mat-header-cell *matHeaderCellDef>Status</th>
+          <td mat-cell *matCellDef="let m">
+            <span class="badge" [class.badge--confirmada]="m.ativo" [class.badge--falta]="!m.ativo">
+              {{ m.ativo ? 'Ativo' : 'Inativo' }}
+            </span>
+          </td>
+        </ng-container>
+
+        <!-- Ações -->
+        <ng-container matColumnDef="acoes">
+          <th mat-header-cell *matHeaderCellDef></th>
+          <td mat-cell *matCellDef="let m">
+            <div class="acoes">
+              <button
+                mat-icon-button
+                color="primary"
+                (click)="abrirEditar(m)"
+                matTooltip="Editar"
+                aria-label="Editar médico">
+                <mat-icon>edit</mat-icon>
+              </button>
+              @if (m.ativo) {
+                <button
+                  mat-icon-button
+                  color="warn"
+                  (click)="confirmarDesativar(m)"
+                  matTooltip="Desativar"
+                  aria-label="Desativar médico">
+                  <mat-icon>person_off</mat-icon>
+                </button>
+              }
+            </div>
+          </td>
+        </ng-container>
+
+        <tr mat-header-row *matHeaderRowDef="colunas"></tr>
+        <tr mat-row *matRowDef="let row; columns: colunas;"
+            [class.row-inativo]="!row.ativo"></tr>
+      </table>
+    </div>
+  }
+}

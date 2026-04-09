@@ -1,0 +1,44 @@
+.loading-center {
+  display: flex;
+  justify-content: center;
+  padding: 64px 0;
+}
+
+.table-container {
+  overflow-x: auto;
+}
+
+.avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  font-size: 13px;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.nome {
+  font-weight: 500;
+  &.inativo { opacity: .5; text-decoration: line-through; }
+}
+
+.mono {
+  font-family: 'Courier New', monospace;
+  font-size: 13px;
+  background: #f1f5f9;
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+.acoes {
+  display: flex;
+  gap: 4px;
+}
+
+.row-inativo td {
+  opacity: .5;
+}

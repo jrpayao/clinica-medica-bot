@@ -1,0 +1,14 @@
+.loading-center { display: flex; justify-content: center; padding: 64px 0; }
+.busca-field { width: 320px; }
+.table-container { overflow-x: auto; margin-bottom: 8px; }
+
+.paciente-info { display: flex; align-items: center; gap: 10px; }
+.avatar {
+  width: 34px; height: 34px; border-radius: 50%;
+  background: linear-gradient(135deg, #2563eb, #7c3aed);
+  color: #fff; font-weight: 700; font-size: 14px;
+  display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+}
+.nome { font-weight: 500; font-size: 14px; }
+.subtexto { font-size: 12px; color: var(--color-text-secondary); }
+.mono { font-family: monospace; font-size: 13px; }

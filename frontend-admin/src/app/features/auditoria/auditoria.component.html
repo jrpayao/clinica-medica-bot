@@ -1,0 +1,58 @@
+<div style="padding:24px">
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px">
+    <h2 style="margin:0">Auditoria de Ações</h2>
+    <div style="display:flex;gap:12px;align-items:center">
+      <mat-form-field appearance="outline" style="width:200px;margin-bottom:-20px">
+        <mat-label>Tipo de ação</mat-label>
+        <mat-select [ngModel]="filtroAcao()" (ngModelChange)="filtroAcao.set($event)">
+          <mat-option value="">Todas</mat-option>
+          <mat-option value="ACESSO_CLINICA">Acesso à clínica</mat-option>
+          <mat-option value="LICENCA_ALTERADA">Licença alterada</mat-option>
+          <mat-option value="ESTAB_ALTERADO">Estabelecimento</mat-option>
+          <mat-option value="USUARIO_ALTERADO">Usuário</mat-option>
+          <mat-option value="LOGIN">Login</mat-option>
+          <mat-option value="LOGOUT">Logout</mat-option>
+        </mat-select>
+      </mat-form-field>
+      <button mat-raised-button (click)="aplicarFiltro()">Filtrar</button>
+    </div>
+  </div>
+
+  @if (loading()) {
+    <div style="display:flex;justify-content:center;padding:48px"><mat-spinner diameter="40"/></div>
+  } @else {
+    <table mat-table [dataSource]="eventos()" style="width:100%">
+      <ng-container matColumnDef="created_at">
+        <th mat-header-cell *matHeaderCellDef>Data/Hora</th>
+        <td mat-cell *matCellDef="let e" style="font-size:12px">{{ e.created_at | date:'dd/MM/yy HH:mm:ss' }}</td>
+      </ng-container>
+      <ng-container matColumnDef="usuario_role">
+        <th mat-header-cell *matHeaderCellDef>Role</th>
+        <td mat-cell *matCellDef="let e" style="font-size:12px">{{ e.usuario_role }} #{{ e.usuario_id }}</td>
+      </ng-container>
+      <ng-container matColumnDef="acao">
+        <th mat-header-cell *matHeaderCellDef>Ação</th>
+        <td mat-cell *matCellDef="let e"><strong style="font-size:12px">{{ e.acao }}</strong></td>
+      </ng-container>
+      <ng-container matColumnDef="estabelecimento_id">
+        <th mat-header-cell *matHeaderCellDef>Clínica</th>
+        <td mat-cell *matCellDef="let e" style="font-size:12px">{{ e.estabelecimento_id ?? '—' }}</td>
+      </ng-container>
+      <ng-container matColumnDef="ip_origem">
+        <th mat-header-cell *matHeaderCellDef>IP</th>
+        <td mat-cell *matCellDef="let e" style="font-size:12px">{{ e.ip_origem ?? '—' }}</td>
+      </ng-container>
+      <tr mat-header-row *matHeaderRowDef="colunas"></tr>
+      <tr mat-row *matRowDef="let row; columns: colunas;"></tr>
+    </table>
+
+    <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:12px">
+      <button mat-button [disabled]="offset() === 0" (click)="anterior()">
+        <mat-icon>arrow_back</mat-icon> Anterior
+      </button>
+      <button mat-button [disabled]="eventos().length < 50" (click)="proxima()">
+        Próxima <mat-icon>arrow_forward</mat-icon>
+      </button>
+    </div>
+  }
+</div>

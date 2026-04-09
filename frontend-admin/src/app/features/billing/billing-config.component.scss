@@ -1,0 +1,33 @@
+.config-card {
+  max-width: 520px;
+
+  mat-card-title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 16px !important;
+
+    mat-icon { color: var(--color-text-secondary); }
+  }
+}
+
+.config-form {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding-top: 16px;
+}
+
+.form-actions {
+  margin-top: 8px;
+
+  button {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+}
+
+.btn-spinner {
+  display: inline-block;
+}

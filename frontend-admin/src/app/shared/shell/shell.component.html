@@ -1,0 +1,154 @@
+<mat-sidenav-container class="shell-container">
+
+  <!-- ── Sidebar ─────────────────────────────────────────── -->
+  <mat-sidenav
+    [mode]="sidenavMode()"
+    [opened]="sidenavOpened()"
+    (closedStart)="sidebarAberta.set(false)"
+    class="sidebar">
+
+    <!-- Brand -->
+    <div class="sidebar__brand">
+      <mat-icon class="sidebar__brand-icon">local_hospital</mat-icon>
+      <div class="sidebar__brand-text">
+        @if (isModoGlobal()) {
+          <span class="sidebar__brand-name">MedBot</span>
+          <span class="sidebar__brand-sub" style="color:#93c5fd">⚡ Plataforma</span>
+        } @else if (isModoEscopado()) {
+          <span class="sidebar__brand-name">MedBot Admin</span>
+          <span class="sidebar__brand-sub">{{ nomeEstabelecimentoAtivo() ?? 'Clínica' }}</span>
+        } @else {
+          <span class="sidebar__brand-name">MedBot Admin</span>
+          <span class="sidebar__brand-sub">Painel de Gestão</span>
+        }
+      </div>
+    </div>
+
+    <mat-divider />
+
+    @if (isModoGlobal()) {
+      <div style="padding:12px 16px">
+        <button mat-stroked-button style="width:100%;font-size:12px" (click)="irParaSelecao()">
+          <mat-icon>login</mat-icon> Entrar como clínica
+        </button>
+      </div>
+    }
+    @if (isModoEscopado()) {
+      <div style="padding:12px 16px">
+        <button mat-stroked-button style="width:100%;font-size:12px" (click)="trocarEstabelecimento()">
+          <mat-icon>arrow_back</mat-icon> Voltar à plataforma
+        </button>
+      </div>
+    }
+
+    <!-- Navegação -->
+    <nav class="sidebar__nav">
+      @for (item of navItemsFiltrados(); track item.path) {
+        <a
+          class="sidebar__nav-item"
+          [routerLink]="item.path"
+          routerLinkActive="sidebar__nav-item--active"
+          [routerLinkActiveOptions]="{ exact: item.path === '/dashboard' }"
+          (click)="!isDesktop() && sidebarAberta.set(false)"
+          [matTooltip]="item.label"
+          matTooltipPosition="right">
+          <mat-icon class="sidebar__nav-icon">{{ item.icon }}</mat-icon>
+          <span class="sidebar__nav-label">{{ item.label }}</span>
+        </a>
+      }
+    </nav>
+
+    <!-- Rodapé do sidebar -->
+    <div class="sidebar__footer">
+      <mat-divider />
+      <div class="sidebar__user">
+        <div class="sidebar__user-avatar">
+          {{ auth.usuario()?.nome?.charAt(0)?.toUpperCase() ?? 'A' }}
+        </div>
+        <div class="sidebar__user-info">
+          <span class="sidebar__user-name">{{ auth.usuario()?.nome ?? '—' }}</span>
+          <span class="sidebar__user-role">{{ auth.usuario()?.role ?? '' }}</span>
+        </div>
+        <button
+          mat-icon-button
+          [matMenuTriggerFor]="userMenu"
+          class="sidebar__user-menu-btn"
+          aria-label="Menu do usuário">
+          <mat-icon>more_vert</mat-icon>
+        </button>
+      </div>
+    </div>
+  </mat-sidenav>
+
+  <!-- ── Conteúdo principal ─────────────────────────────── -->
+  <mat-sidenav-content class="main">
+
+    <!-- Header / Toolbar -->
+    <mat-toolbar class="main__toolbar" color="primary">
+      @if (!isDesktop()) {
+        <button mat-icon-button (click)="toggleSidebar()" aria-label="Abrir menu">
+          <mat-icon>menu</mat-icon>
+        </button>
+      }
+
+      <span class="main__toolbar-title">{{ tituloPagina() }}</span>
+
+      <span class="spacer"></span>
+
+      <!-- ADMIN_GLOBAL — modo global: seletor de filtro no toolbar -->
+      @if (isModoGlobal()) {
+        <mat-form-field appearance="outline" class="toolbar-est-select">
+          <mat-icon matPrefix class="toolbar-est-icon">business</mat-icon>
+          <mat-select [formControl]="filtroEstCtrl" placeholder="Selecionar clínica">
+            <mat-option [value]="null">— Todas as clínicas —</mat-option>
+            @for (e of ds.estabelecimentos(); track e.id) {
+              <mat-option [value]="e.id">{{ e.nome }}</mat-option>
+            }
+          </mat-select>
+        </mat-form-field>
+      }
+
+      <!-- ADMIN_GLOBAL — modo escopado: mostra nome + botão trocar -->
+      @if (isModoEscopado()) {
+        <button
+          mat-button
+          class="main__toolbar-est"
+          (click)="trocarEstabelecimento()"
+          matTooltip="Trocar estabelecimento">
+          <mat-icon>business</mat-icon>
+          <span class="main__toolbar-est-label">{{ nomeEstabelecimentoAtivo() ?? 'Trocar Clínica' }}</span>
+          <mat-icon class="toolbar-est-swap">swap_horiz</mat-icon>
+        </button>
+      }
+    </mat-toolbar>
+
+    <!-- Área de conteúdo -->
+    <div class="main__content">
+      <router-outlet />
+    </div>
+
+  </mat-sidenav-content>
+
+</mat-sidenav-container>
+
+<!-- Menu do usuário -->
+<mat-menu #userMenu="matMenu">
+  @if (isModoEscopado()) {
+    <button mat-menu-item (click)="trocarEstabelecimento()">
+      <mat-icon>public</mat-icon>
+      <span>Modo Global</span>
+    </button>
+    <mat-divider />
+  }
+  @if (isModoGlobal()) {
+    <button mat-menu-item (click)="irParaSelecao()">
+      <mat-icon>swap_horiz</mat-icon>
+      <span>Selecionar estabelecimento</span>
+    </button>
+    <mat-divider />
+  }
+  <button mat-menu-item (click)="sair()">
+    <mat-icon>logout</mat-icon>
+    <span>Sair</span>
+  </button>
+</mat-menu>

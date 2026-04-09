@@ -1,0 +1,27 @@
+.portal-container {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  overflow: hidden;
+}
+
+.portal-header {
+  flex-shrink: 0;
+  padding: 0.5rem 1.5rem;
+  background: #1e40af;
+  color: #fff;
+
+  h1 {
+    margin: 0;
+    font-size: 1rem;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+  }
+}
+
+main {
+  flex: 1;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}

@@ -1,0 +1,80 @@
+<app-page-header titulo="Pacientes" subtitulo="Lista de pacientes atendidos na clínica">
+  <mat-form-field appearance="outline" class="busca-field">
+    <mat-label>Buscar por nome ou CPF</mat-label>
+    <input matInput [formControl]="busca" />
+    <mat-icon matSuffix>search</mat-icon>
+  </mat-form-field>
+</app-page-header>
+
+@if (carregando()) {
+  <div class="loading-center"><mat-spinner diameter="40" /></div>
+}
+
+@if (!carregando()) {
+  @if (pacientes().length === 0) {
+    <app-empty-state icon="group" title="Nenhum paciente cadastrado"
+      description="Os pacientes aparecem aqui após realizarem um agendamento." />
+  } @else {
+    <div class="table-container">
+      <table mat-table [dataSource]="pacientesPaginados" class="mat-elevation-z0">
+
+        <ng-container matColumnDef="nome">
+          <th mat-header-cell *matHeaderCellDef>Paciente</th>
+          <td mat-cell *matCellDef="let p">
+            <div class="paciente-info">
+              <div class="avatar">{{ p.nome.charAt(0).toUpperCase() }}</div>
+              <div>
+                <div class="nome">{{ p.nome }}</div>
+                @if (p.email) {
+                  <div class="subtexto">{{ p.email }}</div>
+                }
+              </div>
+            </div>
+          </td>
+        </ng-container>
+
+        <ng-container matColumnDef="cpf">
+          <th mat-header-cell *matHeaderCellDef>CPF</th>
+          <td mat-cell *matCellDef="let p">
+            <span class="mono">{{ p.cpf }}</span>
+          </td>
+        </ng-container>
+
+        <ng-container matColumnDef="telefone">
+          <th mat-header-cell *matHeaderCellDef>Telefone</th>
+          <td mat-cell *matCellDef="let p">{{ p.telefone ?? '—' }}</td>
+        </ng-container>
+
+        <ng-container matColumnDef="email">
+          <th mat-header-cell *matHeaderCellDef>E-mail</th>
+          <td mat-cell *matCellDef="let p">{{ p.email ?? '—' }}</td>
+        </ng-container>
+
+        <ng-container matColumnDef="convenio">
+          <th mat-header-cell *matHeaderCellDef>Convênio</th>
+          <td mat-cell *matCellDef="let p">{{ p.convenio ?? 'Particular' }}</td>
+        </ng-container>
+
+        <ng-container matColumnDef="acoes">
+          <th mat-header-cell *matHeaderCellDef></th>
+          <td mat-cell *matCellDef="let p">
+            <button mat-icon-button color="primary" (click)="abrirEditar(p)" matTooltip="Editar">
+              <mat-icon>edit</mat-icon>
+            </button>
+          </td>
+        </ng-container>
+
+        <tr mat-header-row *matHeaderRowDef="colunas"></tr>
+        <tr mat-row *matRowDef="let row; columns: colunas;"></tr>
+      </table>
+    </div>
+
+    <mat-paginator
+      [length]="pacientesFiltrados.length"
+      [pageSize]="tamanhoPagina()"
+      [pageSizeOptions]="[10, 20, 50]"
+      [pageIndex]="pagina()"
+      (page)="onPageChange($event)"
+      showFirstLastButtons />
+  }
+}

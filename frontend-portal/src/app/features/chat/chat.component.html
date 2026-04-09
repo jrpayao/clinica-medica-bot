@@ -1,0 +1,116 @@
+<div class="chat-container">
+
+  <!-- Erro de sessão -->
+  @if (erroSessao()) {
+    <div class="erro-sessao">
+      <span>⚠️</span> {{ erroSessao() }}
+    </div>
+  }
+
+  <!-- Banner de emergência -->
+  @if (chat.emergencia()) {
+    <div class="banner-emergencia" role="alert">
+      <span class="banner-icone">🚨</span>
+      <span class="banner-texto">
+        EMERGÊNCIA DETECTADA — Ligue imediatamente para o
+        <strong>SAMU 192</strong>
+      </span>
+    </div>
+  }
+
+  <div class="chat-header">
+    <h2>MedBot Chat</h2>
+    <span class="status" [class.online]="chat.conectado()">
+      {{ chat.conectado() ? 'Conectado' : 'Desconectado' }}
+    </span>
+  </div>
+
+  <div class="chat-messages" #messagesContainer>
+
+    @for (msg of chat.mensagens(); track msg.timestamp) {
+      <div class="message" [class.user]="msg.role === 'user'" [class.assistant]="msg.role === 'assistant'">
+        @if (msg.role === 'assistant') {
+          <div class="message-content" [innerHTML]="formatarMensagem(msg.content)"></div>
+        } @else {
+          <div class="message-content">{{ msg.content }}</div>
+        }
+        <div class="message-time">{{ msg.timestamp | date:'HH:mm' }}</div>
+      </div>
+    }
+
+    <!-- Chips de convênio (estado COLETANDO_CONVENIO) -->
+    @if (chat.convenios().length > 0 && !chat.emergencia()) {
+      <div class="chips-group" aria-label="Selecione seu convênio">
+        @for (conv of chat.convenios(); track conv.id) {
+          <button class="chip chip-convenio" (click)="selecionarConvenio(conv)">
+            {{ conv.nome }}
+          </button>
+        }
+        <button class="chip chip-particular" (click)="chat.enviarQuickReply('Não, sou particular')">
+          Particular
+        </button>
+      </div>
+    }
+
+    <!-- Chips de resposta rápida -->
+    @if (chat.quickReplies().length > 0 && !chat.emergencia()) {
+      <div class="chips-group" aria-label="Respostas rápidas">
+        @for (reply of chat.quickReplies(); track reply) {
+          <button class="chip chip-reply" (click)="chat.enviarQuickReply(reply)">
+            {{ reply }}
+          </button>
+        }
+      </div>
+    }
+
+    <!-- Cards de slots disponíveis -->
+    @if (chat.slotsSugeridos().length > 0 && !chat.emergencia()) {
+      <div class="slots-sugeridos">
+        <p class="slots-titulo">Horários disponíveis:</p>
+        @if (!chat.conectado()) {
+          <p class="slots-aviso">⚠️ Conexão perdida. <button class="btn-reconectar" (click)="reconectar()">Reconectar</button></p>
+        }
+        @for (slot of chat.slotsSugeridos(); track slot.id) {
+          <button
+            class="slot-card"
+            [disabled]="chat.confirmando() || !chat.conectado()"
+            (click)="chat.confirmarSlot(slot.id)"
+          >
+            <span class="slot-data">{{ slot.data }} — {{ slot.hora_inicio }} às {{ slot.hora_fim }}</span>
+            <span class="slot-medico">Dr(a). {{ slot.medico_nome }}</span>
+          </button>
+        }
+      </div>
+    }
+
+    <!-- Indicador digitando -->
+    @if (chat.digitando() || chat.confirmando()) {
+      <div class="message assistant typing">
+        <div class="message-content">
+          <span class="dot"></span>
+          <span class="dot"></span>
+          <span class="dot"></span>
+        </div>
+      </div>
+    }
+
+  </div>
+
+  <form class="chat-input" (ngSubmit)="enviar()">
+    <input
+      type="text"
+      name="mensagem"
+      placeholder="Digite sua mensagem..."
+      [ngModel]="inputMensagem()"
+      (ngModelChange)="inputMensagem.set($event)"
+      [disabled]="!chat.conectado() || chat.emergencia()"
+    />
+    <button
+      type="submit"
+      [disabled]="!chat.conectado() || !inputMensagem().trim() || chat.emergencia()"
+    >
+      Enviar
+    </button>
+  </form>
+
+</div>

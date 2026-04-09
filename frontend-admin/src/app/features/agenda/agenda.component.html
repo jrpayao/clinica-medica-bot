@@ -1,0 +1,103 @@
+<app-page-header titulo="Agenda" subtitulo="Slots do dia por médico">
+
+  <!-- Filtro especialidade -->
+  @if (!semEstabelecimento()) {
+    <mat-form-field appearance="outline" class="filtro-especialidade">
+      <mat-label>Especialidade</mat-label>
+      <mat-select [formControl]="filtroEspecialidadeCtrl">
+        <mat-option [value]="null">Todas</mat-option>
+        @for (e of medicosSvc.especialidades(); track e.id) {
+          <mat-option [value]="e.id">{{ e.nome }}</mat-option>
+        }
+      </mat-select>
+    </mat-form-field>
+  }
+
+  <!-- Filtro médico -->
+  @if (!semEstabelecimento()) {
+    <mat-form-field appearance="outline" class="filtro-medico">
+      <mat-label>Médico</mat-label>
+      <mat-select [formControl]="filtroMedicoCtrl">
+        <mat-option [value]="null">Todos</mat-option>
+        @for (m of medicosFiltrados(); track m.id) {
+          <mat-option [value]="m.id">{{ m.nome }}</mat-option>
+        }
+      </mat-select>
+    </mat-form-field>
+  }
+
+  <!-- Seletor de data -->
+  @if (!semEstabelecimento()) {
+    <div class="date-nav">
+      <button mat-icon-button (click)="diaAnterior()" aria-label="Dia anterior">
+        <mat-icon>chevron_left</mat-icon>
+      </button>
+      <mat-form-field appearance="outline" class="date-field">
+        <input matInput [matDatepicker]="picker" [formControl]="dataCtrl" />
+        <mat-datepicker-toggle matIconSuffix [for]="picker" />
+        <mat-datepicker #picker />
+      </mat-form-field>
+      <button mat-icon-button (click)="proximoDia()" aria-label="Próximo dia">
+        <mat-icon>chevron_right</mat-icon>
+      </button>
+    </div>
+  }
+
+</app-page-header>
+
+<!-- Admin Global sem estabelecimento selecionado -->
+@if (semEstabelecimento()) {
+  <app-empty-state
+    icon="business"
+    title="Selecione um estabelecimento"
+    description="Como Super Admin, selecione um estabelecimento no topo da página para visualizar a agenda." />
+}
+
+<!-- Loading -->
+@if (!semEstabelecimento() && (agenda.carregando() || false)) {
+  <div class="loading-center">
+    <mat-spinner diameter="40" />
+  </div>
+}
+
+@if (!semEstabelecimento() && !agenda.carregando() && !false) {
+
+  <!-- Empty state -->
+  @if (slotsFiltrados().length === 0) {
+    <app-empty-state
+      icon="calendar_month"
+      title="Nenhum slot para esta data"
+      description="Gere a agenda de um médico para criar slots de atendimento." />
+  }
+
+  <!-- Grade de horários -->
+  <div class="calendar-grid">
+    @for (hora of horas(); track hora) {
+      <div class="hora-row">
+        <div class="hora-label">{{ hora }}</div>
+        <div class="hora-slots">
+          @for (slot of slotsPorHora().get(hora)!; track slot.id) {
+            <button
+              class="slot-pill"
+              [style.background]="corSlot(slot.status) + '18'"
+              [style.borderColor]="corSlot(slot.status)"
+              [style.color]="corSlot(slot.status)"
+              (click)="abrirDetalhe(slot)"
+              [matTooltip]="slot.medico_nome + ' — ' + slot.status">
+
+              <mat-icon class="slot-icon">{{ iconSlot(slot.status) }}</mat-icon>
+
+              <div class="slot-info">
+                <span class="slot-medico">{{ slot.medico_nome }}</span>
+                @if (slot.consulta) {
+                  <span class="slot-paciente">{{ slot.consulta.paciente_nome }}</span>
+                }
+              </div>
+            </button>
+          }
+        </div>
+      </div>
+    }
+  </div>
+
+}

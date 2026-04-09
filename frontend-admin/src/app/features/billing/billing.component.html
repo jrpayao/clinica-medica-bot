@@ -1,0 +1,270 @@
+<app-page-header titulo="Billing IA" subtitulo="Monitoramento de custos e uso dos modelos de IA">
+  <button mat-stroked-button (click)="baixarCsv()" [disabled]="svc.carregando()">
+    <mat-icon>download</mat-icon>
+    Exportar CSV
+  </button>
+</app-page-header>
+
+<mat-tab-group animationDuration="200ms" class="billing-tabs">
+
+  <!-- ── Tab Dashboard ────────────────────────────────────────── -->
+  <mat-tab>
+    <ng-template mat-tab-label>
+      <mat-icon class="tab-icon">bar_chart</mat-icon>
+      Dashboard
+    </ng-template>
+
+    <div class="tab-content">
+
+      <!-- Filtros -->
+      <mat-card appearance="outlined" class="filter-card">
+        <mat-card-content>
+          <div class="filter-row">
+
+            <mat-form-field appearance="outline" class="date-field">
+              <mat-label>Data</mat-label>
+              <input matInput [matDatepicker]="picker" [formControl]="dataCtrl">
+              <mat-datepicker-toggle matIconSuffix [for]="picker" />
+              <mat-datepicker #picker />
+            </mat-form-field>
+
+            <!-- Seletor de estabelecimento — apenas ADMIN_GLOBAL -->
+            @if (isAdminGlobal()) {
+              <mat-form-field appearance="outline" class="est-field">
+                <mat-label>Estabelecimento</mat-label>
+                <mat-select [formControl]="estabelecimentoCtrl">
+                  <mat-option [value]="null">Todos</mat-option>
+                  @for (e of svc.ranking(); track e.estabelecimento_id) {
+                    <mat-option [value]="e.estabelecimento_id">{{ e.nome }}</mat-option>
+                  }
+                </mat-select>
+                <mat-icon matSuffix>business</mat-icon>
+              </mat-form-field>
+            }
+
+            <button mat-flat-button color="primary" (click)="filtrar()" [disabled]="svc.carregando()">
+              <mat-icon>search</mat-icon>
+              Filtrar
+            </button>
+
+          </div>
+
+          <!-- Badge do filtro ativo -->
+          @if (isAdminGlobal() && estabelecimentoCtrl.value) {
+            <div class="filter-badge">
+              <mat-icon>filter_alt</mat-icon>
+              Filtrando por: <strong>{{ nomeEstabelecimentoSelecionado() }}</strong>
+            </div>
+          }
+        </mat-card-content>
+      </mat-card>
+
+      <!-- Loading -->
+      @if (svc.carregando()) {
+        <div class="loading-center">
+          <mat-spinner diameter="48" />
+        </div>
+      }
+
+      <!-- Erro -->
+      @if (svc.erro()) {
+        <mat-card appearance="outlined" class="error-card">
+          <mat-card-content>
+            <div class="error-row">
+              <mat-icon color="warn">error_outline</mat-icon>
+              <span>{{ svc.erro() }}</span>
+            </div>
+          </mat-card-content>
+        </mat-card>
+      }
+
+      @if (!svc.carregando() && svc.dashboard(); as d) {
+
+        <!-- KPI cards -->
+        <div class="kpi-grid">
+          <mat-card appearance="outlined" class="kpi-card">
+            <mat-card-content>
+              <div class="kpi-icon kpi-icon--blue"><mat-icon>attach_money</mat-icon></div>
+              <div class="kpi-info">
+                <span class="kpi-value">USD {{ d.limites.custo_atual_usd | number:'1.2-4' }}</span>
+                <span class="kpi-label">Custo Hoje</span>
+              </div>
+            </mat-card-content>
+          </mat-card>
+
+          <mat-card appearance="outlined" class="kpi-card">
+            <mat-card-content>
+              <div class="kpi-icon kpi-icon--orange"><mat-icon>today</mat-icon></div>
+              <div class="kpi-info">
+                <span class="kpi-value">USD {{ d.limites.diario_usd | number:'1.2-2' }}</span>
+                <span class="kpi-label">Limite Diário</span>
+              </div>
+            </mat-card-content>
+          </mat-card>
+
+          <mat-card appearance="outlined" class="kpi-card">
+            <mat-card-content>
+              <div class="kpi-icon kpi-icon--green"><mat-icon>date_range</mat-icon></div>
+              <div class="kpi-info">
+                <span class="kpi-value">USD {{ d.limites.mensal_usd | number:'1.2-2' }}</span>
+                <span class="kpi-label">Limite Mensal</span>
+              </div>
+            </mat-card-content>
+          </mat-card>
+
+          <mat-card appearance="outlined" class="kpi-card"
+            [class.kpi-card--warn]="percentual >= 70"
+            [class.kpi-card--danger]="percentual >= 90">
+            <mat-card-content>
+              <div class="kpi-icon"
+                [class.kpi-icon--red]="percentual >= 90"
+                [class.kpi-icon--orange]="percentual >= 70 && percentual < 90"
+                [class.kpi-icon--blue]="percentual < 70">
+                <mat-icon>speed</mat-icon>
+              </div>
+              <div class="kpi-info">
+                <span class="kpi-value">{{ percentual | number:'1.1-1' }}%</span>
+                <span class="kpi-label">Uso do Limite</span>
+              </div>
+            </mat-card-content>
+          </mat-card>
+        </div>
+
+        <!-- Barra de progresso -->
+        <mat-card appearance="outlined" class="progress-card">
+          <mat-card-content>
+            <div class="progress-header">
+              <span class="progress-label">Uso do limite diário</span>
+              <span class="progress-value"
+                [class.text-warn]="percentual >= 70"
+                [class.text-danger]="percentual >= 90">
+                {{ percentual | number:'1.1-1' }}%
+              </span>
+            </div>
+            <mat-progress-bar [color]="corProgressBar" mode="determinate" [value]="percentual" class="main-progress" />
+            @if (percentual >= 90) {
+              <p class="progress-alert">
+                <mat-icon class="alert-icon">warning</mat-icon>
+                Limite quase atingido! Considere aumentar o limite ou reduzir o uso.
+              </p>
+            }
+          </mat-card-content>
+        </mat-card>
+
+        <!-- Ranking por estabelecimento (ADMIN_GLOBAL) -->
+        @if (isAdminGlobal() && svc.ranking().length) {
+          <mat-card appearance="outlined">
+            <mat-card-header>
+              <mat-card-title>
+                <mat-icon>leaderboard</mat-icon>
+                Ranking por Estabelecimento
+              </mat-card-title>
+              <mat-card-subtitle>Custo total do dia por tenant</mat-card-subtitle>
+            </mat-card-header>
+            <mat-card-content class="table-content">
+              <table mat-table [dataSource]="svc.ranking()" class="billing-table">
+                <ng-container matColumnDef="nome">
+                  <th mat-header-cell *matHeaderCellDef>Estabelecimento</th>
+                  <td mat-cell *matCellDef="let r">
+                    <button mat-button color="primary" class="est-link"
+                      (click)="estabelecimentoCtrl.setValue(r.estabelecimento_id); filtrar()">
+                      {{ r.nome }}
+                    </button>
+                  </td>
+                </ng-container>
+                <ng-container matColumnDef="chamadas">
+                  <th mat-header-cell *matHeaderCellDef>Chamadas</th>
+                  <td mat-cell *matCellDef="let r">{{ r.total_chamadas | number }}</td>
+                </ng-container>
+                <ng-container matColumnDef="tokens">
+                  <th mat-header-cell *matHeaderCellDef>Tokens</th>
+                  <td mat-cell *matCellDef="let r">{{ r.total_tokens | number }}</td>
+                </ng-container>
+                <ng-container matColumnDef="custo">
+                  <th mat-header-cell *matHeaderCellDef>Custo (USD)</th>
+                  <td mat-cell *matCellDef="let r" class="cell-cost">{{ r.custo_total | number:'1.4-6' }}</td>
+                </ng-container>
+                <tr mat-header-row *matHeaderRowDef="colunasRanking"></tr>
+                <tr mat-row *matRowDef="let row; columns: colunasRanking;" class="ranking-row"
+                  [class.ranking-row--selected]="estabelecimentoCtrl.value === row.estabelecimento_id"></tr>
+              </table>
+            </mat-card-content>
+          </mat-card>
+        }
+
+        <!-- Charts -->
+        <div class="charts-grid">
+          <mat-card appearance="outlined">
+            <mat-card-header>
+              <mat-card-title><mat-icon>bar_chart</mat-icon> Uso por Modelo</mat-card-title>
+            </mat-card-header>
+            <mat-card-content class="chart-content">
+              @if (d.por_modelo.length) {
+                <canvas #modelChart></canvas>
+              } @else {
+                <p class="empty-chart">Sem dados para o período selecionado.</p>
+              }
+            </mat-card-content>
+          </mat-card>
+
+          <mat-card appearance="outlined">
+            <mat-card-header>
+              <mat-card-title><mat-icon>donut_large</mat-icon> Custo por Feature</mat-card-title>
+            </mat-card-header>
+            <mat-card-content class="chart-content">
+              @if (d.por_feature.length) {
+                <canvas #featureChart></canvas>
+              } @else {
+                <p class="empty-chart">Sem dados para o período selecionado.</p>
+              }
+            </mat-card-content>
+          </mat-card>
+        </div>
+
+        <!-- Tabela detalhada por modelo -->
+        @if (d.por_modelo.length) {
+          <mat-card appearance="outlined">
+            <mat-card-header>
+              <mat-card-title><mat-icon>table_chart</mat-icon> Detalhe por Modelo</mat-card-title>
+            </mat-card-header>
+            <mat-card-content class="table-content">
+              <table mat-table [dataSource]="d.por_modelo" class="billing-table">
+                <ng-container matColumnDef="modelo">
+                  <th mat-header-cell *matHeaderCellDef>Modelo</th>
+                  <td mat-cell *matCellDef="let m" class="cell-mono">{{ m.modelo }}</td>
+                </ng-container>
+                <ng-container matColumnDef="chamadas">
+                  <th mat-header-cell *matHeaderCellDef>Chamadas</th>
+                  <td mat-cell *matCellDef="let m">{{ m.total_chamadas | number }}</td>
+                </ng-container>
+                <ng-container matColumnDef="tokens">
+                  <th mat-header-cell *matHeaderCellDef>Total Tokens</th>
+                  <td mat-cell *matCellDef="let m">{{ m.total_tokens | number }}</td>
+                </ng-container>
+                <ng-container matColumnDef="custo">
+                  <th mat-header-cell *matHeaderCellDef>Custo (USD)</th>
+                  <td mat-cell *matCellDef="let m" class="cell-cost">{{ m.custo_total | number:'1.4-6' }}</td>
+                </ng-container>
+                <tr mat-header-row *matHeaderRowDef="colunasModelo"></tr>
+                <tr mat-row *matRowDef="let row; columns: colunasModelo;"></tr>
+              </table>
+            </mat-card-content>
+          </mat-card>
+        }
+
+      } <!-- fim @if dashboard -->
+    </div>
+  </mat-tab>
+
+  <!-- ── Tab Configurações ─────────────────────────────────────── -->
+  <mat-tab>
+    <ng-template mat-tab-label>
+      <mat-icon class="tab-icon">settings</mat-icon>
+      Configurações
+    </ng-template>
+    <div class="tab-content">
+      <app-billing-config />
+    </div>
+  </mat-tab>
+
+</mat-tab-group>

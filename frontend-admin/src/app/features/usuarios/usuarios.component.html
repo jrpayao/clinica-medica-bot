@@ -1,0 +1,79 @@
+<div style="padding:24px">
+  <h2>Usuários Internos</h2>
+
+  @if (!isGlobal()) {
+    <mat-card style="margin-bottom:24px">
+      <mat-card-header><mat-card-title>Novo usuário</mat-card-title></mat-card-header>
+      <mat-card-content style="padding-top:12px;display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;align-items:end">
+        <mat-form-field appearance="outline">
+          <mat-label>Nome</mat-label>
+          <input matInput [ngModel]="novoNome()" (ngModelChange)="novoNome.set($event)">
+        </mat-form-field>
+        <mat-form-field appearance="outline">
+          <mat-label>E-mail</mat-label>
+          <input matInput type="email" [ngModel]="novoEmail()" (ngModelChange)="novoEmail.set($event)">
+        </mat-form-field>
+        <mat-form-field appearance="outline">
+          <mat-label>Senha</mat-label>
+          <input matInput type="password" [ngModel]="novaSenha()" (ngModelChange)="novaSenha.set($event)">
+        </mat-form-field>
+        <mat-form-field appearance="outline">
+          <mat-label>Perfil</mat-label>
+          <mat-select [ngModel]="novoRole()" (ngModelChange)="novoRole.set($event)">
+            <mat-option value="RECEPCIONISTA">Recepcionista</mat-option>
+            <mat-option value="MEDICO">Médico</mat-option>
+          </mat-select>
+        </mat-form-field>
+        <button mat-raised-button color="primary" (click)="criarUsuario()" [disabled]="criando()">
+          <mat-icon>person_add</mat-icon> Criar
+        </button>
+      </mat-card-content>
+      @if (erroForm()) {
+        <mat-card-footer style="padding:0 16px 12px;color:#ef4444;font-size:12px">{{ erroForm() }}</mat-card-footer>
+      }
+    </mat-card>
+  }
+
+  @if (loading()) {
+    <div style="display:flex;justify-content:center;padding:48px"><mat-spinner diameter="40"/></div>
+  } @else {
+    <table mat-table [dataSource]="usuarios()" style="width:100%">
+      <ng-container matColumnDef="nome">
+        <th mat-header-cell *matHeaderCellDef>Nome</th>
+        <td mat-cell *matCellDef="let u">{{ u.nome }}</td>
+      </ng-container>
+      <ng-container matColumnDef="email">
+        <th mat-header-cell *matHeaderCellDef>E-mail</th>
+        <td mat-cell *matCellDef="let u">{{ u.email }}</td>
+      </ng-container>
+      <ng-container matColumnDef="role">
+        <th mat-header-cell *matHeaderCellDef>Perfil</th>
+        <td mat-cell *matCellDef="let u"><mat-chip>{{ u.role }}</mat-chip></td>
+      </ng-container>
+      <ng-container matColumnDef="ativo">
+        <th mat-header-cell *matHeaderCellDef>Status</th>
+        <td mat-cell *matCellDef="let u">
+          <mat-chip [color]="u.ativo ? 'primary' : 'warn'" highlighted>{{ u.ativo ? 'Ativo' : 'Inativo' }}</mat-chip>
+        </td>
+      </ng-container>
+      <ng-container matColumnDef="acoes">
+        <th mat-header-cell *matHeaderCellDef></th>
+        <td mat-cell *matCellDef="let u">
+          @if (!isGlobal()) {
+            @if (u.ativo) {
+              <button mat-icon-button color="warn" (click)="desativar(u.id)" matTooltip="Desativar">
+                <mat-icon>person_off</mat-icon>
+              </button>
+            } @else {
+              <button mat-icon-button color="primary" (click)="reativar(u.id)" matTooltip="Reativar">
+                <mat-icon>person</mat-icon>
+              </button>
+            }
+          }
+        </td>
+      </ng-container>
+      <tr mat-header-row *matHeaderRowDef="colunas"></tr>
+      <tr mat-row *matRowDef="let row; columns: colunas;"></tr>
+    </table>
+  }
+</div>

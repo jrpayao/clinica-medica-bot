@@ -1,0 +1,28 @@
+$primary: #2563eb;
+$success: #16a34a;
+$danger: #dc2626;
+$warning: #f59e0b;
+$bg-secondary: #f3f4f6;
+$text-secondary: #6b7280;
+$border: #e5e7eb;
+
+:root {
+  --primary: #{$primary};
+  --success: #{$success};
+  --danger: #{$danger};
+  --warning: #{$warning};
+  --bg-secondary: #{$bg-secondary};
+  --text-secondary: #{$text-secondary};
+  --border: #{$border};
+}
+
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  color: #111827;
+  background: #fff;
+}

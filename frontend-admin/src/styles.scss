@@ -1,0 +1,233 @@
+// ============================================================
+// MedBot Admin — Design System
+// Angular Material 21 + tema saúde (Material Design 3)
+// ============================================================
+
+@use '@angular/material' as mat;
+
+// Incluir estilos base do Material (uma vez no projeto)
+@include mat.core();
+
+// ── Paleta de cores ──────────────────────────────────────────
+// Primário: azul saúde  |  Secundário: verde sucesso
+$medbot-theme: mat.define-theme((
+  color: (
+    theme-type: light,
+    primary: mat.$azure-palette,
+    tertiary: mat.$green-palette,
+  ),
+  typography: (
+    brand-family: '"Inter", "Segoe UI", Roboto, sans-serif',
+    plain-family: '"Inter", "Segoe UI", Roboto, sans-serif',
+  ),
+  density: (scale: 0),
+));
+
+// Aplicar tema em todos os componentes Material
+html {
+  @include mat.all-component-themes($medbot-theme);
+}
+
+// ── Dark mode automático ─────────────────────────────────────
+@media (prefers-color-scheme: dark) {
+  $medbot-dark: mat.define-theme((
+    color: (
+      theme-type: dark,
+      primary: mat.$azure-palette,
+      tertiary: mat.$green-palette,
+    ),
+  ));
+  html {
+    @include mat.all-component-colors($medbot-dark);
+  }
+}
+
+// ── Tokens CSS globais ────────────────────────────────────────
+:root {
+  // Cores semânticas mantidas para compatibilidade
+  --color-primary:        #1e5fa8;
+  --color-primary-light:  #2563eb;
+  --color-success:        #16a34a;
+  --color-danger:         #dc2626;
+  --color-warning:        #d97706;
+  --color-info:           #0891b2;
+
+  // Superfícies
+  --color-bg:             #f8fafc;
+  --color-surface:        #ffffff;
+  --color-border:         #e2e8f0;
+  --color-text:           #0f172a;
+  --color-text-secondary: #64748b;
+
+  // Layout
+  --sidebar-width:        260px;
+  --header-height:        64px;
+  --content-padding:      24px;
+  --border-radius:        12px;
+  --border-radius-sm:     8px;
+
+  // Sombras
+  --shadow-sm: 0 1px 3px rgba(0,0,0,.08), 0 1px 2px rgba(0,0,0,.06);
+  --shadow-md: 0 4px 6px rgba(0,0,0,.07), 0 2px 4px rgba(0,0,0,.06);
+  --shadow-lg: 0 10px 15px rgba(0,0,0,.07), 0 4px 6px rgba(0,0,0,.05);
+
+  // Urgências
+  --urgency-baixa:       #64748b;
+  --urgency-media:       #d97706;
+  --urgency-alta:        #ea580c;
+  --urgency-emergencia:  #dc2626;
+
+  // Status consultas
+  --status-agendada:     #2563eb;
+  --status-confirmada:   #16a34a;
+  --status-cancelada:    #dc2626;
+  --status-realizada:    #7c3aed;
+  --status-falta:        #9ca3af;
+
+  // Status slots
+  --slot-disponivel:     #16a34a;
+  --slot-agendado:       #2563eb;
+  --slot-bloqueado:      #9ca3af;
+  --slot-encaixe:        #d97706;
+  --slot-reservado:      #7c3aed;
+
+  // Status licença
+  --licenca-trial:       #0891b2;
+  --licenca-ativa:       #16a34a;
+  --licenca-expirada:    #dc2626;
+  --licenca-suspensa:    #7c3aed;
+}
+
+// ── Reset e base ─────────────────────────────────────────────
+*, *::before, *::after { box-sizing: border-box; }
+
+html, body {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  font-family: "Inter", "Segoe UI", Roboto, sans-serif;
+  color: var(--color-text);
+  background: var(--color-bg);
+  -webkit-font-smoothing: antialiased;
+}
+
+// ── Utilitários globais ───────────────────────────────────────
+
+// Badges de status/urgência
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 20px;
+
+  &--baixa     { background: #f1f5f9; color: var(--urgency-baixa); }
+  &--media     { background: #fef3c7; color: var(--urgency-media); }
+  &--alta      { background: #ffedd5; color: var(--urgency-alta); }
+  &--emergencia{ background: #fee2e2; color: var(--urgency-emergencia); }
+
+  &--agendada  { background: #dbeafe; color: var(--status-agendada); }
+  &--confirmada{ background: #dcfce7; color: var(--status-confirmada); }
+  &--cancelada { background: #fee2e2; color: var(--status-cancelada); }
+  &--realizada { background: #ede9fe; color: var(--status-realizada); }
+  &--falta     { background: #f1f5f9; color: var(--status-falta); }
+
+  &--trial     { background: #cffafe; color: var(--licenca-trial); }
+  &--ativa     { background: #dcfce7; color: var(--licenca-ativa); }
+  &--expirada  { background: #fee2e2; color: var(--licenca-expirada); }
+  &--suspensa  { background: #ede9fe; color: var(--licenca-suspensa); }
+}
+
+// Card padrão
+.card {
+  background: var(--color-surface);
+  border-radius: var(--border-radius);
+  box-shadow: var(--shadow-sm);
+  border: 1px solid var(--color-border);
+}
+
+// Page layout padrão
+.page {
+  padding: var(--content-padding);
+  max-width: 1400px;
+
+  &__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 24px;
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+
+  &__title {
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--color-text);
+    margin: 0;
+  }
+
+  &__subtitle {
+    font-size: 14px;
+    color: var(--color-text-secondary);
+    margin: 2px 0 0;
+  }
+}
+
+// ── Angular Material overrides ────────────────────────────────
+
+// Tabelas com bordas mais sutis
+.mat-mdc-table {
+  background: var(--color-surface) !important;
+  border-radius: var(--border-radius) !important;
+  overflow: hidden;
+  box-shadow: var(--shadow-sm) !important;
+  border: 1px solid var(--color-border) !important;
+}
+
+.mat-mdc-header-row {
+  background: #f8fafc !important;
+}
+
+.mat-mdc-row:hover {
+  background: #f1f5f9 !important;
+}
+
+// Snackbar de sucesso/erro
+.snack-success .mdc-snackbar__surface {
+  background-color: #166534 !important;
+  color: #fff !important;
+}
+.snack-erro .mdc-snackbar__surface {
+  background-color: #991b1b !important;
+  color: #fff !important;
+}
+.snack-aviso .mdc-snackbar__surface {
+  background-color: #92400e !important;
+  color: #fff !important;
+}
+
+// Dialog com bordas arredondadas
+.mat-mdc-dialog-container {
+  --mdc-dialog-container-shape: 16px !important;
+}
+
+// Form fields mais limpos
+.mat-mdc-form-field {
+  width: 100%;
+}
+
+// Chips de especialidade
+.chip-especialidade {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 500;
+}

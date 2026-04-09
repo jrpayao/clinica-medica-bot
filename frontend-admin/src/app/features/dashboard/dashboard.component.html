@@ -1,0 +1,220 @@
+<app-page-header titulo="Dashboard" [subtitulo]="'Visão geral do dia ' + (hoje() | date:'dd/MM/yyyy')">
+  <mat-form-field appearance="outline" class="date-picker">
+    <mat-label>Data</mat-label>
+    <input matInput [matDatepicker]="picker" [formControl]="dataCtrl" />
+    <mat-datepicker-toggle matIconSuffix [for]="picker" />
+    <mat-datepicker #picker />
+  </mat-form-field>
+</app-page-header>
+
+<!-- ADMIN_GLOBAL ainda não escolheu modo (nem clínica nem modo global) -->
+@if (auth.precisaSelecionarEstabelecimento()) {
+  <app-empty-state
+    icon="business"
+    title="Selecione um estabelecimento"
+    description="Use o seletor no topo da página para escolher a clínica que deseja visualizar." />
+}
+
+<!-- Loading -->
+@if (!auth.precisaSelecionarEstabelecimento() && ds.carregando()) {
+  <div class="loading-center">
+    <mat-spinner diameter="40" />
+  </div>
+}
+
+@if (!auth.precisaSelecionarEstabelecimento() && !ds.carregando()) {
+
+  <!-- ── Alertas ────────────────────────────────────────────── -->
+  @if (ds.alertas().length) {
+    <div class="alertas-grid">
+      @for (alerta of ds.alertas(); track alerta.tipo) {
+        <div class="alerta alerta--{{ corAlerta(alerta.tipo) }}" [routerLink]="alerta.link">
+          <mat-icon class="alerta__icon">{{ iconeAlerta(alerta.tipo) }}</mat-icon>
+          <span class="alerta__msg">{{ alerta.mensagem }}</span>
+          <mat-icon class="alerta__arrow">chevron_right</mat-icon>
+        </div>
+      }
+    </div>
+  }
+
+  @if (ds.kpi(); as kpi) {
+
+    <!-- ── Quick actions ──────────────────────────────────────── -->
+    <div class="quick-actions">
+      <button mat-stroked-button routerLink="/agenda">
+        <mat-icon>calendar_month</mat-icon>
+        Agenda
+      </button>
+      <button mat-stroked-button (click)="irParaConsultas()">
+        <mat-icon>list_alt</mat-icon>
+        Consultas de Hoje
+      </button>
+      <button mat-stroked-button routerLink="/billing">
+        <mat-icon>payments</mat-icon>
+        Billing
+      </button>
+    </div>
+
+    <!-- ── KPI cards navegáveis ───────────────────────────────── -->
+    <div class="kpi-grid">
+
+      <mat-card class="kpi-card kpi-card--clickable" (click)="irParaConsultas()">
+        <mat-card-content>
+          <div class="kpi-card__inner">
+            <div class="kpi-card__info">
+              <span class="kpi-card__label">Total Consultas</span>
+              <span class="kpi-card__value">{{ kpi.total_consultas }}</span>
+            </div>
+            <mat-icon class="kpi-card__icon" style="color:#2563eb">event_note</mat-icon>
+          </div>
+          <span class="kpi-card__cta">Ver todas <mat-icon inline>chevron_right</mat-icon></span>
+        </mat-card-content>
+      </mat-card>
+
+      <mat-card class="kpi-card kpi-card--success kpi-card--clickable"
+        (click)="irParaConsultas('REALIZADA')">
+        <mat-card-content>
+          <div class="kpi-card__inner">
+            <div class="kpi-card__info">
+              <span class="kpi-card__label">Realizadas</span>
+              <span class="kpi-card__value">{{ kpi.consultas_realizadas }}</span>
+            </div>
+            <mat-icon class="kpi-card__icon" style="color:#16a34a">check_circle</mat-icon>
+          </div>
+          <span class="kpi-card__cta">Ver lista <mat-icon inline>chevron_right</mat-icon></span>
+        </mat-card-content>
+      </mat-card>
+
+      <mat-card class="kpi-card kpi-card--warning kpi-card--clickable"
+        (click)="irParaConsultas('AGENDADA')">
+        <mat-card-content>
+          <div class="kpi-card__inner">
+            <div class="kpi-card__info">
+              <span class="kpi-card__label">Agendadas</span>
+              <span class="kpi-card__value">{{ kpi.consultas_agendadas }}</span>
+            </div>
+            <mat-icon class="kpi-card__icon" style="color:#d97706">schedule</mat-icon>
+          </div>
+          <span class="kpi-card__cta">Ver lista <mat-icon inline>chevron_right</mat-icon></span>
+        </mat-card-content>
+      </mat-card>
+
+      <mat-card class="kpi-card kpi-card--danger kpi-card--clickable"
+        (click)="irParaConsultas('CANCELADA')">
+        <mat-card-content>
+          <div class="kpi-card__inner">
+            <div class="kpi-card__info">
+              <span class="kpi-card__label">Canceladas</span>
+              <span class="kpi-card__value">{{ kpi.consultas_canceladas }}</span>
+            </div>
+            <mat-icon class="kpi-card__icon" style="color:#dc2626">cancel</mat-icon>
+          </div>
+          <span class="kpi-card__cta">Ver lista <mat-icon inline>chevron_right</mat-icon></span>
+        </mat-card-content>
+      </mat-card>
+
+      <!-- Taxa de ocupação -->
+      <mat-card class="kpi-card kpi-card--clickable" routerLink="/agenda">
+        <mat-card-content>
+          <div class="kpi-card__inner">
+            <div class="kpi-card__info">
+              <span class="kpi-card__label">Ocupação Hoje</span>
+              <span class="kpi-card__value">{{ ds.taxaOcupacao().percentual | number:'1.0-1' }}%</span>
+            </div>
+            <mat-icon class="kpi-card__icon" style="color:#7c3aed">event_available</mat-icon>
+          </div>
+          <span class="kpi-card__sub">
+            {{ ds.taxaOcupacao().slots_ocupados }}/{{ ds.taxaOcupacao().total_slots }} slots
+          </span>
+        </mat-card-content>
+      </mat-card>
+
+    </div>
+
+    <!-- ── Custo IA ───────────────────────────────────────────── -->
+    <mat-card class="section-card section-card--clickable" routerLink="/billing">
+      <mat-card-header>
+        <mat-card-title>
+          <mat-icon>payments</mat-icon>
+          Custo IA Hoje
+        </mat-card-title>
+        <mat-card-subtitle>
+          USD {{ kpi.custo_ia_total | number:'1.4-4' }} de
+          USD {{ kpi.limite_diario | number:'1.2-2' }}
+          ({{ percentualCusto | percent:'1.0-1' }})
+          <mat-icon class="card-link-icon" inline>open_in_new</mat-icon>
+        </mat-card-subtitle>
+      </mat-card-header>
+      <mat-card-content>
+        <mat-progress-bar
+          [color]="corProgressBar"
+          mode="determinate"
+          [value]="percentualCusto * 100"
+          class="billing-bar"
+          [matTooltip]="(percentualCusto | percent:'1.0-1') + ' do limite diário utilizado'" />
+      </mat-card-content>
+    </mat-card>
+
+    <!-- ── Próximas consultas ─────────────────────────────────── -->
+    <mat-card class="section-card">
+      <mat-card-header>
+        <mat-card-title>
+          <mat-icon>upcoming</mat-icon>
+          Próximas Consultas
+        </mat-card-title>
+        <mat-card-subtitle>Agendadas a partir de agora</mat-card-subtitle>
+        <span class="spacer-header"></span>
+        <button mat-button color="primary" (click)="irParaConsultas('AGENDADA')" class="ver-todas-btn">
+          Ver todas <mat-icon inline>chevron_right</mat-icon>
+        </button>
+      </mat-card-header>
+      <mat-card-content>
+        @if (ds.proximas().length) {
+          <div class="proximas-lista">
+            @for (c of ds.proximas(); track c.consulta_id) {
+              <div class="proxima-item" (click)="irParaConsultas('AGENDADA')">
+                <div class="proxima-hora">{{ c.hora_inicio }}</div>
+                <div class="proxima-info">
+                  <span class="proxima-paciente">{{ c.paciente_nome }}</span>
+                  <span class="proxima-meta">{{ c.medico_nome }} · {{ c.especialidade_nome }}</span>
+                </div>
+                <span class="urgencia-badge urgencia-badge--{{ c.urgencia | lowercase }}">
+                  {{ c.urgencia }}
+                </span>
+              </div>
+            }
+          </div>
+        } @else {
+          <p class="empty-text">Nenhuma consulta agendada para o restante do dia.</p>
+        }
+      </mat-card-content>
+    </mat-card>
+
+    <!-- ── Gráfico uso por modelo ─────────────────────────────── -->
+    @if (ds.usoModelos().length) {
+      <mat-card class="section-card section-card--clickable" routerLink="/billing">
+        <mat-card-header>
+          <mat-card-title>
+            <mat-icon>psychology</mat-icon>
+            Uso por Modelo IA
+          </mat-card-title>
+          <mat-card-subtitle>
+            Detalhes completos em Billing
+            <mat-icon class="card-link-icon" inline>open_in_new</mat-icon>
+          </mat-card-subtitle>
+        </mat-card-header>
+        <mat-card-content>
+          <canvas #modelChart class="chart-canvas"></canvas>
+        </mat-card-content>
+      </mat-card>
+    }
+
+  } @else {
+    <div class="empty-day">
+      <mat-icon>event_busy</mat-icon>
+      <p>Nenhuma atividade registrada para este dia.</p>
+      <button mat-stroked-button routerLink="/agenda">Ver Agenda</button>
+    </div>
+  }
+
+}

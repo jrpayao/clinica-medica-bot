@@ -1,0 +1,18 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(curl -s -X POST http://localhost:8100/v1/chat/sessao -H 'Content-Type: application/json' -d '{\"canal\":\"PORTAL\"}')",
+      "Bash(python3 -c ':*)",
+      "Bash(wscat --version)",
+      "Bash(python3 -c \"import websockets; print\\('websockets ok'\\)\")",
+      "Bash(psql postgresql://medbot:medbot@localhost:5432/medbot -c \"SELECT e.nome, l.plano, l.status, l.trial_expira_em FROM licencas l JOIN estabelecimentos e ON e.id = l.estabelecimento_id;\")",
+      "Bash(python3 -c \"import json,sys; d=json.load\\(sys.stdin\\); print\\(d.get\\('dependencies',{}\\).get\\('@angular/core','?'\\)\\); print\\(list\\(d.get\\('scripts',{}\\).keys\\(\\)\\)\\)\")",
+      "Bash(npx ng:*)",
+      "Bash(node_modules/.bin/ng build:*)",
+      "Bash(npm install:*)",
+      "Bash(python3 -c \"import json,sys; d=json.load\\(sys.stdin\\); print\\(d.get\\('scripts',{}\\)\\)\")",
+      "Bash(node_modules/.bin/ng serve:*)",
+      "Bash(echo \"Portal PID: $!\")"
+    ]
+  }
+}

@@ -1,0 +1,148 @@
+<div class="auth-page">
+  <div class="auth-card">
+
+    <!-- Logo / Brand -->
+    <div class="brand">
+      <div class="brand-icon">🏥</div>
+      <h1>MedBot</h1>
+      <p>Agendamento inteligente de consultas</p>
+    </div>
+
+    <!-- Toggle Paciente / Equipe -->
+    <div class="mode-tabs">
+      <button
+        class="mode-tab"
+        [class.active]="modo() === 'paciente'"
+        (click)="trocarModo('paciente')"
+      >Paciente</button>
+      <button
+        class="mode-tab"
+        [class.active]="modo() === 'equipe'"
+        (click)="trocarModo('equipe')"
+      >Equipe / Admin</button>
+    </div>
+
+    <!-- ── FLUXO PACIENTE ── -->
+    @if (modo() === 'paciente') {
+
+      @if (etapa() === 'cpf') {
+        <form class="auth-form" (ngSubmit)="solicitarSms()">
+          <div class="form-group">
+            <label for="cpf">CPF</label>
+            <input
+              id="cpf"
+              type="text"
+              inputmode="numeric"
+              placeholder="000.000.000-00"
+              autocomplete="off"
+              [value]="cpf()"
+              (input)="onCpfInput($event)"
+              required
+            />
+          </div>
+          <button
+            class="btn-primary"
+            type="submit"
+            [disabled]="carregando() || cpfNumerosOnly.length < 11"
+          >
+            @if (carregando()) { <span class="spinner"></span> }
+            {{ carregando() ? 'Enviando...' : 'Receber código SMS' }}
+          </button>
+        </form>
+      }
+
+      @if (etapa() === 'codigo') {
+        <form class="auth-form" (ngSubmit)="verificarCodigo()">
+          <p class="info-text">
+            Código enviado para o CPF <strong>{{ cpf() }}</strong>
+          </p>
+
+          @if (devCodigo()) {
+            <div class="dev-badge">
+              🛠 Dev mode — código: <strong>{{ devCodigo() }}</strong>
+            </div>
+          }
+
+          <div class="form-group">
+            <label for="codigo">Código SMS</label>
+            <input
+              id="codigo"
+              type="text"
+              inputmode="numeric"
+              placeholder="000000"
+              maxlength="6"
+              autocomplete="one-time-code"
+              [value]="codigo()"
+              (input)="onCodigoInput($event)"
+              required
+            />
+          </div>
+
+          <button
+            class="btn-primary"
+            type="submit"
+            [disabled]="carregando() || codigo().length < 6"
+          >
+            @if (carregando()) { <span class="spinner"></span> }
+            {{ carregando() ? 'Verificando...' : 'Entrar' }}
+          </button>
+
+          <button
+            type="button"
+            class="btn-ghost"
+            (click)="etapa.set('cpf'); codigo.set('')"
+          >← Usar outro CPF</button>
+        </form>
+      }
+
+    }
+
+    <!-- ── FLUXO EQUIPE ── -->
+    @if (modo() === 'equipe') {
+      <form class="auth-form" (ngSubmit)="loginEquipe()">
+        <div class="form-group">
+          <label for="email">E-mail</label>
+          <input
+            id="email"
+            type="email"
+            placeholder="medico@hospital.com"
+            autocomplete="email"
+            [value]="email()"
+            (input)="onEmailInput($event)"
+            required
+          />
+        </div>
+
+        <div class="form-group">
+          <label for="senha">Senha</label>
+          <input
+            id="senha"
+            type="password"
+            placeholder="••••••••"
+            autocomplete="current-password"
+            [value]="senha()"
+            (input)="onSenhaInput($event)"
+            required
+          />
+        </div>
+
+        <button
+          class="btn-primary"
+          type="submit"
+          [disabled]="carregando() || !email() || !senha()"
+        >
+          @if (carregando()) { <span class="spinner"></span> }
+          {{ carregando() ? 'Entrando...' : 'Entrar' }}
+        </button>
+      </form>
+    }
+
+    <!-- Mensagem de erro -->
+    @if (erro()) {
+      <div class="alert-error">
+        <span>⚠</span> {{ erro() }}
+      </div>
+    }
+
+  </div>
+</div>

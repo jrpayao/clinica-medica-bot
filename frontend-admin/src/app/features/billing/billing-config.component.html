@@ -1,0 +1,73 @@
+<mat-card appearance="outlined" class="config-card">
+  <mat-card-header>
+    <mat-card-title>
+      <mat-icon>tune</mat-icon>
+      Limites de Consumo IA
+    </mat-card-title>
+    <mat-card-subtitle>
+      Valores aplicados em memória — persistem até reinício do servidor.
+    </mat-card-subtitle>
+  </mat-card-header>
+
+  <mat-card-content>
+    <form [formGroup]="form" (ngSubmit)="salvar()" class="config-form">
+
+      <mat-form-field appearance="outline">
+        <mat-label>Limite Diário (USD)</mat-label>
+        <span matTextPrefix>$ &nbsp;</span>
+        <input matInput type="number" min="0.01" step="0.01" formControlName="daily_limit_usd">
+        <mat-icon matSuffix>today</mat-icon>
+        @if (form.get('daily_limit_usd')?.hasError('required')) {
+          <mat-error>Campo obrigatório</mat-error>
+        }
+        @if (form.get('daily_limit_usd')?.hasError('min')) {
+          <mat-error>Valor mínimo: $0.01</mat-error>
+        }
+      </mat-form-field>
+
+      <mat-form-field appearance="outline">
+        <mat-label>Limite Mensal (USD)</mat-label>
+        <span matTextPrefix>$ &nbsp;</span>
+        <input matInput type="number" min="0.01" step="0.01" formControlName="monthly_limit_usd">
+        <mat-icon matSuffix>date_range</mat-icon>
+        @if (form.get('monthly_limit_usd')?.hasError('required')) {
+          <mat-error>Campo obrigatório</mat-error>
+        }
+        @if (form.get('monthly_limit_usd')?.hasError('min')) {
+          <mat-error>Valor mínimo: $0.01</mat-error>
+        }
+      </mat-form-field>
+
+      <mat-form-field appearance="outline">
+        <mat-label>Alerta quando atingir (%)</mat-label>
+        <input matInput type="number" min="1" max="100" step="1" formControlName="alert_threshold">
+        <span matTextSuffix>&nbsp;%</span>
+        <mat-icon matSuffix>notifications_active</mat-icon>
+        <mat-hint>Alerta disparado quando o custo diário atingir esta % do limite.</mat-hint>
+        @if (form.get('alert_threshold')?.hasError('min') || form.get('alert_threshold')?.hasError('max')) {
+          <mat-error>Valor entre 1% e 100%</mat-error>
+        }
+      </mat-form-field>
+
+      <div class="form-actions">
+        <button
+          mat-flat-button
+          color="primary"
+          type="submit"
+          [disabled]="form.invalid || salvando()"
+        >
+          @if (salvando()) {
+            <mat-spinner diameter="18" class="btn-spinner" />
+            Salvando...
+          } @else {
+            <ng-container>
+              <mat-icon>save</mat-icon>
+              Salvar Configurações
+            </ng-container>
+          }
+        </button>
+      </div>
+
+    </form>
+  </mat-card-content>
+</mat-card>

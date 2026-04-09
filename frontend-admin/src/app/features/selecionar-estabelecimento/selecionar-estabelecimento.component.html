@@ -1,0 +1,148 @@
+<div class="sel-page">
+
+  <!-- ── Painel lateral esquerdo — branding ──────────────────── -->
+  <aside class="sel-brand">
+    <mat-icon class="sel-brand__icon">local_hospital</mat-icon>
+    <h1 class="sel-brand__title">MedBot Admin</h1>
+    <p class="sel-brand__subtitle">Sistema inteligente de agendamento médico com IA</p>
+
+    <div class="sel-brand__user">
+      <div class="user-avatar">{{ iniciais() }}</div>
+      <div>
+        <strong>{{ usuario()?.nome ?? 'Admin' }}</strong>
+        <span>Admin Global</span>
+      </div>
+    </div>
+
+    <button mat-stroked-button class="btn-logout" (click)="logout()">
+      <mat-icon>logout</mat-icon>
+      Sair
+    </button>
+  </aside>
+
+  <!-- ── Conteúdo principal ───────────────────────────────────── -->
+  <main class="sel-main">
+
+    <div class="sel-header">
+      <h2>Selecionar Estabelecimento</h2>
+      <p>Escolha o estabelecimento que deseja gerenciar nesta sessão.</p>
+    </div>
+
+    <!-- Erro -->
+    @if (erro()) {
+      <div class="sel-error">
+        <mat-icon>error_outline</mat-icon>
+        {{ erro() }}
+      </div>
+    }
+
+    <!-- Loading -->
+    @if (carregando()) {
+      <div class="sel-loading">
+        <mat-spinner diameter="48" />
+        <p>Carregando estabelecimentos...</p>
+      </div>
+    }
+
+    <!-- Empty -->
+    @if (!carregando() && estabelecimentos().length === 0 && !erro()) {
+      <div class="sel-empty">
+        <mat-icon>domain_disabled</mat-icon>
+        <h3>Nenhum estabelecimento cadastrado</h3>
+        <p>Ainda não há estabelecimentos registrados na plataforma.</p>
+      </div>
+    }
+
+    <!-- Opção super admin -->
+    <div class="superadmin-bar">
+      <div class="superadmin-info">
+        <mat-icon>admin_panel_settings</mat-icon>
+        <div>
+          <strong>Continuar como Super Admin</strong>
+          <span>Acesso global sem escopo de estabelecimento — visualiza toda a plataforma.</span>
+        </div>
+      </div>
+      <button mat-stroked-button color="primary" (click)="continuarComoSuperAdmin()">
+        <mat-icon>open_in_new</mat-icon>
+        Modo Global
+      </button>
+    </div>
+
+    <!-- Grid de cards -->
+    @if (!carregando() && estabelecimentos().length > 0) {
+      <div class="sel-grid">
+        @for (est of estabelecimentos(); track est.id) {
+          <mat-card
+            appearance="outlined"
+            class="est-card"
+            [class.est-card--inativo]="!est.ativo"
+            [class.est-card--loading]="selecionando() === est.id"
+          >
+            <mat-card-header>
+              <div mat-card-avatar class="est-avatar">
+                <mat-icon>{{ tipoIcon(est.tipo) }}</mat-icon>
+              </div>
+              <mat-card-title>{{ est.nome }}</mat-card-title>
+              <mat-card-subtitle>{{ tipoLabel(est.tipo) }}</mat-card-subtitle>
+
+              <div class="est-badges">
+                <span class="badge badge--{{ est.plano }}">{{ planoLabel(est.plano) }}</span>
+                @if (est.ativo) {
+                  <span class="badge badge--ativo">Ativo</span>
+                } @else {
+                  <span class="badge badge--inativo">Inativo</span>
+                }
+              </div>
+            </mat-card-header>
+
+            <mat-card-content>
+              <ul class="est-info">
+                <li>
+                  <mat-icon>location_on</mat-icon>
+                  <span>{{ formatarLocalizacao(est) }}</span>
+                </li>
+                @if (est.email) {
+                  <li>
+                    <mat-icon>email</mat-icon>
+                    <span>{{ est.email }}</span>
+                  </li>
+                }
+                @if (est.telefone) {
+                  <li>
+                    <mat-icon>phone</mat-icon>
+                    <span>{{ est.telefone }}</span>
+                  </li>
+                }
+                <li>
+                  <mat-icon>link</mat-icon>
+                  <span class="slug">{{ est.slug }}</span>
+                </li>
+              </ul>
+            </mat-card-content>
+
+            <mat-card-actions>
+              @if (selecionando() === est.id) {
+                <button mat-flat-button color="primary" disabled class="btn-acessar">
+                  <mat-spinner diameter="16" />
+                  Acessando...
+                </button>
+              } @else {
+                <button
+                  mat-flat-button
+                  color="primary"
+                  class="btn-acessar"
+                  [disabled]="!est.ativo || selecionando() !== null"
+                  (click)="est.ativo && selecionar(est.id)"
+                >
+                  <mat-icon>login</mat-icon>
+                  @if (est.ativo) { Acessar } @else { Inativo }
+                </button>
+              }
+            </mat-card-actions>
+          </mat-card>
+        }
+      </div>
+    }
+
+  </main>
+</div>
