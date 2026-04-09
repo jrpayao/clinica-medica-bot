@@ -12,8 +12,8 @@ export interface UsoModelo {
 export interface ProximaConsulta {
   consulta_id: number;
   hora_inicio: string;
-  paciente_nome: string;
-  medico_nome: string;
+  cliente_nome: string;
+  profissional_nome: string;
   especialidade_nome: string;
   urgencia: string;
   status: string;

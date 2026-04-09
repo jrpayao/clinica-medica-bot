@@ -8,27 +8,27 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatDialog } from '@angular/material/dialog';
 
-import { MedicosService, Medico } from './medicos.service';
-import { MedicoDialogComponent, MedicoDialogData } from './medico-dialog.component';
+import { ProfissionaisService, Medico } from './profissionais.service';
+import { ProfissionalDialogComponent, ProfissionalDialogData } from './profissional-dialog.component';
 import { ConfirmDialogComponent } from '../../shared/components/confirm-dialog/confirm-dialog.component';
 import { EmptyStateComponent } from '../../shared/components/empty-state/empty-state.component';
 import { PageHeaderComponent } from '../../shared/components/page-header/page-header.component';
 import { ToastService } from '../../core/services/toast.service';
 
 @Component({
-  selector: 'app-medicos',
+  selector: 'app-profissionais',
   standalone: true,
   imports: [
     MatTableModule, MatButtonModule, MatIconModule,
     MatChipsModule, MatTooltipModule, MatProgressSpinnerModule,
     EmptyStateComponent, PageHeaderComponent,
   ],
-  templateUrl: './medicos.component.html',
-  styleUrl: './medicos.component.scss',
+  templateUrl: './profissionais.component.html',
+  styleUrl: './profissionais.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class MedicosComponent implements OnInit {
-  readonly svc = inject(MedicosService);
+export class ProfissionaisComponent implements OnInit {
+  readonly svc = inject(ProfissionaisService);
   private readonly dialog = inject(MatDialog);
   private readonly toast = inject(ToastService);
 
@@ -39,11 +39,11 @@ export class MedicosComponent implements OnInit {
   }
 
   abrirNovo(): void {
-    const ref = this.dialog.open(MedicoDialogComponent, {
+    const ref = this.dialog.open(ProfissionalDialogComponent, {
       data: {
         medico: null,
         especialidades: this.svc.especialidades(),
-      } satisfies MedicoDialogData,
+      } satisfies ProfissionalDialogData,
       width: '520px',
     });
 
@@ -59,11 +59,11 @@ export class MedicosComponent implements OnInit {
   }
 
   abrirEditar(medico: Medico): void {
-    const ref = this.dialog.open(MedicoDialogComponent, {
+    const ref = this.dialog.open(ProfissionalDialogComponent, {
       data: {
         medico,
         especialidades: this.svc.especialidades(),
-      } satisfies MedicoDialogData,
+      } satisfies ProfissionalDialogData,
       width: '520px',
     });
 

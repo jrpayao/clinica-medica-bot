@@ -4,8 +4,8 @@ import { firstValueFrom } from 'rxjs';
 
 export interface SlotAdmin {
   id: number;
-  medico_id: number;
-  medico_nome: string;
+  profissional_id: number;
+  profissional_nome: string;
   especialidade_nome: string;
   data: string;
   hora_inicio: string;
@@ -16,7 +16,7 @@ export interface SlotAdmin {
 
 export interface ConsultaAdmin {
   id: number;
-  paciente_nome: string;
+  cliente_nome: string;
   paciente_cpf_mascarado: string;
   urgencia: string;
   status: string;
@@ -39,7 +39,7 @@ export class AgendaAdminService {
     this.carregando.set(true);
     try {
       const medicoId = this.filtroMedicoId();
-      const params = medicoId ? `?medico_id=${medicoId}` : '';
+      const params = medicoId ? `?profissional_id=${medicoId}` : '';
       const res = await firstValueFrom(
         this.api.get<SlotAdmin[]>(`/agenda/slots/dia/${data}${params}`)
       );

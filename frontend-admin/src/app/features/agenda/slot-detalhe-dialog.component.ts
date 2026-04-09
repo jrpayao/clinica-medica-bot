@@ -19,7 +19,7 @@ import { SlotAdmin } from '../../core/services/agenda-admin.service';
   template: `
     <div class="dialog-header" [style.borderColor]="corUrgencia">
       <div>
-        <h2 mat-dialog-title>{{ slot.hora_inicio.slice(0,5) }} — {{ slot.medico_nome }}</h2>
+        <h2 mat-dialog-title>{{ slot.hora_inicio.slice(0,5) }} — {{ slot.profissional_nome }}</h2>
         <p class="dialog-esp">{{ slot.especialidade_nome }}</p>
       </div>
       <span class="badge badge--{{ slot.status.toLowerCase() }}">{{ slot.status }}</span>
@@ -31,7 +31,7 @@ import { SlotAdmin } from '../../core/services/agenda-admin.service';
         <!-- Paciente -->
         <section class="section">
           <h4 class="section-title"><mat-icon>person</mat-icon> Paciente</h4>
-          <p class="info-row"><strong>Nome:</strong> {{ c.paciente_nome }}</p>
+          <p class="info-row"><strong>Nome:</strong> {{ c.cliente_nome }}</p>
           @if (c.paciente_cpf_mascarado) {
             <p class="info-row"><strong>CPF:</strong> {{ c.paciente_cpf_mascarado }}</p>
           }

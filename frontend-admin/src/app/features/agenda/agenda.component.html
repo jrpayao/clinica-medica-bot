@@ -83,14 +83,14 @@
               [style.borderColor]="corSlot(slot.status)"
               [style.color]="corSlot(slot.status)"
               (click)="abrirDetalhe(slot)"
-              [matTooltip]="slot.medico_nome + ' — ' + slot.status">
+              [matTooltip]="slot.profissional_nome + ' — ' + slot.status">
 
               <mat-icon class="slot-icon">{{ iconSlot(slot.status) }}</mat-icon>
 
               <div class="slot-info">
-                <span class="slot-medico">{{ slot.medico_nome }}</span>
+                <span class="slot-medico">{{ slot.profissional_nome }}</span>
                 @if (slot.consulta) {
-                  <span class="slot-paciente">{{ slot.consulta.paciente_nome }}</span>
+                  <span class="slot-paciente">{{ slot.consulta.cliente_nome }}</span>
                 }
               </div>
             </button>

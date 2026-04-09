@@ -36,10 +36,10 @@
       <mat-expansion-panel-header>
         <mat-panel-title>
           <span class="data-hora">{{ slot.data | date:'dd/MM' }} {{ slot.hora_inicio.slice(0,5) }}</span>
-          <span class="medico-nome">{{ slot.medico_nome }}</span>
+          <span class="medico-nome">{{ slot.profissional_nome }}</span>
         </mat-panel-title>
         <mat-panel-description>
-          <span class="paciente-nome">{{ slot.consulta!.paciente_nome }}</span>
+          <span class="paciente-nome">{{ slot.consulta!.cliente_nome }}</span>
           <span class="badge badge--{{ slot.consulta!.urgencia.toLowerCase() }}">
             {{ slot.consulta!.urgencia }}
           </span>

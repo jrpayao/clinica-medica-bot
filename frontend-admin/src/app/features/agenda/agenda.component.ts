@@ -25,7 +25,7 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatDialog } from '@angular/material/dialog';
 
 import { AgendaAdminService, SlotAdmin } from '../../core/services/agenda-admin.service';
-import { MedicosService } from '../medicos/medicos.service';
+import { ProfissionaisService } from '../profissionais/profissionais.service';
 import { AuthAdminService } from '../../core/services/auth-admin.service';
 import { SlotDetalheDialogComponent } from './slot-detalhe-dialog.component';
 import { EmptyStateComponent } from '../../shared/components/empty-state/empty-state.component';
@@ -49,7 +49,7 @@ import { localDateString } from '../../core/utils/date.utils';
 })
 export class AgendaComponent implements OnInit {
   readonly agenda    = inject(AgendaAdminService);
-  readonly medicosSvc = inject(MedicosService);
+  readonly medicosSvc = inject(ProfissionaisService);
   readonly auth      = inject(AuthAdminService);
   private readonly dialog = inject(MatDialog);
 
@@ -80,10 +80,10 @@ export class AgendaComponent implements OnInit {
     let slots = this.agenda.slots();
 
     if (medicoId) {
-      slots = slots.filter((s) => s.medico_id === medicoId);
+      slots = slots.filter((s) => s.profissional_id === medicoId);
     } else if (espId) {
       const ids = new Set(this.medicosFiltrados().map((m) => m.id));
-      slots = slots.filter((s) => ids.has(s.medico_id));
+      slots = slots.filter((s) => ids.has(s.profissional_id));
     }
 
     return slots;
@@ -120,7 +120,7 @@ export class AgendaComponent implements OnInit {
       this.agenda.filtroMedicoId.set(null);
     });
 
-    // Muda médico → recarrega backend com ?medico_id=N
+    // Muda médico → recarrega backend com ?profissional_id=N
     this.filtroMedicoCtrl.valueChanges.subscribe(async (id) => {
       this.filtroMedicoId.set(id);
       if (this.semEstabelecimento()) return;

@@ -175,8 +175,8 @@
               <div class="proxima-item" (click)="irParaConsultas('AGENDADA')">
                 <div class="proxima-hora">{{ c.hora_inicio }}</div>
                 <div class="proxima-info">
-                  <span class="proxima-paciente">{{ c.paciente_nome }}</span>
-                  <span class="proxima-meta">{{ c.medico_nome }} · {{ c.especialidade_nome }}</span>
+                  <span class="proxima-paciente">{{ c.cliente_nome }}</span>
+                  <span class="proxima-meta">{{ c.profissional_nome }} · {{ c.especialidade_nome }}</span>
                 </div>
                 <span class="urgencia-badge urgencia-badge--{{ c.urgencia | lowercase }}">
                   {{ c.urgencia }}

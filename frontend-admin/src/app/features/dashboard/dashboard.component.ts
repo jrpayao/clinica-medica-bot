@@ -142,7 +142,7 @@ export class DashboardComponent implements OnInit, AfterViewInit {
     const data = localDateString(this.dataCtrl.value ?? new Date());
     const qp: Record<string, string> = { data };
     if (status) qp['status'] = status;
-    this.router.navigate(['/consultas'], { queryParams: qp });
+    this.router.navigate(['/atendimentos'], { queryParams: qp });
   }
 
   get percentualCusto(): number {

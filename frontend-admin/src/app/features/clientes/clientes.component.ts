@@ -21,7 +21,7 @@ import { MatDialog } from '@angular/material/dialog';
 import { ApiService } from '../../core/services/api.service';
 import { EmptyStateComponent } from '../../shared/components/empty-state/empty-state.component';
 import { PageHeaderComponent } from '../../shared/components/page-header/page-header.component';
-import { PacienteEditDialogComponent } from './paciente-edit-dialog.component';
+import { ClienteEditDialogComponent } from './cliente-edit-dialog.component';
 import { ToastService } from '../../core/services/toast.service';
 
 interface Paciente {
@@ -38,7 +38,7 @@ interface Paciente {
 }
 
 @Component({
-  selector: 'app-pacientes',
+  selector: 'app-clientes',
   standalone: true,
   imports: [
     ReactiveFormsModule,
@@ -47,11 +47,11 @@ interface Paciente {
     MatTooltipModule, MatPaginatorModule,
     EmptyStateComponent, PageHeaderComponent,
   ],
-  templateUrl: './pacientes.component.html',
-  styleUrl: './pacientes.component.scss',
+  templateUrl: './clientes.component.html',
+  styleUrl: './clientes.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class PacientesComponent implements OnInit {
+export class ClientesComponent implements OnInit {
   private readonly api = inject(ApiService);
   private readonly dialog = inject(MatDialog);
   private readonly toast = inject(ToastService);
@@ -82,17 +82,17 @@ export class PacientesComponent implements OnInit {
   async ngOnInit(): Promise<void> {
     this.carregando.set(true);
     try {
-      const lista = await firstValueFrom(this.api.get<Paciente[]>('/pacientes/'));
+      const lista = await firstValueFrom(this.api.get<Paciente[]>('/clientes/'));
       this.pacientes.set(lista);
     } catch {
-      this.toast.erro('Erro ao carregar pacientes.');
+      this.toast.erro('Erro ao carregar clientes.');
     } finally {
       this.carregando.set(false);
     }
   }
 
   abrirEditar(paciente: Paciente): void {
-    const ref = this.dialog.open(PacienteEditDialogComponent, {
+    const ref = this.dialog.open(ClienteEditDialogComponent, {
       data: paciente,
       width: '480px',
     });
@@ -100,12 +100,12 @@ export class PacientesComponent implements OnInit {
       if (!dados) return;
       try {
         const atualizado = await firstValueFrom(
-          this.api.patch<Paciente>(`/pacientes/${paciente.id}`, dados),
+          this.api.patch<Paciente>(`/clientes/${paciente.id}`, dados),
         );
         this.pacientes.update((l) => l.map((p) => (p.id === paciente.id ? atualizado : p)));
-        this.toast.sucesso('Paciente atualizado!');
+        this.toast.sucesso('Cliente atualizado!');
       } catch {
-        this.toast.erro('Erro ao atualizar paciente.');
+        this.toast.erro('Erro ao atualizar cliente.');
       }
     });
   }

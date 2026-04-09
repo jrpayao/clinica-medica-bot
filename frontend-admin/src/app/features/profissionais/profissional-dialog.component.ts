@@ -1,5 +1,5 @@
 /**
- * MedicoDialogComponent — formulário de criação/edição de médico.
+ * ProfissionalDialogComponent — formulário de criação/edição de médico.
  * Aberto via MatDialog. Retorna os dados ao fechar com "Salvar".
  */
 import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
@@ -12,15 +12,15 @@ import { MatSelectModule } from '@angular/material/select';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 
-import { Medico, Especialidade } from './medicos.service';
+import { Medico, Especialidade } from './profissionais.service';
 
-export interface MedicoDialogData {
+export interface ProfissionalDialogData {
   medico: Medico | null;
   especialidades: Especialidade[];
 }
 
 @Component({
-  selector: 'app-medico-dialog',
+  selector: 'app-profissional-dialog',
   standalone: true,
   imports: [
     ReactiveFormsModule,
@@ -121,9 +121,9 @@ export interface MedicoDialogData {
     mat-dialog-actions { padding-bottom: 16px !important; gap: 8px; }
   `],
 })
-export class MedicoDialogComponent {
-  readonly data = inject<MedicoDialogData>(MAT_DIALOG_DATA);
-  readonly dialogRef = inject(MatDialogRef<MedicoDialogComponent>);
+export class ProfissionalDialogComponent {
+  readonly data = inject<ProfissionalDialogData>(MAT_DIALOG_DATA);
+  readonly dialogRef = inject(MatDialogRef<ProfissionalDialogComponent>);
   private readonly fb = inject(FormBuilder);
 
   readonly form = this.fb.group({

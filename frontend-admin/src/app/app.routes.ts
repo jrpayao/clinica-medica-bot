@@ -35,21 +35,21 @@ export const routes: Routes = [
           import('./features/agenda/agenda.component').then((m) => m.AgendaComponent),
       },
       {
-        path: 'consultas',
+        path: 'atendimentos',
         loadComponent: () =>
-          import('./features/consultas/consultas.component').then((m) => m.ConsultasComponent),
+          import('./features/atendimentos/atendimentos.component').then((m) => m.AtendimentosComponent),
       },
       {
-        path: 'pacientes',
+        path: 'clientes',
         loadComponent: () =>
-          import('./features/pacientes/pacientes.component').then((m) => m.PacientesComponent),
+          import('./features/clientes/clientes.component').then((m) => m.ClientesComponent),
       },
 
       // ── Admin + Global ──────────────────────────────────────
       {
-        path: 'medicos',
+        path: 'profissionais',
         loadComponent: () =>
-          import('./features/medicos/medicos.component').then((m) => m.MedicosComponent),
+          import('./features/profissionais/profissionais.component').then((m) => m.ProfissionaisComponent),
       },
       {
         path: 'especialidades',

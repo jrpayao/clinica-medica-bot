@@ -12,7 +12,7 @@ interface Paciente {
 }
 
 @Component({
-  selector: 'app-paciente-edit-dialog',
+  selector: 'app-cliente-edit-dialog',
   standalone: true,
   imports: [ReactiveFormsModule, MatDialogModule, MatButtonModule, MatFormFieldModule, MatInputModule, MatIconModule],
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -59,9 +59,9 @@ interface Paciente {
   styles: [`.dialog-form { display: flex; flex-direction: column; gap: 4px; min-width: 380px; padding-top: 8px; }
             mat-dialog-actions { padding-bottom: 16px !important; gap: 8px; }`],
 })
-export class PacienteEditDialogComponent {
+export class ClienteEditDialogComponent {
   readonly data = inject<Paciente>(MAT_DIALOG_DATA);
-  readonly dialogRef = inject(MatDialogRef<PacienteEditDialogComponent>);
+  readonly dialogRef = inject(MatDialogRef<ClienteEditDialogComponent>);
   private readonly fb = inject(FormBuilder);
 
   readonly form = this.fb.group({

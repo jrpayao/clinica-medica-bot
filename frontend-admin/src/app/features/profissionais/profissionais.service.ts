@@ -41,7 +41,7 @@ export interface MedicoUpdate {
 }
 
 @Injectable({ providedIn: 'root' })
-export class MedicosService {
+export class ProfissionaisService {
   private readonly api = inject(ApiService);
 
   readonly medicos = signal<Medico[]>([]);
@@ -55,13 +55,13 @@ export class MedicosService {
     this.erro.set(null);
     try {
       const [medicos, especialidades] = await Promise.all([
-        firstValueFrom(this.api.get<Medico[]>('/medicos/')),
+        firstValueFrom(this.api.get<Medico[]>('/profissionais/')),
         firstValueFrom(this.api.get<Especialidade[]>('/especialidades/')),
       ]);
       this.medicos.set(medicos);
       this.especialidades.set(especialidades);
     } catch {
-      this.erro.set('Erro ao carregar médicos.');
+      this.erro.set('Erro ao carregar profissionais.');
     } finally {
       this.carregando.set(false);
     }
@@ -70,7 +70,7 @@ export class MedicosService {
   async criar(dados: MedicoCreate): Promise<Medico> {
     this.salvando.set(true);
     try {
-      const novo = await firstValueFrom(this.api.post<Medico>('/medicos/', dados));
+      const novo = await firstValueFrom(this.api.post<Medico>('/profissionais/', dados));
       this.medicos.update((list) => [...list, novo]);
       return novo;
     } finally {
@@ -82,7 +82,7 @@ export class MedicosService {
     this.salvando.set(true);
     try {
       const atualizado = await firstValueFrom(
-        this.api.patch<Medico>(`/medicos/${id}`, dados)
+        this.api.patch<Medico>(`/profissionais/${id}`, dados)
       );
       this.medicos.update((list) => list.map((m) => (m.id === id ? atualizado : m)));
     } finally {

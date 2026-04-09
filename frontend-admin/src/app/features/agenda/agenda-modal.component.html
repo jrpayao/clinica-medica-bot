@@ -7,14 +7,14 @@
 
     <section class="modal-section">
       <h4>Médico</h4>
-      <p>{{ slot.medico_nome }}</p>
+      <p>{{ slot.profissional_nome }}</p>
       <p class="secondary">{{ slot.especialidade_nome }}</p>
     </section>
 
     @if (slot.consulta; as c) {
       <section class="modal-section">
         <h4>Paciente</h4>
-        <p>{{ c.paciente_nome }}</p>
+        <p>{{ c.cliente_nome }}</p>
         <p class="secondary">CPF: {{ c.paciente_cpf_mascarado }}</p>
       </section>
 

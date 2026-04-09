@@ -28,8 +28,8 @@ import { localDateString } from '../../core/utils/date.utils';
 interface Consulta {
   id: number;
   slot_id: number;
-  paciente_id: number;
-  medico_id: number;
+  cliente_id: number;
+  profissional_id: number;
   status: string;
   urgencia: string;
   canal_origem: string;
@@ -41,8 +41,8 @@ interface Consulta {
 
 interface SlotComConsulta {
   id: number;
-  medico_id: number;
-  medico_nome: string;
+  profissional_id: number;
+  profissional_nome: string;
   especialidade_nome: string;
   data: string;
   hora_inicio: string;
@@ -50,7 +50,7 @@ interface SlotComConsulta {
   status: string;
   consulta: {
     id: number;
-    paciente_nome: string;
+    cliente_nome: string;
     paciente_cpf_mascarado: string;
     status: string;
     urgencia: string;
@@ -62,7 +62,7 @@ interface SlotComConsulta {
 }
 
 @Component({
-  selector: 'app-consultas',
+  selector: 'app-atendimentos',
   standalone: true,
   imports: [
     DatePipe, ReactiveFormsModule,
@@ -72,11 +72,11 @@ interface SlotComConsulta {
     MatExpansionModule,
     EmptyStateComponent, PageHeaderComponent,
   ],
-  templateUrl: './consultas.component.html',
-  styleUrl: './consultas.component.scss',
+  templateUrl: './atendimentos.component.html',
+  styleUrl: './atendimentos.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class ConsultasComponent implements OnInit {
+export class AtendimentosComponent implements OnInit {
   private readonly api    = inject(ApiService);
   private readonly dialog = inject(MatDialog);
   private readonly toast  = inject(ToastService);
@@ -106,7 +106,7 @@ export class ConsultasComponent implements OnInit {
   }
 
   async ngOnInit(): Promise<void> {
-    // Aplica filtros vindos de query params (ex: /consultas?status=AGENDADA&data=2026-04-08)
+    // Aplica filtros vindos de query params (ex: /atendimentos?status=AGENDADA&data=2026-04-08)
     const qp = this.route.snapshot.queryParamMap;
     const statusParam = qp.get('status');
     const dataParam   = qp.get('data');
@@ -120,7 +120,7 @@ export class ConsultasComponent implements OnInit {
       );
       this.slots.set(lista);
     } catch {
-      this.toast.erro('Erro ao carregar consultas.');
+      this.toast.erro('Erro ao carregar atendimentos.');
     } finally {
       this.carregando.set(false);
     }
@@ -130,7 +130,7 @@ export class ConsultasComponent implements OnInit {
     const ref = this.dialog.open(ConfirmDialogComponent, {
       data: {
         titulo: 'Cancelar consulta',
-        mensagem: `Cancelar a consulta de ${slot.consulta!.paciente_nome}?`,
+        mensagem: `Cancelar a consulta de ${slot.consulta!.cliente_nome}?`,
         confirmLabel: 'Cancelar consulta',
         confirmColor: 'warn',
       },
