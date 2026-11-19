@@ -6,6 +6,7 @@ from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.base import Base, TimestampMixin
+from app.models.teleconsulta import Modalidade
 
 
 class AtendimentoTipo(str, enum.Enum):
@@ -87,6 +88,12 @@ class Atendimento(Base, TimestampMixin):
         ForeignKey("cliente_convenios.id", ondelete="SET NULL"), nullable=True
     )
     numero_autorizacao: Mapped[str | None] = mapped_column(String(50), nullable=True)
+    modalidade: Mapped[Modalidade] = mapped_column(
+        Enum(Modalidade, name="modalidade_atendimento"),
+        default=Modalidade.PRESENCIAL,
+        server_default="PRESENCIAL",
+        nullable=False,
+    )
     motivo_cancelamento: Mapped[MotivoCancelamento | None] = mapped_column(
         Enum(MotivoCancelamento, name="motivo_cancelamento"), nullable=True
     )

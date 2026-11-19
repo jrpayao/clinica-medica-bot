@@ -133,6 +133,7 @@ async def listar_atendimentos_do_dia(
             Atendimento.canal_origem,
             func.coalesce(Convenio.nome, convenio_do_cadastro.nome),
             Atendimento.observacoes,
+            Atendimento.modalidade,
         )
         .join(Slot, Atendimento.slot_id == Slot.id)
         .join(Cliente, Atendimento.cliente_id == Cliente.id)
@@ -163,10 +164,11 @@ async def listar_atendimentos_do_dia(
             "canal_origem": _valor(canal),
             "convenio_nome": convenio,
             "observacoes": observacoes,
+            "modalidade": _valor(resto[0]) if resto else "PRESENCIAL",
             "acoes": proximas_acoes(status, perfil),
         }
         for (at_id, hora_ini, hora_fim, cli_nome, cpf, telefone, prof_nome, esp_nome,
-             status, urgencia, canal, convenio, observacoes) in linhas
+             status, urgencia, canal, convenio, observacoes, *resto) in linhas
     ]
 
 

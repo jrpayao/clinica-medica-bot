@@ -156,6 +156,7 @@ async def test_lista_do_dia_formata_e_mascara_cpf(mock_db):
         "canal_origem": "PORTAL",
         "convenio_nome": "Unimed",
         "observacoes": None,
+        "modalidade": "PRESENCIAL",
         "acoes": ["PRESENTE", "CONFIRMADA", "FALTA"],
     }]
 

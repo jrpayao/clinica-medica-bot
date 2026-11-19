@@ -81,6 +81,8 @@ _PREFIXO_NOME = re.compile(
 
 RESPOSTA_PLANO_NAO_SEI = "Não sei informar"
 RESPOSTA_SEM_CARTEIRINHA = "Não tenho em mãos"
+RESPOSTA_PRESENCIAL = "Presencial"
+RESPOSTA_ONLINE = "Online (por vídeo)"
 RESPOSTA_ENTRAR_NA_FILA = "Sim, entrar na lista"
 RESPOSTA_RECUSAR_FILA = "Não, obrigado"
 CONVITE_FILA = (
@@ -129,6 +131,7 @@ _DADOS_COLETADOS_INICIAL: dict = {
     "numero_carteirinha": None,
     "contato_step": "cpf",  # "cpf" | "carteirinha" (só convênio) | "telefone" | "email"
     "objetivo": "agendar",  # "agendar" | "fila" (sem horário: entra na lista de espera)
+    "modalidade": "PRESENCIAL",  # "PRESENCIAL" | "ONLINE" (só em horário que aceita online)
     # Legado + compartilhados
     "sintomas": [],
     "especialidade": None,
@@ -1023,6 +1026,7 @@ class ChatService:
                 "hora_inicio": slot.hora_inicio.strftime("%H:%M"),
                 "hora_fim": slot.hora_fim.strftime("%H:%M"),
                 "profissional_nome": profissional.nome if profissional else "Profissional",
+                "aceita_online": slot.aceita_online is True,
             })
 
         return result_slots
@@ -1046,18 +1050,30 @@ class ChatService:
 
         # Buscar info do slot para mostrar ao usuário
         slot_desc = "o horário selecionado"
+        aceita_online = False
         for s in session_data.get("slots_temp", []):
             if s["id"] == slot_id:
                 slot_desc = descrever_horario(s)
+                aceita_online = s.get("aceita_online") is True
                 break
 
         nome = (dados_coletados.get("nome") or "").split()[0]
         saudacao = f"{nome}, " if nome else ""
-        resposta = (
-            f"Ótimo, {saudacao}você escolheu {slot_desc}.\n\n"
-            "Para finalizar o agendamento, preciso de mais algumas informações.\n\n"
-            "Qual é o seu **CPF**?"
-        )
+        dados_coletados["modalidade"] = "PRESENCIAL"
+        extras: dict = {}
+        if aceita_online:
+            dados_coletados["contato_step"] = "modalidade"
+            resposta = (
+                f"Ótimo, {saudacao}você escolheu {slot_desc}.\n\n"
+                "Este horário pode ser presencial ou online, por chamada de vídeo. Como você prefere ser atendido?"
+            )
+            extras = {"quick_replies": [RESPOSTA_PRESENCIAL, RESPOSTA_ONLINE]}
+        else:
+            resposta = (
+                f"Ótimo, {saudacao}você escolheu {slot_desc}.\n\n"
+                "Para finalizar o agendamento, preciso de mais algumas informações.\n\n"
+                "Qual é o seu **CPF**?"
+            )
 
         mensagens.append({"role": "user", "content": mensagem})
         mensagens.append({"role": "assistant", "content": resposta})
@@ -1071,6 +1087,7 @@ class ChatService:
             "estado": ChatEstado.COLETANDO_CONTATO,
             "emergencia": False,
             "sessao_expirada": False,
+            **extras,
         }
 
     async def _processar_coleta_contato(
@@ -1085,7 +1102,27 @@ class ChatService:
         step = dados_coletados.get("contato_step", "cpf")
         extras: dict = {}
 
-        if step == "cpf":
+        if step == "modalidade":
+            texto = mensagem.lower()
+            proximo_estado = ChatEstado.COLETANDO_CONTATO
+            online = any(p in texto for p in ("online", "vídeo", "video", "remot", "distância", "distancia"))
+            presencial = any(p in texto for p in ("presencial", "pessoalmente", "consultório", "consultorio"))
+            if online == presencial:
+                resposta = "Não entendi. Você prefere atendimento presencial ou online, por vídeo?"
+                extras = {"quick_replies": [RESPOSTA_PRESENCIAL, RESPOSTA_ONLINE]}
+            else:
+                dados_coletados["modalidade"] = "ONLINE" if online else "PRESENCIAL"
+                dados_coletados["contato_step"] = "cpf"
+                resposta = (
+                    (
+                        "Combinado, será por vídeo. Você vai receber o link da sala ao final."
+                        if online
+                        else "Combinado, atendimento presencial."
+                    )
+                    + "\n\nPara finalizar o agendamento, qual é o seu **CPF**?"
+                )
+
+        elif step == "cpf":
             cpf = normalizar_cpf(mensagem)
             proximo_estado = ChatEstado.COLETANDO_CONTATO
             if cpf is None:
@@ -1169,7 +1206,8 @@ class ChatService:
                     else ""
                 )
                 + f"**Especialidade:** {especialidade}\n"
-                f"**Horário:** {slot_desc}\n"
+                + ("**Modalidade:** Online, por vídeo\n" if dados_coletados.get("modalidade") == "ONLINE" else "")
+                + f"**Horário:** {slot_desc}\n"
                 f"**Telefone:** {telefone}\n"
                 f"**E-mail:** {email}\n\n"
                 "Deseja confirmar o agendamento? Responda **Sim** para confirmar."
@@ -1201,6 +1239,7 @@ class ChatService:
     ) -> dict:
         """Cria o agendamento no banco após confirmação do usuário."""
         from app.models.atendimento import AtendimentoCanal
+        from app.models.teleconsulta import Modalidade
         from app.models.cliente import Cliente, ModalidadePagamento
         from app.schemas.atendimento import AtendimentoCreate
         from sqlalchemy import select
@@ -1246,6 +1285,7 @@ class ChatService:
             await self._salvar_sessao(session_token, session_data)
             return {"resposta": resposta, "estado": ChatEstado.FINALIZADO, "emergencia": False, "sessao_expirada": False}
 
+        teleconsulta_link: str | None = None
         try:
             from app.models.profissional import Profissional
             from app.models.slot import Slot
@@ -1334,6 +1374,8 @@ class ChatService:
                     await self.db.refresh(carteirinha)
                 cliente_convenio_id = carteirinha.id
 
+            online = dados_coletados.get("modalidade") == "ONLINE"
+
             # Urgência e resumo de triagem a partir do que o paciente relatou
             relatos = [r for r in (dados_coletados.get("sintomas") or []) if isinstance(r, str)]
             urgencia = classificar_urgencia(" ".join(relatos))["urgencia"]
@@ -1345,6 +1387,7 @@ class ChatService:
                 slot_id=slot_id,
                 urgencia=urgencia,
                 triagem_resumo=triagem,
+                modalidade=Modalidade.ONLINE if online else Modalidade.PRESENCIAL,
                 canal_origem=(
                     AtendimentoCanal.WHATSAPP if session_data.get("canal") == "WHATSAPP" else AtendimentoCanal.PORTAL
                 ),
@@ -1379,12 +1422,20 @@ class ChatService:
                     slot_desc = f"{s['data']} às {s['hora_inicio']}"
                     break
 
+            teleconsulta_link = await self._link_da_teleconsulta(atendimento) if online else None
             protocolo = f"PROTO-{atendimento.id:06d}"
             resposta = (
                 f"✅ **Agendamento confirmado!**\n\n"
                 f"📋 **Protocolo:** {protocolo}\n"
                 f"Sua consulta foi marcada para **{slot_desc}**.\n"
                 f"Você receberá um lembrete no telefone **{telefone}**.\n\n"
+                + (
+                    "O atendimento será **online**. No horário, entre na sala por este link: "
+                    f"{teleconsulta_link}\nA sala de espera abre 30 minutos antes.\n\n"
+                    if teleconsulta_link
+                    else ""
+                )
+                +
                 "Se precisar cancelar ou reagendar, informe o protocolo à recepção. "
                 "Cuide-se bem!"
             )
@@ -1417,9 +1468,26 @@ class ChatService:
             "resposta": resposta,
             "estado": ChatEstado.FINALIZADO,
             "confirmacao": {"mensagem": resposta},
+            "teleconsulta_link": teleconsulta_link,
             "emergencia": False,
             "sessao_expirada": False,
         }
+
+    async def _link_da_teleconsulta(self, atendimento) -> str | None:
+        """Link da sala para o paciente; também tenta enviá-lo por WhatsApp e e-mail."""
+        from app.services import telemedicina_service as tele
+
+        try:
+            sala = await tele.criar_teleconsulta(self.db, atendimento)
+            link = tele.link_do_paciente(sala.token_paciente)
+            if not isinstance(link, str):
+                return None
+            await tele.enviar_link(self.db, atendimento)
+            await self.db.commit()
+            return link
+        except Exception as erro:
+            log.warning("teleconsulta_link_falhou", atendimento_id=getattr(atendimento, "id", None), erro=str(erro)[:200])
+            return None
 
     async def _resumir_triagem(
         self, session_data: dict, dados: dict, relatos: list[str], urgencia, cliente_id: int

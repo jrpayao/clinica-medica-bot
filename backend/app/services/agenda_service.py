@@ -10,6 +10,7 @@ from app.models.especialidade import Especialidade
 from app.models.profissional import Profissional
 from app.models.cliente import Cliente
 from app.models.slot import Slot, SlotStatus
+from app.models.teleconsulta import Modalidade
 from app.schemas.atendimento import AtendimentoCreate
 
 log = structlog.get_logger(__name__)
@@ -102,6 +103,10 @@ class AgendaService:
         if slot.status != SlotStatus.DISPONIVEL:
             raise SlotIndisponivelError("Slot nao esta disponivel para agendamento")
 
+        online = dados.modalidade == Modalidade.ONLINE
+        if online and not slot.aceita_online:
+            raise SlotIndisponivelError("Este horario nao aceita atendimento online")
+
         slot.status = SlotStatus.AGENDADO
 
         data = dados.model_dump()
@@ -110,6 +115,10 @@ class AgendaService:
         self.db.add(atendimento)
         await self.db.flush()
         await self.db.refresh(atendimento)
+        if online:
+            from app.services.telemedicina_service import criar_teleconsulta
+
+            await criar_teleconsulta(self.db, atendimento)
 
         log.info(
             "atendimento_agendado",
@@ -225,6 +234,8 @@ async def listar_slots_dia(
             Atendimento.triagem_resumo,
             Atendimento.observacoes,
             Atendimento.created_at,
+            Slot.aceita_online,
+            Atendimento.modalidade,
         )
         .select_from(
             outerjoin(Slot, Profissional,   Slot.profissional_id       == Profissional.id)
@@ -250,8 +261,10 @@ async def listar_slots_dia(
             slot_id, prof_id, prof_nome, esp_nome,
             slot_data, hora_ini, hora_fim, slot_status,
             atendimento_id, cli_nome, cpf,
-            urgencia, atend_status, canal, triagem, obs, created_at,
+            urgencia, atend_status, canal, triagem, obs, created_at, *resto,
         ) = row
+        aceita_online = bool(resto[0]) if resto else False
+        modalidade = resto[1] if len(resto) > 1 else None
 
         atendimento = None
         if atendimento_id is not None:
@@ -265,6 +278,9 @@ async def listar_slots_dia(
                 "triagem_resumo":        triagem,
                 "observacoes":           obs,
                 "created_at":            created_at.isoformat() if created_at else None,
+                "modalidade":            (
+                    modalidade.value if hasattr(modalidade, "value") else (modalidade or "PRESENCIAL")
+                ),
             }
 
         slots.append({
@@ -276,6 +292,7 @@ async def listar_slots_dia(
             "hora_inicio":         hora_ini.strftime("%H:%M") if hora_ini else "",
             "hora_fim":            hora_fim.strftime("%H:%M") if hora_fim else "",
             "status":              slot_status.value if hasattr(slot_status, "value") else slot_status,
+            "aceita_online":       aceita_online,
             "atendimento":         atendimento,
         })
 

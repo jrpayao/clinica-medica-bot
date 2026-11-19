@@ -1,7 +1,7 @@
 import enum
 from datetime import date, datetime, time
 
-from sqlalchemy import Date, DateTime, Enum, ForeignKey, String, Time, func
+from sqlalchemy import Boolean, Date, DateTime, Enum, ForeignKey, String, Time, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.base import Base
@@ -31,6 +31,10 @@ class Slot(Base):
     motivo_bloqueio: Mapped[str | None] = mapped_column(String(500), nullable=True)
     reservado_em: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True
+    )
+    # O profissional aceita atender este horario por video (telemedicina)
+    aceita_online: Mapped[bool] = mapped_column(
+        Boolean, default=False, server_default="false", nullable=False
     )
     estabelecimento_id: Mapped[int] = mapped_column(
         ForeignKey("estabelecimentos.id"), nullable=False, index=True

@@ -31,6 +31,13 @@ from app.models.rede_estabelecimento import RedeEstabelecimentos
 from app.models.sessao_chat import SessaoChat
 from app.models.sessao_historico import SessaoHistorico
 from app.models.slot import Slot, SlotStatus
+from app.models.teleconsulta import (
+    DocumentoClinico,
+    Modalidade,
+    RegistroClinico,
+    Teleconsulta,
+    TipoDocumento,
+)
 from app.models.tipo_atendimento import TipoAtendimento, profissional_tipo_atendimentos
 from app.models.token_usage import TokenUsage
 from app.models.usuario import Usuario, UsuarioRole
@@ -71,6 +78,11 @@ __all__ = [
     "Slot",
     "SlotStatus",
     "TipoAtendimento",
+    "DocumentoClinico",
+    "Modalidade",
+    "RegistroClinico",
+    "Teleconsulta",
+    "TipoDocumento",
     "profissional_tipo_atendimentos",
     "TokenUsage",
     "Usuario",

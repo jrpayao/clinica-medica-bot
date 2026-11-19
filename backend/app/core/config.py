@@ -58,6 +58,13 @@ class Settings(BaseSettings):
     whatsapp_instance: str = "medbot"
     whatsapp_provider: str = "evolution"  # "evolution" | "uazapi" | "zapi" | "meta"
 
+    # Telemedicina (Jitsi Meet). O servidor publico meet.jit.si serve so para demonstracao:
+    # exige login de quem abre a sala e corta chamadas embutidas apos 5 minutos.
+    jitsi_base_url: str = "https://meet.jit.si"
+    jitsi_app_id: str = ""       # com app_id + app_secret, as salas exigem JWT (Jitsi proprio)
+    jitsi_app_secret: str = ""
+    portal_url: str = "http://localhost:4200"
+
     # SMS / Twilio
     twilio_account_sid: str = ""
     twilio_auth_token: str = ""

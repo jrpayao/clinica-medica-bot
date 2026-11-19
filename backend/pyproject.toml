@@ -21,6 +21,7 @@ dependencies = [
     "langchain-ollama>=1.0.1",
     "websockets>=16.0",
     "tzdata>=2026.1",
+    "fpdf2>=2.8",
 ]
 
 [dependency-groups]

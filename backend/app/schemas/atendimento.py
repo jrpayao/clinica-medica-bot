@@ -10,6 +10,7 @@ from app.models.atendimento import (
     MotivoCancelamento,
 )
 from app.models.slot import SlotStatus
+from app.models.teleconsulta import Modalidade
 
 
 class SlotResponse(BaseModel):
@@ -21,6 +22,7 @@ class SlotResponse(BaseModel):
     hora_inicio: time
     hora_fim: time
     status: SlotStatus
+    aceita_online: bool = False
 
 
 class AtendimentoCreate(BaseModel):
@@ -35,6 +37,7 @@ class AtendimentoCreate(BaseModel):
     observacoes: str | None = None
     cliente_convenio_id: int | None = None
     estabelecimento_id: int | None = None
+    modalidade: Modalidade = Modalidade.PRESENCIAL
 
 
 class AtendimentoCancelar(BaseModel):
@@ -58,6 +61,7 @@ class AtendimentoOut(BaseModel):
     canal_origem: AtendimentoCanal
     observacoes: str | None
     motivo_cancelamento: MotivoCancelamento | None = None
+    modalidade: Modalidade = Modalidade.PRESENCIAL
     created_at: datetime
     updated_at: datetime
 
