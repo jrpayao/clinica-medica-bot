@@ -28,6 +28,7 @@ por cima do compose oficial.
 | `marca/title.html` e `marca/favicon.svg` | título e ícone da aba |
 | `marca/medbot-logo.svg` | logo (também substitui o logo padrão do Jitsi) |
 | `marca/head.html` | estilos próprios: hoje só o tamanho do logo |
+| `marca/encerramento.html` | tela de quem sai da chamada, com o botão "Voltar para a chamada" (substitui as páginas `close*.html` do Jitsi) |
 
 Botões da sala: microfone, câmera, compartilhar tela, chat, fundo virtual (desfocar ou trocar, para quem
 atende de casa), mosaico, tela cheia, configurações de aparelhos e sair.

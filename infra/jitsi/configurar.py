@@ -105,7 +105,7 @@ def main() -> None:
         "",
         "# Chamada entra direto, sem tela de boas-vindas nem convite para criar salas",
         "ENABLE_WELCOME_PAGE=0",
-        "ENABLE_CLOSE_PAGE=0",
+        "ENABLE_CLOSE_PAGE=1",  # quem sai vai para a tela de encerramento do MedBot (marca/encerramento.html)
         "ENABLE_PREJOIN_PAGE=0",
         "DISABLE_DEEP_LINKING=1",
         "DEFAULT_LANGUAGE=pt-BR",  # código desta versão do Jitsi (arquivo lang/main-pt-BR.json)

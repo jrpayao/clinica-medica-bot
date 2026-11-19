@@ -1435,6 +1435,7 @@ T103 (abstração WhatsApp) → T104 (E2E)
 - Nome técnico da sala escondido; nome do participante vem do agendamento e não pode ser trocado; nenhuma chamada a serviços de terceiros (avatar, estatística, pesquisa de satisfação do Jitsi).
 - Conferido por `tools/video/sonda-jitsi-marca.mjs` (15 verificações, inclusive nenhum "Jitsi" visível no computador e no celular) e pela chamada real (`sonda-jitsi.mjs`), que segue funcionando.
 - **Corrigido junto:** o português configurado antes (`ptBR`) não valia nesta versão do Jitsi, que usa `pt-BR`; a sala aparecia no idioma do navegador.
+- **Tela de encerramento** (pedido de 2026-11-19): quem sai da chamada vê "Você saiu da chamada" com a marca do MedBot e o botão "Voltar para a chamada", que reabre a mesma sala com o acesso assinado guardado na aba. Antes a tela ficava preta. A sonda confere a tela, o celular e a volta (20 verificações).
 
 ### ⬜ T158: Identidade da unidade na sala de vídeo (para depois)
 - Logo da clínica na sala, reaproveitando o enviado no Receituário. Caminho provável: o arquivo de marca (`dynamicBrandingUrl`) servido pelo backend por sala; confirmar na documentação do Jitsi antes.

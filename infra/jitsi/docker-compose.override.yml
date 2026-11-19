@@ -15,5 +15,9 @@ services:
             # logo (também no lugar do logo padrão, para qualquer tela que ainda o use)
             - ./marca/medbot-logo.svg:/usr/share/jitsi-meet/images/medbot-logo.svg:ro
             - ./marca/medbot-logo.svg:/usr/share/jitsi-meet/images/watermark.svg:ro
+            # tela de quem sai da chamada (o Jitsi escolhe entre estas conforme a situação)
+            - ./marca/encerramento.html:/usr/share/jitsi-meet/static/close.html:ro
+            - ./marca/encerramento.html:/usr/share/jitsi-meet/static/close2.html:ro
+            - ./marca/encerramento.html:/usr/share/jitsi-meet/static/close3.html:ro
             # cores, fundo e logo lidos pela sala ao entrar
             - ./marca/medbot-branding.json:/usr/share/jitsi-meet/static/medbot-branding.json:ro

@@ -15,6 +15,7 @@ const ESPERADOS = ['microphone', 'camera', 'desktop', 'chat', 'select-background
 const PROIBIDOS = ['invite', 'recording', 'livestreaming', 'security', 'raisehand', 'participants-pane', 'shareaudio', 'sharedvideo', 'whiteboard', 'embedmeeting', 'feedback', 'shortcuts', 'help', 'closedcaptions', 'etherpad']
 
 let falhas = 0
+const transborda = (page) => page.evaluate(() => document.documentElement.scrollWidth > innerWidth)
 const conferir = (ok, texto) => { console.log(`${ok ? 'OK   ' : 'FALHA'} ${texto}`); if (!ok) falhas++ }
 
 async function entrar(url, largura = 1280) {
@@ -83,10 +84,30 @@ try {
 
   // o que aparece depois de sair da chamada
   await paciente.evaluate(() => globalThis.APP.conference.hangup())
-  await paciente.waitForTimeout(4000)
-  const depois = await paciente.evaluate(() => ({ url: location.pathname, texto: document.body.innerText.slice(0, 300) }))
+  await paciente.waitForURL(/\/static\/close/, { timeout: 15000 }).catch(() => {})
+  await paciente.waitForTimeout(1500)
+  const depois = await paciente.evaluate(() => ({
+    url: location.pathname,
+    texto: document.body.innerText,
+    logo: [...document.images].some((i) => /medbot/i.test(i.src) && i.naturalWidth > 0),
+    titulo: document.title,
+  }))
   await paciente.screenshot({ path: path.join(OUT, 'marca-saida.png') })
-  conferir(!/jitsi/i.test(depois.texto), `tela depois de sair (${depois.url}): "${depois.texto.replace(/\s+/g, ' ').slice(0, 120)}"`)
+  conferir(/\/static\/close/.test(depois.url), `tela de encerramento aberta (${depois.url})`)
+  conferir(/Você saiu da chamada/.test(depois.texto), `texto da tela: "${depois.texto.replace(/\s+/g, ' ').slice(0, 140)}"`)
+  conferir(depois.logo && /MedBot/.test(depois.titulo) && !/jitsi/i.test(depois.texto + depois.titulo), 'tela de encerramento com a marca do MedBot e sem Jitsi')
+  conferir((await transborda(paciente)) === false, 'tela de encerramento cabe no celular')
+
+  // saiu sem querer: o botão leva de volta para a mesma chamada
+  const voltar = paciente.getByRole('button', { name: 'Voltar para a chamada' })
+  conferir(await voltar.isVisible().catch(() => false), 'botão "Voltar para a chamada" visível')
+  if (await voltar.isVisible().catch(() => false)) {
+    await voltar.click()
+    const voltou = await paciente.waitForFunction(() => { try { return globalThis.APP.conference.isJoined() } catch { return false } }, null, { timeout: 60000 })
+      .then(() => true).catch(() => false)
+    const participantes = voltou ? await medico.evaluate(() => globalThis.APP.conference._room.getParticipants().length + 1) : 0
+    conferir(voltou && participantes === 2, `paciente voltou para a mesma chamada (${participantes} na sala)`)
+  }
 } catch (e) {
   console.log('ERRO:', e.message.split('\n').slice(0, 4).join(' | '))
   falhas++
