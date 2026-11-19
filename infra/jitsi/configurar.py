@@ -108,7 +108,7 @@ def main() -> None:
         "ENABLE_CLOSE_PAGE=0",
         "ENABLE_PREJOIN_PAGE=0",
         "DISABLE_DEEP_LINKING=1",
-        "DEFAULT_LANGUAGE=ptBR",
+        "DEFAULT_LANGUAGE=pt-BR",  # código desta versão do Jitsi (arquivo lang/main-pt-BR.json)
         "",
         "# Senhas internas entre os serviços do Jitsi",
         *[f"{nome}={antes.get(nome) or secrets.token_hex(16)}" for nome in SENHAS],

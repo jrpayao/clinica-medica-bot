@@ -1,0 +1,15 @@
+<!-- Ajustes visuais do MedBot na sala de vídeo (T157). Incluído no <head> de toda página do Jitsi. -->
+<style>
+    /* O Jitsi reserva 71x32 px para o logo: pequeno demais para o nome ser lido */
+    .watermark.leftwatermark {
+        width: 132px !important;
+        height: 43px !important;
+        max-width: none !important;
+    }
+    @media (max-width: 480px) {
+        .watermark.leftwatermark {
+            width: 98px !important;
+            height: 32px !important;
+        }
+    }
+</style>

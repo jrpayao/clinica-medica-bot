@@ -12,6 +12,37 @@ Toda a configuração do MedBot fica no `.env`, gerado por `configurar.py`.
 - **Só entra quem o MedBot autoriza.** Cada entrada em sala leva um acesso assinado (JWT) que vale para uma sala só e expira em 3 horas. Sem ele, ou com o de outra sala, a entrada é recusada.
 - **Só o profissional é moderador.** O paciente entra como participante e não consegue silenciar nem remover ninguém.
 - **Sem página inicial.** Ninguém cria sala avulsa no servidor.
+- **Cara do MedBot.** Logo, cores, ícone e título da aba do MedBot; interface sempre em português;
+  barra só com o que a consulta usa; nenhuma chamada a serviços de terceiros (ver "Identidade visual").
+
+## Identidade visual
+
+Fica em `marca/` e é aplicada pelo `docker-compose.override.yml`, que o docker compose lê automaticamente
+por cima do compose oficial.
+
+| Arquivo | O que define |
+|---|---|
+| `marca/medbot-branding.json` | cor de fundo, logo da sala e cores dos botões (tema) |
+| `marca/custom-config.js` | botões da barra, nome técnico da sala escondido, privacidade (sem avatar, estatística ou pesquisa de terceiros), sem convite |
+| `marca/custom-interface_config.js` | nome do aplicativo, idioma fixo em português, sem propaganda do Jitsi |
+| `marca/title.html` e `marca/favicon.svg` | título e ícone da aba |
+| `marca/medbot-logo.svg` | logo (também substitui o logo padrão do Jitsi) |
+| `marca/head.html` | estilos próprios: hoje só o tamanho do logo |
+
+Botões da sala: microfone, câmera, compartilhar tela, chat, fundo virtual (desfocar ou trocar, para quem
+atende de casa), mosaico, tela cheia, configurações de aparelhos e sair.
+
+Depois de editar algo em `marca/`:
+
+```bash
+cd infra/jitsi && docker compose up -d --force-recreate web
+```
+
+Conferência automática da identidade (título, ícone, logo, cores, idioma, botões, nenhum "Jitsi" à vista):
+
+```bash
+cd tools/video && node sonda-jitsi-marca.mjs out/salas.json
+```
 
 ## Na sua máquina
 
@@ -78,7 +109,8 @@ Observações para o deploy com CapRover:
 
 - **Trocar o segredo** (suspeita de vazamento): `python infra/jitsi/configurar.py --novo-segredo`, `docker compose up -d`,
   `python infra/jitsi/apontar_backend.py` e reiniciar o backend. Links de sala já abertos deixam de valer.
-- **Atualizar o Jitsi:** baixar o `docker-compose.yml` da versão nova do projeto oficial, `docker compose pull && docker compose up -d`.
+- **Atualizar o Jitsi:** baixar o `docker-compose.yml` da versão nova do projeto oficial, `docker compose pull && docker compose up -d`
+  e rodar `sonda-jitsi-marca.mjs`. Nomes de opções mudam entre versões (nesta, o português passou de `ptBR` para `pt-BR`).
 - **Registros:** `docker compose logs -f prosody` (entrada em salas) e `docker compose logs -f jvb` (áudio e vídeo).
 - A pasta `config/` e o arquivo `.env` são gerados e ficam fora do git: têm chaves e senhas.
 

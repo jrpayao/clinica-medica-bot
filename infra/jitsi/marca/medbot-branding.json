@@ -1,0 +1,18 @@
+{
+  "backgroundColor": "#0f172a",
+  "logoImageUrl": "/images/medbot-logo.svg",
+  "logoClickUrl": "",
+  "premeetingBackground": "#0f172a",
+  "customTheme": {
+    "palette": {
+      "action01": "#2563eb",
+      "action01Hover": "#1d4ed8",
+      "action01Active": "#1e40af",
+      "link01": "#93c5fd",
+      "link01Hover": "#bfdbfe",
+      "link01Active": "#60a5fa",
+      "focus01": "#60a5fa",
+      "uiBackground": "#0f172a"
+    }
+  }
+}

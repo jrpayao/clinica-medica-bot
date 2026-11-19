@@ -1,0 +1,19 @@
+# Identidade visual do MedBot na sala de vídeo (T157).
+# O docker compose aplica este arquivo por cima do docker-compose.yml oficial, que segue sem alterações.
+# Depois de editar algo em ./marca, aplique com: docker compose up -d --force-recreate web
+services:
+    web:
+        volumes:
+            # anexados ao config.js e ao interface_config.js gerados pela imagem
+            - ./marca/custom-config.js:/config/custom-config.js:ro
+            - ./marca/custom-interface_config.js:/config/custom-interface_config.js:ro
+            # estilos próprios (tamanho do logo), incluídos no <head> de toda página
+            - ./marca/head.html:/usr/share/jitsi-meet/head.html:ro
+            # título da aba, descrição e ícone
+            - ./marca/title.html:/usr/share/jitsi-meet/title.html:ro
+            - ./marca/favicon.svg:/usr/share/jitsi-meet/images/favicon.svg:ro
+            # logo (também no lugar do logo padrão, para qualquer tela que ainda o use)
+            - ./marca/medbot-logo.svg:/usr/share/jitsi-meet/images/medbot-logo.svg:ro
+            - ./marca/medbot-logo.svg:/usr/share/jitsi-meet/images/watermark.svg:ro
+            # cores, fundo e logo lidos pela sala ao entrar
+            - ./marca/medbot-branding.json:/usr/share/jitsi-meet/static/medbot-branding.json:ro

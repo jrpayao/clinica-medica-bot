@@ -8,7 +8,7 @@
 
 ## Progresso Geral
 
-`[●●●●●●●●●●]` 97% — 133/137 tasks concluídas (pendente: G9 Deploy; G16–G17 em BACKLOG)
+`[●●●●●●●●●●]` 97% — 134/139 tasks concluídas (pendente: G9 Deploy; G16–G17 em BACKLOG)
 
 > **Revisão de 2026-11-19:** varredura do código e das telas mostrou que T91–T102 estavam marcadas como concluídas sem código em nenhuma branch, e T90 só pela metade. Foram reabertas abaixo. G25–G27 e G28 foram registrados.
 
@@ -44,7 +44,7 @@
 | G26 — Convênios e Planos          | plano G26 | concluído   | `[●●●●●]` 100%  |
 | G27 — Vocabulário + Catálogo      | plano G27 | concluído   | `[●●●●●]` 100%  |
 | G28 — Correções pós-varredura     | —         | 11/11       | `[●●●●●]` 100%  |
-| G29 — Telemedicina                | T149–T156 | 8/8         | `[●●●●●]` 100%  |
+| G29 — Telemedicina                | T149–T158 | 9/10        | `[●●●●○]` 90%   |
 
 
 ---
@@ -1427,6 +1427,17 @@ T103 (abstração WhatsApp) → T104 (E2E)
 - Salas exigem acesso assinado (JWT) emitido pelo backend, válido para uma sala e por 3 horas. Só o profissional é moderador; o paciente entra como participante.
 - Rodando nesta máquina em `https://localhost:8443` (certificado autoassinado: aceitar uma vez em cada navegador).
 - Conferido com chamada real entre dois navegadores, com câmera e microfone simulados (`tools/video/sonda-jitsi.mjs`): os dois entram, o vídeo chega nos dois sentidos, quem vem sem acesso assinado ou com acesso de outra sala fica de fora. O mesmo dentro das telas do sistema (`sonda-teleconsulta.mjs`).
+
+### ✅ T157: Identidade visual da sala de vídeo (plataforma)
+- Escolha do usuário em 2026-11-19: identidade da plataforma primeiro. A identidade por unidade fica para outra etapa.
+- `infra/jitsi/marca/` + `docker-compose.override.yml` (o compose oficial segue intacto): logo e ícone do MedBot, fundo `#0f172a`, botões azuis `#2563eb`, título "MedBot Teleconsulta", interface sempre em português.
+- Barra com 9 botões: microfone, câmera, compartilhar tela, chat, fundo virtual, mosaico, tela cheia, configurações, sair. Sem convite, gravação, transmissão, reações, enquetes, quadro.
+- Nome técnico da sala escondido; nome do participante vem do agendamento e não pode ser trocado; nenhuma chamada a serviços de terceiros (avatar, estatística, pesquisa de satisfação do Jitsi).
+- Conferido por `tools/video/sonda-jitsi-marca.mjs` (15 verificações, inclusive nenhum "Jitsi" visível no computador e no celular) e pela chamada real (`sonda-jitsi.mjs`), que segue funcionando.
+- **Corrigido junto:** o português configurado antes (`ptBR`) não valia nesta versão do Jitsi, que usa `pt-BR`; a sala aparecia no idioma do navegador.
+
+### ⬜ T158: Identidade da unidade na sala de vídeo (para depois)
+- Logo da clínica na sala, reaproveitando o enviado no Receituário. Caminho provável: o arquivo de marca (`dynamicBrandingUrl`) servido pelo backend por sala; confirmar na documentação do Jitsi antes.
 
 ### Limites conhecidos
 - **Sem `JITSI_BASE_URL` configurado**, o padrão continua sendo o servidor público `meet.jit.si`, que serve só para demonstração.
