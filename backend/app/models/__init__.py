@@ -63,6 +63,7 @@ __all__ = [
     "Slot",
     "SlotStatus",
     "TipoAtendimento",
+    "profissional_tipo_atendimentos",
     "TokenUsage",
     "Usuario",
     "UsuarioRole",

@@ -13,7 +13,7 @@ Acesso:
 
 
 import structlog
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from typing import Annotated
@@ -147,6 +147,7 @@ class TokenEstabelecimentoResponse(BaseModel):
 )
 async def selecionar_estabelecimento(
     dados: SelecionarEstabelecimentoSchema,
+    request: Request,
     db: AsyncSession = Depends(get_db),
     current_user: dict = Depends(require_role("ADMIN_GLOBAL")),
 ) -> TokenEstabelecimentoResponse:
@@ -171,6 +172,22 @@ async def selecionar_estabelecimento(
         "estabelecimento_id": dados.estabelecimento_id,
     }
     access_token = create_access_token(token_data)
+
+    # Entrar em uma clínica é ação sensível da plataforma: fica na trilha de auditoria
+    from app.models.auditoria import TipoAuditoria
+    from app.services.auditoria_service import AuditoriaService
+
+    await AuditoriaService(db).registrar(
+        acao=TipoAuditoria.ACESSO_CLINICA,
+        usuario_id=int(current_user["sub"]),
+        usuario_role="ADMIN_GLOBAL",
+        estabelecimento_id=dados.estabelecimento_id,
+        entidade="estabelecimento",
+        entidade_id=dados.estabelecimento_id,
+        detalhes={"estabelecimento": est.nome},
+        ip_origem=request.client.host if request.client else None,
+    )
+    await db.commit()
 
     log.info(
         "admin_global_selecionou_estabelecimento",

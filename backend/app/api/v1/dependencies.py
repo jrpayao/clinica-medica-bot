@@ -78,6 +78,29 @@ def require_role(*roles: str):
     return check_role
 
 
+def profissional_do_token(current_user: dict) -> int | None:
+    """Profissional ao qual o usuário está restrito: o próprio, para MEDICO; None para os demais perfis.
+
+    MEDICO sem vínculo com um profissional não enxerga dado nenhum (403).
+    """
+    if current_user.get("role") != "MEDICO":
+        return None
+    profissional_id = current_user.get("profissional_id")
+    if profissional_id is None:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Usuário não está vinculado a um profissional. Procure o gestor da unidade.",
+        )
+    return int(profissional_id)
+
+
+async def get_profissional_restrito(
+    current_user: Annotated[dict, Depends(get_current_user)],
+) -> int | None:
+    """Dependency de profissional_do_token."""
+    return profissional_do_token(current_user)
+
+
 async def get_estabelecimento_id(
     request: Request,
     current_user: Annotated[dict, Depends(get_current_user)],
@@ -197,16 +220,14 @@ async def get_estabelecimento_id_opcional(
     )
 
 
-async def verificar_licenca_ativa(
-    estabelecimento_id: Annotated[int, Depends(get_estabelecimento_id)],
-    db: AsyncSession = Depends(get_db),
-) -> Licenca:
-    """Verifica se a licença do tenant está válida.
+async def validar_licenca_do_estabelecimento(db: AsyncSession, estabelecimento_id: int) -> Licenca:
+    """Garante que o estabelecimento tem licença válida.
 
-    HTTP 402 → TRIAL expirado ou EXPIRADA
+    HTTP 402 → sem licença, TRIAL expirado ou EXPIRADA
     HTTP 403 → SUSPENSA
 
-    Injetado via dependencies=[] nos routers de domínio.
+    Usado direto pelos fluxos públicos (chat do paciente), que não têm JWT e
+    resolvem o estabelecimento por outro meio.
     """
     from app.services.licenca_service import LicencaService
 
@@ -234,6 +255,17 @@ async def verificar_licenca_ativa(
         )
 
     return licenca
+
+
+async def verificar_licenca_ativa(
+    estabelecimento_id: Annotated[int, Depends(get_estabelecimento_id)],
+    db: AsyncSession = Depends(get_db),
+) -> Licenca:
+    """Verifica se a licença do tenant autenticado está válida.
+
+    Injetado via dependencies=[] nos routers de domínio (exigem JWT).
+    """
+    return await validar_licenca_do_estabelecimento(db, estabelecimento_id)
 
 
 async def require_quota_medico(

@@ -1,9 +1,10 @@
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta
 
 import structlog
-from sqlalchemy import outerjoin, select
+from sqlalchemy import or_, outerjoin, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.tempo import agora_local, fuso_do_estabelecimento
 from app.models.atendimento import Atendimento, AtendimentoStatus
 from app.models.especialidade import Especialidade
 from app.models.profissional import Profissional
@@ -26,12 +27,18 @@ class AgendaService:
         data_inicio: date | None = None,
         data_fim: date | None = None,
         convenio_id: int | None = None,
+        agora: datetime | None = None,
     ) -> list[Slot]:
-        """Busca slots disponíveis do estabelecimento com filtros opcionais."""
+        """Busca slots disponíveis do estabelecimento com filtros opcionais.
+
+        Horários de hoje que já passaram não são oferecidos (`agora` é injetável para teste).
+        """
         from app.models.profissional import Profissional
 
+        if agora is None:
+            agora = agora_local(await fuso_do_estabelecimento(self.db, estabelecimento_id))
         if data_inicio is None:
-            data_inicio = date.today()
+            data_inicio = agora.date()
         if data_fim is None:
             data_fim = data_inicio + timedelta(days=30)
 
@@ -41,6 +48,11 @@ class AgendaService:
             Slot.data >= data_inicio,
             Slot.data <= data_fim,
         )
+
+        if data_inicio <= agora.date():
+            query = query.where(
+                or_(Slot.data > agora.date(), Slot.hora_inicio > agora.time().replace(microsecond=0))
+            )
 
         if profissional_id:
             query = query.where(Slot.profissional_id == profissional_id)

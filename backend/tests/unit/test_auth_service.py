@@ -134,6 +134,7 @@ async def test_login_interno_sucesso(service, mock_db):
     usuario_mock = MagicMock()
     usuario_mock.id = 1
     usuario_mock.email = "recep@clinica.com"
+    usuario_mock.nome = "Recepcionista Teste"
     usuario_mock.senha_hash = hash_password("senha123")
     usuario_mock.role = UsuarioRole.RECEPCIONISTA
     usuario_mock.profissional_id = None
@@ -170,6 +171,7 @@ async def test_login_interno_senha_incorreta(service, mock_db):
     usuario_mock = MagicMock()
     usuario_mock.id = 1
     usuario_mock.email = "admin@clinica.com"
+    usuario_mock.nome = "Admin Teste"
     usuario_mock.senha_hash = hash_password("correta123")
     usuario_mock.role = UsuarioRole.ADMIN_ESTABELECIMENTO
     usuario_mock.profissional_id = None
@@ -190,6 +192,7 @@ async def test_login_medico_inclui_profissional_id(service, mock_db):
     usuario_mock = MagicMock()
     usuario_mock.id = 5
     usuario_mock.email = "dr@clinica.com"
+    usuario_mock.nome = "Dr. Teste"
     usuario_mock.senha_hash = hash_password("senha123")
     usuario_mock.role = UsuarioRole.MEDICO
     usuario_mock.profissional_id = 10

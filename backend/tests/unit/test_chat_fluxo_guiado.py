@@ -152,3 +152,36 @@ class TestDadosColetadosIniciais:
         assert "tipo_atendimento" in _DADOS_COLETADOS_INICIAL
         assert "telefone" in _DADOS_COLETADOS_INICIAL
         assert "email" in _DADOS_COLETADOS_INICIAL
+
+
+class TestNomeInformadoEmFrase:
+    """O paciente costuma responder com uma frase, não só com o nome."""
+
+    @pytest.mark.parametrize(
+        ("mensagem", "nome", "primeiro"),
+        [
+            ("Meu nome é Pedro Oliveira", "Pedro Oliveira", "Pedro"),
+            ("me chamo Ana Paula", "Ana Paula", "Ana"),
+            ("Eu sou a Camila Lima.", "Camila Lima", "Camila"),
+            ("sou o João", "João", "João"),
+            ("Aqui é o Luiz Barbosa", "Luiz Barbosa", "Luiz"),
+            ("João Silva", "João Silva", "João"),
+        ],
+    )
+    async def test_extrai_nome_e_cumprimenta_pelo_primeiro_nome(self, mensagem, nome, primeiro):
+        svc = _make_service()
+        svc.redis.get = AsyncMock(return_value=_session("COLETANDO_NOME"))
+
+        resultado = await svc.processar_mensagem("test-token", mensagem)
+
+        saved = json.loads(svc.redis.set.call_args[0][1])
+        assert saved["dados_coletados"]["nome"] == nome
+        assert f"Obrigado, {primeiro}!" in resultado["resposta"]
+
+    async def test_pergunta_de_convenio_tem_acentuacao(self):
+        svc = _make_service()
+        svc.redis.get = AsyncMock(return_value=_session("COLETANDO_NOME"))
+
+        resultado = await svc.processar_mensagem("test-token", "João Silva")
+
+        assert "Você possui convênio médico ou plano de saúde?" in resultado["resposta"]

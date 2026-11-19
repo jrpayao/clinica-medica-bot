@@ -87,34 +87,59 @@ def test_websocket_sessao_expirada(mock_redis):
 
 def test_websocket_criar_sessao():
     """RF: POST /v1/chat/sessao cria nova sessao e retorna token."""
-    from unittest.mock import MagicMock
-    from app.api.v1.dependencies import verificar_licenca_ativa
-
     mock_redis = AsyncMock()
     mock_redis.set = AsyncMock(return_value=True)
 
-    # chat.router tem _LICENCA_DEP (verificar_licenca_ativa) no nível do router.
-    # O endpoint /sessao é público (pacientes anônimos), então sobrescrevemos a
-    # dependency de licença para não exigir JWT nos testes de unidade do endpoint.
-    mock_licenca = MagicMock()
-    app.dependency_overrides[verificar_licenca_ativa] = lambda: mock_licenca
+    # /sessao é público (paciente anônimo): a licença é validada pelo
+    # estabelecimento informado no body, sem JWT.
+    with (
+        patch("app.api.v1.endpoints.chat.get_redis_client", return_value=mock_redis),
+        patch("app.api.v1.endpoints.chat.ChatService") as MockChatService,
+        patch(
+            "app.api.v1.endpoints.chat.validar_licenca_do_estabelecimento",
+            new=AsyncMock(),
+        ) as mock_licenca,
+    ):
+        mock_service = AsyncMock()
+        mock_service.criar_sessao = AsyncMock(return_value="uuid-test-token")
+        MockChatService.return_value = mock_service
 
-    try:
-        with (
-            patch("app.api.v1.endpoints.chat.get_redis_client", return_value=mock_redis),
-            patch("app.api.v1.endpoints.chat.ChatService") as MockChatService,
-        ):
-            mock_service = AsyncMock()
-            mock_service.criar_sessao = AsyncMock(return_value="uuid-test-token")
-            MockChatService.return_value = mock_service
+        client = TestClient(app)
+        response = client.post(
+            "/v1/chat/sessao",
+            json={"canal": "PORTAL", "estabelecimento_id": 1},
+        )
 
-            client = TestClient(app)
-            response = client.post(
-                "/v1/chat/sessao",
-                json={"canal": "PORTAL", "estabelecimento_id": 1},
-            )
+        assert response.status_code == 201
+        assert response.json()["session_token"] == "uuid-test-token"
+        mock_licenca.assert_awaited_once()
+        assert mock_licenca.await_args.args[1] == 1
 
-            assert response.status_code == 201
-            assert response.json()["session_token"] == "uuid-test-token"
-    finally:
-        app.dependency_overrides.pop(verificar_licenca_ativa, None)
+
+def test_websocket_falha_da_ia_responde_fallback_sem_derrubar_conexao(mock_redis):
+    """Se o modelo de IA falhar, o paciente recebe um aviso e a conversa continua."""
+    from app.services.ia.robustez import FALLBACK_MESSAGE
+
+    with (
+        patch("app.api.v1.endpoints.chat.get_redis_client", return_value=mock_redis),
+        patch("app.api.v1.endpoints.chat.ChatService") as MockChatService,
+    ):
+        mock_service = AsyncMock()
+        mock_service.processar_mensagem = AsyncMock(
+            side_effect=[
+                RuntimeError("model 'llama3.1:8b' not found"),
+                {"resposta": "Pode repetir?", "sessao_expirada": False},
+            ]
+        )
+        MockChatService.return_value = mock_service
+
+        client = TestClient(app)
+        with client.websocket_connect("/v1/chat/ws/test-token-ws") as ws:
+            ws.send_json({"mensagem": "Estou com dor de cabeça"})
+            falha = ws.receive_json()
+            ws.send_json({"mensagem": "Estou com dor de cabeça"})
+            seguinte = ws.receive_json()
+
+    assert falha["resposta"] == FALLBACK_MESSAGE
+    assert falha["fallback"] is True
+    assert seguinte["resposta"] == "Pode repetir?"

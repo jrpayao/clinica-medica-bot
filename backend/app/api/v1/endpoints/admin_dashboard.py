@@ -26,6 +26,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.api.v1.dependencies import get_estabelecimento_id_opcional, require_role
 from app.core.config import settings
 from app.core.database import get_db
+from app.core.tempo import agora_local, fuso_do_estabelecimento, hoje_local
 from app.models.atendimento import Atendimento, AtendimentoStatus, AtendimentoUrgencia
 from app.models.especialidade import Especialidade
 from app.models.profissional import Profissional
@@ -185,11 +186,11 @@ async def admin_dashboard(
     - ADMIN_GLOBAL + modo global + filtro → lê est_id do header X-Estabelecimento-ID
     - ADMIN_GLOBAL + modo global sem filtro → None (agrega todas as clínicas)
     """
-    if data is None:
-        data = date.today()
-
     est_id = estabelecimento_id
-    hora_atual = datetime.now(tz=timezone.utc).time()
+    fuso = await fuso_do_estabelecimento(db, est_id)
+    if data is None:
+        data = hoje_local(fuso)
+    hora_atual = agora_local(fuso).time()
 
     # ── Contagens de consultas ────────────────────────────────────
     q_status = (

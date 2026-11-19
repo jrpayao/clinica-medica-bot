@@ -19,11 +19,11 @@ _URGENCIA_ORDEM = {
 }
 
 MENSAGEM_EMERGENCIA = (
-    "ATENCAO: Seus sintomas indicam uma possivel EMERGENCIA MEDICA.\n\n"
+    "ATENÇÃO: Seus sintomas indicam uma possível EMERGÊNCIA MÉDICA.\n\n"
     "Ligue IMEDIATAMENTE para o SAMU: 192\n"
-    "Ou dirija-se a UPA/pronto-socorro mais proximo.\n\n"
-    "NAO e possivel agendar consulta para casos de emergencia. "
-    "Sua saude e prioridade."
+    "Ou dirija-se à UPA/pronto-socorro mais próximo.\n\n"
+    "NÃO é possível agendar consulta para casos de emergência. "
+    "Sua saúde é prioridade."
 )
 
 

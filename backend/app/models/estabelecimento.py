@@ -90,6 +90,11 @@ class EstabelecimentoSaude(Base):
         String(50), nullable=False, default="Especialidade", server_default="Especialidade"
     )
 
+    # Fuso IANA em que a unidade opera (slots guardam data/hora locais)
+    timezone: Mapped[str] = mapped_column(
+        String(64), nullable=False, default="America/Sao_Paulo", server_default="America/Sao_Paulo"
+    )
+
     rede: Mapped["RedeEstabelecimentos | None"] = relationship(  # noqa: F821
         back_populates="estabelecimentos"
     )

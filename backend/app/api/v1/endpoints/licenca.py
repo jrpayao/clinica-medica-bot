@@ -5,7 +5,7 @@ PATCH /v1/admin/licenca/{est_id}        — ADMIN_GLOBAL gerencia licença manua
 """
 
 import structlog
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.v1.dependencies import get_estabelecimento_id, get_current_user, require_role
@@ -69,6 +69,7 @@ async def minha_licenca(
 async def gerenciar_licenca(
     estabelecimento_id: int,
     dados: AdminLicencaUpdate,
+    request: Request,
     current_user: dict = Depends(require_role("ADMIN_GLOBAL")),
     db: AsyncSession = Depends(get_db),
 ) -> LicencaResponse:
@@ -110,6 +111,19 @@ async def gerenciar_licenca(
     except LicencaNaoEncontradaError as e:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
 
+    from app.models.auditoria import TipoAuditoria
+    from app.services.auditoria_service import AuditoriaService
+
+    await AuditoriaService(db).registrar(
+        acao=TipoAuditoria.LICENCA_ALTERADA,
+        usuario_id=admin_id,
+        usuario_role="ADMIN_GLOBAL",
+        estabelecimento_id=estabelecimento_id,
+        entidade="licenca",
+        entidade_id=licenca.id,
+        detalhes={"status": licenca.status.value, "plano": licenca.plano},
+        ip_origem=request.client.host if request.client else None,
+    )
     await db.commit()
 
     quota_cfg = PLANO_QUOTAS.get(licenca.plano, PLANO_QUOTAS["basico"])

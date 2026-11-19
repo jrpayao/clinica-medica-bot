@@ -7,6 +7,7 @@ docs/medbot_arquitetura.md:
 """
 
 import json
+import re
 import uuid
 
 import redis.asyncio as aioredis
@@ -17,6 +18,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.services.agenda_service import AgendaService
 from app.services.ia import billing
+from app.services.ia.dados_paciente import localizar_por_nome, mascarar_cpf, normalizar_cpf
 from app.services.ia.prompts import ESPECIALIDADES_WHITELIST, obter_params_llm, obter_prompt_conversa, obter_prompt_sistema
 from app.services.ia.robustez import (
     FALLBACK_MESSAGE,
@@ -64,16 +66,58 @@ _ESTADOS_TRIAGEM_JSON: set[str] = {
     ChatEstado.SUGESTAO_ESPECIALIDADE,
 }
 
+# Frases com que o paciente costuma anteceder o próprio nome
+_PREFIXO_NOME = re.compile(
+    r"^\s*(?:ol[áa][,!.]?\s+|oi[,!.]?\s+)?"
+    r"(?:(?:o\s+)?meu\s+nome\s+(?:é|e)|me\s+chamo|eu\s+me\s+chamo|(?:eu\s+)?sou|aqui\s+(?:é|e)|pode\s+me\s+chamar\s+de)"
+    r"\s+(?:o\s+|a\s+)?",
+    re.IGNORECASE,
+)
+
+
+RESPOSTA_PLANO_NAO_SEI = "Não sei informar"
+RESPOSTA_SEM_CARTEIRINHA = "Não tenho em mãos"
+
+
+def descrever_pagamento(dados_coletados: dict) -> str:
+    """'Unimed — plano Especial', 'Unimed' ou 'Particular', conforme o que o paciente informou."""
+    if dados_coletados.get("tipo_atendimento") != "CONVENIO" or not dados_coletados.get("convenio"):
+        return "Particular"
+    if dados_coletados.get("plano"):
+        return f"{dados_coletados['convenio']} — plano {dados_coletados['plano']}"
+    return dados_coletados["convenio"]
+
+
+def descrever_horario(slot: dict) -> str:
+    """Horário escolhido, por extenso. O nome do profissional já traz o tratamento cadastrado."""
+    return f"{slot['data']} às {slot['hora_inicio']} com {slot['profissional_nome']}"
+
+
+def extrair_nome_informado(mensagem: str) -> str:
+    """Isola o nome quando o paciente responde com uma frase.
+
+    "Meu nome é Pedro Oliveira." → "Pedro Oliveira"
+    """
+    nome = _PREFIXO_NOME.sub("", mensagem.strip(), count=1)
+    return nome.strip(" .,!;:") or mensagem.strip()
+
+
 # Estado inicial de dados coletados
 _DADOS_COLETADOS_INICIAL: dict = {
     # Fluxo guiado (v2)
     "nome": None,
+    "cpf": None,
     "convenio_id": None,
+    "convenio": None,
+    "plano_id": None,
+    "plano": None,
+    "convenio_step": None,  # None | "plano" (convênio escolhido, falta o plano)
     "tipo_atendimento": None,
     "telefone": None,
     "email": None,
     "slot_id_selecionado": None,
-    "contato_step": "telefone",  # "telefone" | "email"
+    "numero_carteirinha": None,
+    "contato_step": "cpf",  # "cpf" | "carteirinha" (só convênio) | "telefone" | "email"
     # Legado + compartilhados
     "sintomas": [],
     "especialidade": None,
@@ -132,11 +176,14 @@ class ChatService:
             )
             especialidades = list(result.scalars().all())
 
+        convenios = await self._carregar_convenios(estabelecimento_id) if estabelecimento_id else []
+
         session_data = {
             "token": session_token,
             "canal": canal,
             "estabelecimento_id": estabelecimento_id,
             "especialidades": especialidades,  # lista real da clínica
+            "convenios": convenios,  # convênios aceitos, com os planos de cada um
             "mensagens": [],
             "estado": estado_inicial(),  # ChatEstado.START
             "dados_coletados": dict(_DADOS_COLETADOS_INICIAL),
@@ -150,6 +197,48 @@ class ChatService:
 
         log.info("sessao_chat_criada", token=session_token[:8] + "...", canal=canal)
         return session_token
+
+    async def _carregar_convenios(self, estabelecimento_id: int) -> list[dict]:
+        """Convênios ativos da unidade com seus planos ativos, para os botões do chat."""
+        from sqlalchemy import select
+
+        from app.models.convenio import Convenio
+        from app.models.convenio_plano import ConvenioPlano
+
+        linhas = (
+            await self.db.execute(
+                select(Convenio.id, Convenio.nome, ConvenioPlano.id, ConvenioPlano.nome)
+                .outerjoin(
+                    ConvenioPlano,
+                    (ConvenioPlano.convenio_id == Convenio.id) & (ConvenioPlano.ativo == True),  # noqa: E712
+                )
+                .where(
+                    Convenio.estabelecimento_id == estabelecimento_id,
+                    Convenio.ativo == True,  # noqa: E712
+                )
+                .order_by(Convenio.nome, ConvenioPlano.nome)
+            )
+        ).all()
+
+        por_id: dict[int, dict] = {}
+        for conv_id, conv_nome, plano_id, plano_nome in linhas:
+            convenio = por_id.setdefault(conv_id, {"id": conv_id, "nome": conv_nome, "planos": []})
+            if plano_id is not None:
+                convenio["planos"].append({"id": plano_id, "nome": plano_nome})
+        return list(por_id.values())
+
+    @staticmethod
+    def _extras_de_interface(estado: str, dados_coletados: dict, convenios_sessao: list[dict]) -> dict:
+        """Botões que acompanham a pergunta do convênio: operadoras aceitas ou planos da escolhida."""
+        if estado != ChatEstado.COLETANDO_CONVENIO or not convenios_sessao:
+            return {}
+        if dados_coletados.get("convenio_step") == "plano":
+            escolhido = next(
+                (c for c in convenios_sessao if c["id"] == dados_coletados.get("convenio_id")), None
+            )
+            planos = [p["nome"] for p in (escolhido or {}).get("planos", [])]
+            return {"quick_replies": [*planos, RESPOSTA_PLANO_NAO_SEI]}
+        return {"convenios": [{"id": c["id"], "nome": c["nome"]} for c in convenios_sessao]}
 
     async def _carregar_sessao(self, session_token: str) -> dict | None:
         """Carrega sessao do Redis."""
@@ -319,6 +408,7 @@ class ChatService:
         estado_atual: str,
         mensagem: str,
         dados_coletados: dict,
+        convenios_sessao: list[dict] | None = None,
     ) -> tuple[str, str] | None:
         """Retorna (resposta, proximo_estado) para estados com resposta direta (sem LLM).
 
@@ -339,16 +429,31 @@ class ChatService:
             saudacoes = {"oi", "ola", "olá", "bom dia", "boa tarde", "boa noite", "hello", "hi"}
             e_saudacao = msg_stripped.lower() in saudacoes or len(msg_stripped) <= 2
             if nome_atual is None and e_saudacao:
-                return ("Qual e o seu nome completo?", ChatEstado.COLETANDO_NOME)
+                return ("Qual é o seu nome completo?", ChatEstado.COLETANDO_NOME)
             if nome_atual is None and not e_saudacao:
                 # Considera a mensagem como o nome informado
-                dados_coletados["nome"] = msg_stripped
+                nome_informado = extrair_nome_informado(msg_stripped)
+                dados_coletados["nome"] = nome_informado
                 return (
-                    f"Obrigado, {msg_stripped.split()[0]}! Voce possui convenio medico ou plano de saude?",
+                    f"Obrigado, {nome_informado.split()[0]}! Você possui convênio médico ou plano de saúde?",
                     ChatEstado.COLETANDO_CONVENIO,
                 )
             # Nome ja coletado — avancar
-            return ("Voce possui convenio medico ou plano de saude?", ChatEstado.COLETANDO_CONVENIO)
+            return ("Você possui convênio médico ou plano de saúde?", ChatEstado.COLETANDO_CONVENIO)
+
+        if estado_atual == ChatEstado.COLETANDO_CONVENIO and dados_coletados.get("convenio_step") == "plano":
+            # Convênio já escolhido: a resposta é o plano (ou "não sei", que não vira particular)
+            escolhido = next(
+                (c for c in (convenios_sessao or []) if c["id"] == dados_coletados.get("convenio_id")), None
+            )
+            plano = localizar_por_nome(mensagem, (escolhido or {}).get("planos", []))
+            dados_coletados["plano_id"] = plano["id"] if plano else None
+            dados_coletados["plano"] = plano["nome"] if plano else None
+            dados_coletados["convenio_step"] = None
+            return (
+                "Anotado. Agora me conte o que está sentindo para que possamos encontrar o especialista certo.",
+                ChatEstado.OUVINDO_SINTOMAS,
+            )
 
         if estado_atual == ChatEstado.COLETANDO_CONVENIO:
             msg_lower = mensagem.lower().strip()
@@ -362,23 +467,45 @@ class ChatService:
             if particular:
                 dados_coletados["tipo_atendimento"] = "PARTICULAR"
                 return (
-                    "Certo, atendimento particular. Me conte o que esta sentindo.",
+                    "Certo, atendimento particular. Me conte o que está sentindo.",
                     ChatEstado.OUVINDO_SINTOMAS,
                 )
             if e_saudacao or len(msg_lower) <= 2:
                 nome = dados_coletados.get("nome", "").split()[0] if dados_coletados.get("nome") else ""
-                saudacao = f"{nome}, voce" if nome else "Voce"
+                saudacao = f"{nome}, você" if nome else "Você"
                 return (
-                    f"{saudacao} possui convenio medico ou plano de saude?",
+                    f"{saudacao} possui convênio médico ou plano de saúde?",
                     ChatEstado.COLETANDO_CONVENIO,
                 )
-            # Qualquer outra resposta = usuario informou um plano/convenio
+            # Unidade com convênios cadastrados: só aceita os da lista
+            if convenios_sessao:
+                convenio = localizar_por_nome(mensagem, convenios_sessao)
+                if convenio is None:
+                    aceitos = ", ".join(c["nome"] for c in convenios_sessao)
+                    return (
+                        f"Não encontrei esse convênio entre os que atendemos aqui: {aceitos}. "
+                        "Escolha um deles ou siga como particular.",
+                        ChatEstado.COLETANDO_CONVENIO,
+                    )
+                dados_coletados["tipo_atendimento"] = "CONVENIO"
+                dados_coletados["convenio_id"] = convenio["id"]
+                dados_coletados["convenio"] = convenio["nome"]
+                if convenio.get("planos"):
+                    dados_coletados["convenio_step"] = "plano"
+                    return (f"Qual é o seu plano {convenio['nome']}?", ChatEstado.COLETANDO_CONVENIO)
+                return (
+                    f"Perfeito, {convenio['nome']}. Agora me conte o que está sentindo "
+                    "para que possamos encontrar o especialista certo.",
+                    ChatEstado.OUVINDO_SINTOMAS,
+                )
+
+            # Unidade sem convênios cadastrados: registra o que o paciente informou
             dados_coletados["tipo_atendimento"] = "CONVENIO"
             dados_coletados["convenio"] = mensagem.strip()
             nome = dados_coletados.get("nome", "").split()[0] if dados_coletados.get("nome") else ""
-            saudacao = f"{nome}, o" if nome else "O"
+            saudacao = f"Perfeito, {nome}!" if nome else "Perfeito!"
             return (
-                f"Perfeito! {saudacao}brigado por informar. Agora me conte o que esta sentindo para que possamos encontrar o especialista certo.",
+                f"{saudacao} Agora me conte o que está sentindo para que possamos encontrar o especialista certo.",
                 ChatEstado.OUVINDO_SINTOMAS,
             )
 
@@ -449,6 +576,7 @@ class ChatService:
         mensagens = session_data.get("mensagens", [])
         dados_coletados = session_data.get("dados_coletados", dict(_DADOS_COLETADOS_INICIAL))
         especialidades_sessao: list[str] = session_data.get("especialidades", [])
+        convenios_sessao: list[dict] = session_data.get("convenios") or []
 
         # 2. REGRA DE OURO: emergencia sempre verificada ANTES do LLM
         if detectar_emergencia(mensagem):
@@ -487,7 +615,7 @@ class ChatService:
 
         # 3b. Fluxo guiado: estados com resposta direta (sem LLM)
         resposta_direta = self._resposta_direta_fluxo_guiado(
-            estado_atual, mensagem, dados_coletados
+            estado_atual, mensagem, dados_coletados, convenios_sessao
         )
         if resposta_direta is not None:
             resposta_texto, proximo_estado = resposta_direta
@@ -504,6 +632,7 @@ class ChatService:
                 "emergencia": False,
                 "fallback": False,
                 "sessao_expirada": False,
+                **self._extras_de_interface(proximo_estado, dados_coletados, convenios_sessao),
             }
             # Buscar slots quando avança para APRESENTANDO_SLOTS via resposta direta
             if proximo_estado == ChatEstado.APRESENTANDO_SLOTS:
@@ -715,6 +844,7 @@ class ChatService:
         slots = await agenda.buscar_disponibilidade(
             estabelecimento_id=estabelecimento_id,
             especialidade_id=especialidade_id,
+            convenio_id=dados_coletados.get("convenio_id"),
         )
 
         # Carregar nomes dos profissionais e serializar para o frontend
@@ -749,13 +879,13 @@ class ChatService:
             return {"resposta": "Slot inválido. Por favor, selecione um horário da lista.", "estado": ChatEstado.APRESENTANDO_SLOTS, "emergencia": False, "sessao_expirada": False}
 
         dados_coletados["slot_id_selecionado"] = slot_id
-        dados_coletados["contato_step"] = "telefone"
+        dados_coletados["contato_step"] = "cpf"
 
         # Buscar info do slot para mostrar ao usuário
         slot_desc = "o horário selecionado"
         for s in session_data.get("slots_temp", []):
             if s["id"] == slot_id:
-                slot_desc = f"{s['data']} às {s['hora_inicio']} com Dr(a). {s['profissional_nome']}"
+                slot_desc = descrever_horario(s)
                 break
 
         nome = (dados_coletados.get("nome") or "").split()[0]
@@ -763,7 +893,7 @@ class ChatService:
         resposta = (
             f"Ótimo, {saudacao}você escolheu {slot_desc}.\n\n"
             "Para finalizar o agendamento, preciso de mais algumas informações.\n\n"
-            "Qual é o seu **telefone de contato**? (com DDD)"
+            "Qual é o seu **CPF**?"
         )
 
         mensagens.append({"role": "user", "content": mensagem})
@@ -788,10 +918,40 @@ class ChatService:
         dados_coletados: dict,
         mensagens: list,
     ) -> dict:
-        """Coleta telefone e depois email, passo a passo."""
-        step = dados_coletados.get("contato_step", "telefone")
+        """Coleta CPF, telefone e e-mail, um por vez."""
+        step = dados_coletados.get("contato_step", "cpf")
+        extras: dict = {}
 
-        if step == "telefone":
+        if step == "cpf":
+            cpf = normalizar_cpf(mensagem)
+            proximo_estado = ChatEstado.COLETANDO_CONTATO
+            if cpf is None:
+                resposta = "Não consegui validar esse CPF. Confira os 11 números e envie de novo, por favor."
+            else:
+                dados_coletados["cpf"] = cpf
+                if dados_coletados.get("tipo_atendimento") == "CONVENIO" and dados_coletados.get("convenio_id"):
+                    dados_coletados["contato_step"] = "carteirinha"
+                    resposta = (
+                        f"Obrigado! Qual é o **número da sua carteirinha** {dados_coletados.get('convenio') or ''}?"
+                    ).replace(" ?", "?")
+                    extras = {"quick_replies": [RESPOSTA_SEM_CARTEIRINHA]}
+                else:
+                    dados_coletados["contato_step"] = "telefone"
+                    resposta = "Obrigado! Qual é o seu **telefone de contato**? (com DDD)"
+
+        elif step == "carteirinha":
+            numero = re.sub(r"[^0-9A-Za-z]", "", mensagem)
+            tem_numero = any(c.isdigit() for c in numero) and len(numero) >= 5
+            dados_coletados["numero_carteirinha"] = numero[:50] if tem_numero else None
+            dados_coletados["contato_step"] = "telefone"
+            proximo_estado = ChatEstado.COLETANDO_CONTATO
+            resposta = (
+                "Anotado! Qual é o seu **telefone de contato**? (com DDD)"
+                if tem_numero
+                else "Sem problema, a recepção confere no dia. Qual é o seu **telefone de contato**? (com DDD)"
+            )
+
+        elif step == "telefone":
             telefone = mensagem.strip()
             dados_coletados["telefone"] = telefone
             dados_coletados["contato_step"] = "email"
@@ -810,13 +970,20 @@ class ChatService:
             slot_desc = "horário selecionado"
             for s in session_data.get("slots_temp", []):
                 if s["id"] == dados_coletados.get("slot_id_selecionado"):
-                    slot_desc = f"{s['data']} às {s['hora_inicio']} com Dr(a). {s['profissional_nome']}"
+                    slot_desc = descrever_horario(s)
                     break
 
             resposta = (
                 "Confira os dados do seu agendamento:\n\n"
                 f"**Nome:** {nome}\n"
-                f"**Especialidade:** {especialidade}\n"
+                f"**CPF:** {mascarar_cpf(dados_coletados.get('cpf'))}\n"
+                f"**Atendimento:** {descrever_pagamento(dados_coletados)}\n"
+                + (
+                    f"**Carteirinha:** {dados_coletados['numero_carteirinha']}\n"
+                    if dados_coletados.get("numero_carteirinha")
+                    else ""
+                )
+                + f"**Especialidade:** {especialidade}\n"
                 f"**Horário:** {slot_desc}\n"
                 f"**Telefone:** {telefone}\n"
                 f"**E-mail:** {email}\n\n"
@@ -836,6 +1003,7 @@ class ChatService:
             "estado": proximo_estado,
             "emergencia": False,
             "sessao_expirada": False,
+            **extras,
         }
 
     async def _processar_criar_agendamento(
@@ -847,7 +1015,7 @@ class ChatService:
         mensagens: list,
     ) -> dict:
         """Cria o agendamento no banco após confirmação do usuário."""
-        from app.models.cliente import Cliente
+        from app.models.cliente import Cliente, ModalidadePagamento
         from app.schemas.atendimento import AtendimentoCreate
         from sqlalchemy import select
 
@@ -869,6 +1037,19 @@ class ChatService:
         nome = dados_coletados.get("nome") or "Paciente"
         telefone = dados_coletados.get("telefone") or ""
         email = dados_coletados.get("email") or ""
+        cpf = dados_coletados.get("cpf")
+
+        if slot_id and estabelecimento_id and not cpf:
+            # Sessão antiga ou canal que pulou a etapa: nunca gravar cadastro sem documento
+            resposta = "Antes de confirmar, preciso do seu **CPF**."
+            dados_coletados["contato_step"] = "cpf"
+            mensagens.append({"role": "user", "content": mensagem})
+            mensagens.append({"role": "assistant", "content": resposta})
+            session_data["mensagens"] = mensagens
+            session_data["estado"] = ChatEstado.COLETANDO_CONTATO
+            session_data["dados_coletados"] = dados_coletados
+            await self._salvar_sessao(session_token, session_data)
+            return {"resposta": resposta, "estado": ChatEstado.COLETANDO_CONTATO, "emergencia": False, "sessao_expirada": False}
 
         if not slot_id or not estabelecimento_id:
             resposta = "Não consegui localizar o horário selecionado. Por favor, inicie uma nova conversa."
@@ -899,10 +1080,10 @@ class ChatService:
             if not profissional_obj:
                 raise ValueError(f"Profissional do slot {slot_id} não encontrado")
 
-            # Buscar ou criar cliente pelo telefone+estabelecimento
+            # Buscar ou criar cliente pelo CPF dentro da unidade
             result = await self.db.execute(
                 select(Cliente).where(
-                    Cliente.telefone == telefone,
+                    Cliente.cpf == cpf,
                     Cliente.estabelecimento_id == estabelecimento_id,
                 ).limit(1)
             )
@@ -910,19 +1091,62 @@ class ChatService:
 
             if not cliente:
                 cliente = Cliente(
-                    cpf="00000000000",  # placeholder para clientes sem cadastro prévio
+                    cpf=cpf,
                     nome=nome,
                     telefone=telefone,
                     email=email,
+                    convenio_id=dados_coletados.get("convenio_id"),
+                    convenio=dados_coletados.get("convenio"),
+                    modalidade_pagamento=(
+                        ModalidadePagamento.CONVENIO
+                        if dados_coletados.get("tipo_atendimento") == "CONVENIO"
+                        else ModalidadePagamento.PARTICULAR
+                    ),
                     estabelecimento_id=estabelecimento_id,
                 )
                 self.db.add(cliente)
                 await self.db.flush()
                 await self.db.refresh(cliente)
             else:
-                # Atualizar email se veio novo
+                # Completar contato que faltava no cadastro
                 if email and not cliente.email:
                     cliente.email = email
+                if telefone and not cliente.telefone:
+                    cliente.telefone = telefone
+
+            # Carteirinha informada no chat: reaproveita a mesma ou cadastra
+            cliente_convenio_id = None
+            numero_carteirinha = dados_coletados.get("numero_carteirinha")
+            if numero_carteirinha and dados_coletados.get("convenio_id"):
+                from app.models.cliente_convenio import ClienteConvenio
+
+                result = await self.db.execute(
+                    select(ClienteConvenio).where(
+                        ClienteConvenio.cliente_id == cliente.id,
+                        ClienteConvenio.convenio_id == dados_coletados["convenio_id"],
+                        ClienteConvenio.numero_carteirinha == numero_carteirinha,
+                    ).limit(1)
+                )
+                carteirinha = result.scalar_one_or_none()
+                if not carteirinha:
+                    result = await self.db.execute(
+                        select(ClienteConvenio.id).where(
+                            ClienteConvenio.cliente_id == cliente.id,
+                            ClienteConvenio.principal == True,  # noqa: E712
+                        ).limit(1)
+                    )
+                    carteirinha = ClienteConvenio(
+                        cliente_id=cliente.id,
+                        convenio_id=dados_coletados["convenio_id"],
+                        plano_id=dados_coletados.get("plano_id"),
+                        numero_carteirinha=numero_carteirinha,
+                        nome_titular=nome,
+                        principal=result.scalar_one_or_none() is None,
+                    )
+                    self.db.add(carteirinha)
+                    await self.db.flush()
+                    await self.db.refresh(carteirinha)
+                cliente_convenio_id = carteirinha.id
 
             # Criar atendimento
             agenda = AgendaService(self.db)
@@ -931,7 +1155,12 @@ class ChatService:
                 cliente_id=cliente.id,
                 profissional_id=slot_obj.profissional_id,
                 especialidade_id=profissional_obj.especialidade_id,
-                observacoes=f"Agendado via chatbot. Especialidade: {dados_coletados.get('especialidade', '')}",
+                cliente_convenio_id=cliente_convenio_id,
+                observacoes=(
+                    f"Agendado via chatbot. Especialidade: {dados_coletados.get('especialidade', '')}. "
+                    f"Atendimento: {descrever_pagamento(dados_coletados)}"
+                    + ("." if cliente_convenio_id else " (carteirinha a conferir na recepção).")
+                ),
             )
             atendimento = await agenda.agendar_consulta(dados_atendimento, estabelecimento_id)
             await self.db.commit()

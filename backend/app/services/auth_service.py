@@ -138,6 +138,7 @@ class AuthService:
         token_data: dict[str, str | int] = {
             "sub": str(usuario.id),
             "email": usuario.email,
+            "nome": usuario.nome,
             "role": usuario.role.value,
         }
 

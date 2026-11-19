@@ -3,6 +3,8 @@
 import re
 from datetime import datetime
 
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
+
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from app.models.estabelecimento import TipoEstabelecimento
@@ -14,6 +16,18 @@ class EstabelecimentoBase(BaseModel):
     slug: str = Field(..., min_length=2, max_length=100, description="Identificador único URL-friendly")
     tipo: TipoEstabelecimento
     plano: str = Field(default="basico", description="basico | pro | enterprise")
+    timezone: str = Field(default="America/Sao_Paulo", max_length=64, description="Fuso IANA da unidade")
+
+    @field_validator("timezone")
+    @classmethod
+    def validar_timezone(cls, v: str | None) -> str | None:
+        if v is None:
+            return v
+        try:
+            ZoneInfo(v)
+        except (ZoneInfoNotFoundError, ValueError) as e:
+            raise ValueError("Fuso horário inválido (use um nome IANA, ex: America/Sao_Paulo)") from e
+        return v
 
     # Contato
     email: str | None = Field(None, max_length=254)
@@ -96,6 +110,19 @@ class EstabelecimentoUpdate(BaseModel):
     responsavel_email: str | None = Field(None, max_length=254)
     responsavel_telefone: str | None = Field(None, max_length=20)
     responsavel_cargo: str | None = Field(None, max_length=100)
+
+    timezone: str | None = Field(None, max_length=64, description="Fuso IANA da unidade")
+
+    @field_validator("timezone")
+    @classmethod
+    def validar_timezone(cls, v: str | None) -> str | None:
+        if v is None:
+            return v
+        try:
+            ZoneInfo(v)
+        except (ZoneInfoNotFoundError, ValueError) as e:
+            raise ValueError("Fuso horário inválido (use um nome IANA, ex: America/Sao_Paulo)") from e
+        return v
 
 
 class EstabelecimentoResponse(EstabelecimentoBase):

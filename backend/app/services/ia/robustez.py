@@ -24,7 +24,7 @@ ESPECIALIDADE_FALLBACK: str = "Clinica Geral"
 
 # Mensagem exibida ao paciente quando o LLM falha apos retries
 FALLBACK_MESSAGE: str = (
-    "Desculpe, estou com dificuldades tecnicas no momento. "
+    "Desculpe, estou com dificuldades técnicas no momento. "
     "Por favor, tente novamente em instantes ou ligue para a recepção "
     "para agendar sua consulta."
 )

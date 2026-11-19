@@ -6,6 +6,7 @@ class Settings(BaseSettings):
         env_file=".env",
         env_file_encoding="utf-8",
         case_sensitive=False,
+        extra="ignore",
     )
 
     # App
@@ -45,6 +46,9 @@ class Settings(BaseSettings):
 
     # Billing Limits
     daily_limit_usd: float = 10.00
+
+    # Fuso de operação das unidades (slots guardam data/hora locais)
+    app_timezone: str = "America/Sao_Paulo"
     monthly_limit_usd: float = 200.00
     alert_threshold_pct: int = 80
 

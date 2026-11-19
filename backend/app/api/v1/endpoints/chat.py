@@ -13,10 +13,14 @@ from fastapi import APIRouter, Depends, HTTPException, Request, WebSocket, WebSo
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.v1.dependencies import get_estabelecimento_id_chat
+from app.api.v1.dependencies import (
+    get_estabelecimento_id_chat,
+    validar_licenca_do_estabelecimento,
+)
 from app.core.database import AsyncSessionLocal, get_db
 from app.core.redis import get_redis_client  # noqa: E402
 from app.services.ia.chat_service import ChatService
+from app.services.ia.robustez import FALLBACK_MESSAGE
 from app.services.whatsapp_service import enviar_mensagem_whatsapp, extrair_mensagem_evolution
 
 log = structlog.get_logger(__name__)
@@ -59,6 +63,7 @@ async def criar_sessao(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="estabelecimento_id é obrigatório (informe no body ou autentique-se)",
         )
+    await validar_licenca_do_estabelecimento(db, estabelecimento_id)
     redis = get_redis_client()
     service = ChatService(db, redis)
     token = await service.criar_sessao(canal=dados.canal, estabelecimento_id=estabelecimento_id)
@@ -111,10 +116,26 @@ async def websocket_chat(
                 service = ChatService(db=db, redis=redis)
 
                 msg_efetiva = mensagem if mensagem else f"confirmar:{confirmar_slot_id}"
-                resultado = await service.processar_mensagem(
-                    session_token=session_token,
-                    mensagem=msg_efetiva,
-                )
+                try:
+                    resultado = await service.processar_mensagem(
+                        session_token=session_token,
+                        mensagem=msg_efetiva,
+                    )
+                except Exception as e:
+                    # Falha do modelo de IA (ou de infra) não pode encerrar a conversa:
+                    # o paciente é avisado e pode tentar de novo na mesma sessão.
+                    log.error(
+                        "chat_falha_processamento",
+                        token=session_token[:8] + "...",
+                        erro=str(e),
+                    )
+                    await db.rollback()
+                    resultado = {
+                        "resposta": FALLBACK_MESSAGE,
+                        "fallback": True,
+                        "emergencia": False,
+                        "sessao_expirada": False,
+                    }
 
                 await websocket.send_json(resultado)
 

@@ -2,6 +2,7 @@ services:
   postgres:
     image: postgres:16
     container_name: medbot-postgres
+    restart: unless-stopped
     environment:
       POSTGRES_DB: medbot
       POSTGRES_USER: medbot
@@ -19,6 +20,7 @@ services:
   redis:
     image: redis:7-alpine
     container_name: medbot-redis
+    restart: unless-stopped
     ports:
       - "6379:6379"
     healthcheck:
@@ -30,6 +32,7 @@ services:
   qdrant:
     image: qdrant/qdrant:latest
     container_name: medbot-qdrant
+    restart: unless-stopped
     ports:
       - "6333:6333"
       - "6334:6334"

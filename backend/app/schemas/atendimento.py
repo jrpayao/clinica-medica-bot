@@ -27,6 +27,7 @@ class AtendimentoCreate(BaseModel):
     canal_origem: AtendimentoCanal = AtendimentoCanal.PORTAL
     triagem_resumo: dict | None = None
     observacoes: str | None = None
+    cliente_convenio_id: int | None = None
     estabelecimento_id: int | None = None
 
 

@@ -35,3 +35,8 @@ Thumbs.db
 # Docker volumes (local)
 pgdata/
 qdrantdata/
+
+# Test and tooling artifacts
+test-results/
+.playwright-mcp/
+.superpowers/

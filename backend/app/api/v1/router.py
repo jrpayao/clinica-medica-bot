@@ -18,8 +18,10 @@ from app.api.v1.endpoints import (
     especialidades,
     estabelecimentos,
     licenca,
+    painel_profissional,
     profissionais,
     rag,
+    recepcao,
     tipo_atendimentos,
 )
 from app.core.database import get_db
@@ -48,10 +50,13 @@ api_router.include_router(especialidades.router, dependencies=_LICENCA_DEP)
 api_router.include_router(profissionais.router,  dependencies=_LICENCA_DEP)
 api_router.include_router(clientes.router,       dependencies=_LICENCA_DEP)
 api_router.include_router(agenda.router,         dependencies=_LICENCA_DEP)
-api_router.include_router(chat.router,           dependencies=_LICENCA_DEP)
 api_router.include_router(tipo_atendimentos.router, dependencies=_LICENCA_DEP)
+api_router.include_router(recepcao.router,      dependencies=_LICENCA_DEP)
+api_router.include_router(painel_profissional.router, dependencies=_LICENCA_DEP)
 
-# WebSocket sem dependency de licença (HTTPBearer é incompatível com WebSocket)
+# Chat é público: paciente anônimo no portal e webhook do WhatsApp não têm JWT.
+# A licença é validada em criar_sessao, pelo estabelecimento da sessão.
+api_router.include_router(chat.router)
 api_router.include_router(chat.ws_router)
 
 # Carteirinhas de clientes — /v1/clientes/{cliente_id}/convenios

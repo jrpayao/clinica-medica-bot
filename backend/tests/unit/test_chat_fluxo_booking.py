@@ -60,9 +60,11 @@ def _dados_padrao(
     contato_step: str = "telefone",
     telefone: str | None = None,
     email: str | None = None,
+    cpf: str | None = "52998224725",
 ) -> dict:
     return {
         "nome": nome,
+        "cpf": cpf,
         "convenio_id": None,
         "tipo_atendimento": "PARTICULAR",
         "telefone": telefone,
@@ -124,8 +126,8 @@ class TestSlotSelecionado:
         saved = json.loads(svc.redis.set.call_args[0][1])
         assert saved["dados_coletados"]["slot_id_selecionado"] == 42
 
-    async def test_confirmar_slot_pede_telefone(self):
-        """Resposta ao confirmar slot deve pedir o telefone."""
+    async def test_confirmar_slot_pede_cpf(self):
+        """Resposta ao confirmar slot deve pedir o CPF (primeiro dado do cadastro)."""
         svc = _make_service()
         svc.redis.get = AsyncMock(
             return_value=_session(
@@ -137,7 +139,7 @@ class TestSlotSelecionado:
 
         resultado = await svc.processar_mensagem("test-token", "confirmar:42")
 
-        assert "telefone" in resultado["resposta"].lower()
+        assert "cpf" in resultado["resposta"].lower()
 
     async def test_confirmar_slot_invalido_retorna_erro(self):
         """Mensagem confirmar sem ID numérico válido → resposta de erro, sem crash."""
@@ -494,3 +496,12 @@ class TestCriarSessaoEspecialidades:
         saved_raw = svc.redis.set.call_args[0][1]
         saved = json.loads(saved_raw)
         assert saved["especialidades"] == []
+
+
+def test_descricao_do_horario_nao_duplica_o_tratamento_do_profissional():
+    """'com Dr(a). Dr. Ricardo Nunes' aparecia na confirmação; o nome cadastrado já traz o tratamento."""
+    from app.services.ia.chat_service import descrever_horario
+
+    slot = {"data": "20/11/2026", "hora_inicio": "08:00", "profissional_nome": "Dr. Ricardo Nunes"}
+
+    assert descrever_horario(slot) == "20/11/2026 às 08:00 com Dr. Ricardo Nunes"

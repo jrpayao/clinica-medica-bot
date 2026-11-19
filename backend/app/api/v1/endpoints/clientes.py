@@ -11,6 +11,16 @@ from app.services.cliente_service import ClienteService
 router = APIRouter(prefix="/clientes", tags=["Clientes"])
 
 
+async def sem_medico(current_user: dict = Depends(get_current_user)) -> dict:
+    """Cadastro de clientes: MEDICO consulta os próprios pacientes em /profissional/clientes."""
+    if current_user.get("role") == "MEDICO":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Acesso restrito. Consulte seus pacientes no seu painel.",
+        )
+    return current_user
+
+
 @router.get(
     "/",
     response_model=list[ClienteOut],
@@ -35,7 +45,7 @@ async def listar_clientes(
 async def buscar_cliente(
     cliente_id: int,
     db: AsyncSession = Depends(get_db),
-    current_user: dict = Depends(get_current_user),
+    current_user: dict = Depends(sem_medico),
     estabelecimento_id: Annotated[int, Depends(require_estabelecimento)] = ...,
 ) -> ClienteOut:
     service = ClienteService(db)
@@ -54,6 +64,7 @@ async def buscar_cliente(
 async def criar_cliente(
     dados: ClienteCreate,
     db: AsyncSession = Depends(get_db),
+    _: dict = Depends(sem_medico),
     estabelecimento_id: Annotated[int, Depends(require_estabelecimento)] = ...,
 ) -> ClienteOut:
     """Criar cliente. Requer token com estabelecimento_id (ex: via chat token)."""
@@ -70,7 +81,7 @@ async def atualizar_cliente(
     cliente_id: int,
     dados: ClienteUpdate,
     db: AsyncSession = Depends(get_db),
-    current_user: dict = Depends(get_current_user),
+    current_user: dict = Depends(sem_medico),
     estabelecimento_id: Annotated[int, Depends(require_estabelecimento)] = ...,
 ) -> ClienteOut:
     service = ClienteService(db)

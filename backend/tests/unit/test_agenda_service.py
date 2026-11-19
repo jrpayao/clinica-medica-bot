@@ -143,3 +143,34 @@ async def test_cancelar_consulta_ja_realizada(service, mock_db):
 
     with pytest.raises(ConsultaJaRealizadaError):
         await service.cancelar_consulta(1, "motivo")
+
+
+# ============================================================
+# Disponibilidade não oferece horário que já passou
+# ============================================================
+
+def _sql_da_busca(mock_db) -> str:
+    return str(mock_db.execute.call_args[0][0].compile(compile_kwargs={"literal_binds": True}))
+
+
+async def test_disponibilidade_de_hoje_exclui_horarios_que_ja_passaram(service, mock_db):
+    """Às 15:03 de hoje, o slot das 08:00 de hoje não pode ser oferecido."""
+    from datetime import datetime
+
+    await service.buscar_disponibilidade(
+        estabelecimento_id=1, agora=datetime(2026, 11, 19, 15, 3)
+    )
+
+    sql = _sql_da_busca(mock_db)
+    assert "slots.data > '2026-11-19'" in sql
+    assert "slots.hora_inicio > '15:03:00'" in sql
+
+
+async def test_disponibilidade_a_partir_de_data_futura_nao_filtra_por_hora(service, mock_db):
+    from datetime import date, datetime
+
+    await service.buscar_disponibilidade(
+        estabelecimento_id=1, data_inicio=date(2026, 11, 25), agora=datetime(2026, 11, 19, 15, 3)
+    )
+
+    assert "hora_inicio >" not in _sql_da_busca(mock_db)

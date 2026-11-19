@@ -8,12 +8,14 @@ Cobre:
 - Particular (convenio_id=None no paciente) sempre vê todos os slots
 """
 
-from datetime import date
+from datetime import date, datetime
 from unittest.mock import AsyncMock, MagicMock, call
 
 import pytest
 
 from app.services.agenda_service import AgendaService
+
+_AGORA = datetime(2026, 11, 19, 15, 0)
 
 
 def _make_db():
@@ -34,6 +36,7 @@ class TestAgendaConvenioFiltro:
         await svc.buscar_disponibilidade(
             estabelecimento_id=1,
             convenio_id=None,
+            agora=_AGORA,  # sem relógio injetado há uma consulta a mais, a do fuso da unidade
         )
         db.execute.assert_called_once()
 
@@ -56,6 +59,7 @@ class TestAgendaConvenioFiltro:
         await svc.buscar_disponibilidade(
             estabelecimento_id=1,
             convenio_id=3,
+            agora=_AGORA,  # sem relógio injetado há uma consulta a mais, a do fuso da unidade
         )
         db.execute.assert_called_once()
 
