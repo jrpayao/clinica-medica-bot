@@ -1,0 +1,17 @@
+# Coleta das métricas do MedBot. Em produção, troque o alvo pelo nome do serviço da API na rede interna.
+global:
+    scrape_interval: 15s
+    evaluation_interval: 15s
+
+scrape_configs:
+    - job_name: medbot-api
+        # GET /metrics da API (app/core/metricas.py). O token vem de segredos/metrics_token (configurar.py)
+        # e precisa ser o mesmo METRICS_TOKEN do backend/.env.
+      metrics_path: /metrics
+      authorization:
+          type: Bearer
+          credentials_file: /etc/prometheus/metrics_token
+      static_configs:
+          - targets: ["host.docker.internal:8100"]
+            labels:
+                ambiente: local

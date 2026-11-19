@@ -1,0 +1,27 @@
+apiVersion: 1
+
+datasources:
+    - name: Prometheus
+      uid: prometheus
+      type: prometheus
+      access: proxy
+      url: http://prometheus:9090
+      isDefault: true
+      jsonData:
+          timeInterval: 15s
+
+    # Leitura do banco do MedBot com um usuário que só vê colunas sem dado de paciente
+    # (criado por configurar.py --aplicar-banco). Serve aos painéis de custo e de agendamentos.
+    - name: Banco MedBot
+      uid: medbot-banco
+      type: grafana-postgresql-datasource
+      access: proxy
+      url: $BANCO_ENDERECO
+      user: grafana_leitura
+      jsonData:
+          database: $BANCO_NOME
+          sslmode: disable
+          postgresVersion: 1600
+          timescaledb: false
+      secureJsonData:
+          password: $BANCO_LEITURA_SENHA

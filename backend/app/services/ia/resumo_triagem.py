@@ -108,10 +108,13 @@ async def _invocar_llm(sistema: str, usuario: str) -> tuple[str, int, int, str]:
         temperature=0.2,
         max_tokens=320,
     )
-    resposta = await asyncio.wait_for(
-        llm.ainvoke([SystemMessage(content=sistema), HumanMessage(content=usuario)]),
-        timeout=TEMPO_LIMITE_IA_S,
-    )
+    from app.core import metricas
+
+    async with metricas.medir_ia("resumo_triagem"):
+        resposta = await asyncio.wait_for(
+            llm.ainvoke([SystemMessage(content=sistema), HumanMessage(content=usuario)]),
+            timeout=TEMPO_LIMITE_IA_S,
+        )
     uso = resposta.response_metadata.get("token_usage", {}) or {}
     return str(resposta.content), uso.get("prompt_tokens", 0), uso.get("completion_tokens", 0), modelo
 

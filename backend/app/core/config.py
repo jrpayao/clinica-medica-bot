@@ -65,6 +65,15 @@ class Settings(BaseSettings):
     jitsi_app_secret: str = ""
     portal_url: str = "http://localhost:4200"
 
+    # Observabilidade
+    metrics_token: str = ""          # se definido, GET /metrics exige Authorization: Bearer <token>
+    sentry_dsn: str = ""             # GlitchTip ou Sentry; vazio = desligado
+    sentry_ambiente: str = "desenvolvimento"
+    sentry_amostragem_traces: float = 0.0
+    # Preços dos modelos de produção (JSON, dólares por token), somados aos locais:
+    # {"openai/gpt-4o-mini": {"input": 0.00000015, "output": 0.0000006}}
+    precos_modelos: str = ""
+
     # SMS / Twilio
     twilio_account_sid: str = ""
     twilio_auth_token: str = ""

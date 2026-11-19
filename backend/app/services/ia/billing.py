@@ -10,11 +10,35 @@ import structlog
 from sqlalchemy import Date, cast, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.config import MODEL_PRICING
+import json
+
+from app.core import metricas
+from app.core.config import MODEL_PRICING, settings
 from app.models.estabelecimento import EstabelecimentoSaude
 from app.models.token_usage import TokenFeature, TokenUsage
 
 log = structlog.get_logger(__name__)
+
+
+def precos_dos_modelos(json_ambiente: str | None) -> dict[str, dict[str, float]]:
+    """Preços locais somados aos de produção informados em PRECOS_MODELOS. Entrada inválida é ignorada."""
+    precos = dict(MODEL_PRICING)
+    if not json_ambiente:
+        return precos
+    try:
+        informados = json.loads(json_ambiente)
+    except ValueError:
+        log.warning("precos_modelos_invalidos", motivo="json")
+        return precos
+    for modelo, preco in (informados.items() if isinstance(informados, dict) else []):
+        try:
+            precos[str(modelo)] = {"input": float(preco["input"]), "output": float(preco["output"])}
+        except (KeyError, TypeError, ValueError):
+            log.warning("precos_modelos_invalidos", modelo=str(modelo)[:80])
+    return precos
+
+
+MODEL_PRICING.update(precos_dos_modelos(settings.precos_modelos))
 
 
 def calcular_custo(
@@ -24,6 +48,7 @@ def calcular_custo(
     pricing = MODEL_PRICING.get(modelo)
     if not pricing:
         log.warning("modelo_sem_pricing", modelo=modelo)
+        metricas.IA_SEM_PRECO.labels(modelo).inc()
         return Decimal("0")
 
     custo_input = Decimal(str(pricing["input"])) * prompt_tokens
@@ -67,6 +92,7 @@ async def registrar_uso(
     )
     db.add(registro)
     await db.flush()
+    metricas.registrar_ia(modelo, feature_enum.value, prompt_tokens, completion_tokens, float(cost_usd))
 
     log.info(
         "token_usage_registrado",

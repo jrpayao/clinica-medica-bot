@@ -43,3 +43,7 @@ test-results/
 
 # Jitsi local: configuracao gerada, com chaves
 infra/jitsi/config/
+
+# Observabilidade: configuracao gerada, com senhas
+infra/observabilidade/.env
+infra/observabilidade/segredos/

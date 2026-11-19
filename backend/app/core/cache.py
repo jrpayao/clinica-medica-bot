@@ -14,6 +14,8 @@ from typing import Any
 
 import structlog
 
+from app.core import metricas
+
 log = structlog.get_logger(__name__)
 
 PREFIXO = "cache:"
@@ -40,8 +42,10 @@ def chave_catalogo_chat(estabelecimento_id: int) -> str:
 async def obter(chave: str) -> Any | None:
     try:
         bruto = await _cliente().get(PREFIXO + chave)
+        metricas.registrar_cache(chave, "acerto" if bruto else "falta")
         return json.loads(bruto) if bruto else None
     except Exception as erro:  # Redis fora do ar, valor corrompido: segue sem cache
+        metricas.registrar_cache(chave, "erro")
         log.warning("cache_leitura_falhou", chave=chave, erro=str(erro)[:200])
         return None
 

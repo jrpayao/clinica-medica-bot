@@ -16,7 +16,7 @@ from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
 from langchain_openai import ChatOpenAI
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core import cache
+from app.core import cache, metricas
 from app.services.agenda_service import AgendaService
 from app.services.ia import billing
 from app.services.ia.dados_paciente import localizar_por_nome, mascarar_cpf, normalizar_cpf
@@ -732,7 +732,8 @@ class ChatService:
         messages.append(HumanMessage(content=mensagem))
 
         llm = self._criar_llm(modelo, feature=feature)
-        resposta_ai = await llm.ainvoke(messages)
+        async with metricas.medir_ia(feature):
+            resposta_ai = await llm.ainvoke(messages)
 
         resposta_texto = resposta_ai.content
         token_usage = resposta_ai.response_metadata.get("token_usage", {})

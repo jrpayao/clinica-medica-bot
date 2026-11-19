@@ -1,0 +1,53 @@
+# Observabilidade do MedBot: Prometheus (métricas) + Grafana (painéis).
+# Configuração gerada por configurar.py. Passo a passo no README.md desta pasta.
+name: medbot-observabilidade
+
+services:
+    prometheus:
+        image: prom/prometheus:v3.5.0
+        restart: unless-stopped
+        command:
+            - --config.file=/etc/prometheus/prometheus.yml
+            - --storage.tsdb.path=/prometheus
+            - --storage.tsdb.retention.time=${RETENCAO_METRICAS:-30d}
+        volumes:
+            - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+            - ./segredos/metrics_token:/etc/prometheus/metrics_token:ro
+            - prometheus-dados:/prometheus
+        ports:
+            - "127.0.0.1:9090:9090"   # só nesta máquina; o Grafana é a porta de entrada
+        extra_hosts:
+            - "host.docker.internal:host-gateway"
+
+    grafana:
+        image: grafana/grafana:12.1.1
+        restart: unless-stopped
+        depends_on:
+            - prometheus
+        environment:
+            GF_SECURITY_ADMIN_USER: admin
+            GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_SENHA_ADMIN:?rode configurar.py}
+            GF_USERS_ALLOW_SIGN_UP: "false"
+            GF_AUTH_ANONYMOUS_ENABLED: "false"
+            GF_ANALYTICS_REPORTING_ENABLED: "false"
+            GF_ANALYTICS_CHECK_FOR_UPDATES: "false"
+            GF_DEFAULT_LOCALE: pt-BR
+            GF_DATE_FORMATS_DEFAULT_TIMEZONE: ${FUSO:-America/Sao_Paulo}
+            GF_SERVER_ROOT_URL: ${GRAFANA_URL:-http://localhost:3000}
+            GF_DASHBOARDS_DEFAULT_HOME_DASHBOARD_PATH: /var/lib/grafana/dashboards/medbot.json
+            # usados no provisionamento do banco (datasources.yml)
+            BANCO_ENDERECO: ${BANCO_ENDERECO:-host.docker.internal:5432}
+            BANCO_NOME: ${BANCO_NOME:-medbot}
+            BANCO_LEITURA_SENHA: ${BANCO_LEITURA_SENHA:?rode configurar.py}
+        volumes:
+            - ./grafana/provisioning:/etc/grafana/provisioning:ro
+            - ./grafana/dashboards:/var/lib/grafana/dashboards:ro
+            - grafana-dados:/var/lib/grafana
+        ports:
+            - "${GRAFANA_PORTA:-3000}:3000"
+        extra_hosts:
+            - "host.docker.internal:host-gateway"
+
+volumes:
+    prometheus-dados:
+    grafana-dados:
