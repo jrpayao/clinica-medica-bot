@@ -30,6 +30,7 @@ from app.models.teleconsulta import (
     Teleconsulta,
     TipoDocumento,
 )
+from app.services import papel_timbrado_service
 from app.services.documentos_pdf import gerar_pdf
 from app.services.ia.resumo_triagem import texto_do_resumo
 from app.services.mensageria import enviar_whatsapp
@@ -529,6 +530,7 @@ async def _pdf(db: AsyncSession, documento_id: int, atendimento_id: int) -> tupl
         "profissional": {"nome": profissional.nome, "registro": profissional.registro_profissional},
         "paciente": {"nome": cliente.nome},
         "conteudo": documento.conteudo,
+        "timbre": await papel_timbrado_service.para_o_pdf(db, documento.estabelecimento_id),
     })
     return pdf, f"{documento.tipo.value.lower()}-{documento.codigo.lower()}.pdf"
 

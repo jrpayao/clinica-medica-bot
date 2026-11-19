@@ -43,6 +43,11 @@ export const routes: Routes = [
           import('./features/recepcao/recepcao.component').then((m) => m.RecepcaoComponent),
       },
       {
+        path: 'receituario',
+        loadComponent: () =>
+          import('./features/receituario/receituario.component').then((m) => m.ReceituarioComponent),
+      },
+      {
         path: 'atender/:id',
         loadComponent: () =>
           import('./features/atender/atender.component').then((m) => m.AtenderComponent),

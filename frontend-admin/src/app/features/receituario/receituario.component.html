@@ -1,0 +1,85 @@
+<app-page-header titulo="Receituário" subtitulo="Como as receitas e os atestados desta unidade são apresentados">
+  <button mat-stroked-button (click)="verExemplo()" [disabled]="carregando() || falhou()">
+    <mat-icon>picture_as_pdf</mat-icon>
+    Ver exemplo
+  </button>
+</app-page-header>
+
+@if (carregando()) {
+  <div class="centro"><mat-spinner diameter="40" /></div>
+} @else if (falhou()) {
+  <app-empty-state
+    icon="cloud_off"
+    title="Não foi possível carregar"
+    description="Verifique a conexão e recarregue a página." />
+} @else if (config(); as c) {
+  <div class="grade">
+
+    <section class="cartao" aria-labelledby="t-logo">
+      <h2 id="t-logo">Logo</h2>
+      <p class="nota">Aparece no alto de cada página. PNG ou JPEG, até 2 MB. Fundo transparente fica melhor.</p>
+
+      <div class="logo" [class.logo--vazio]="!c.tem_logo">
+        @if (logoUrl(); as url) {
+          <img [src]="url" alt="Logo atual da unidade" />
+        } @else if (c.tem_logo) {
+          <span>Logo enviado (prévia indisponível)</span>
+        } @else {
+          <mat-icon>image</mat-icon>
+          <span>Nenhum logo enviado</span>
+        }
+      </div>
+
+      <div class="acoes">
+        <input #arquivo type="file" accept="image/png,image/jpeg" hidden (change)="escolherArquivo($event)" />
+        <button mat-flat-button color="primary" [disabled]="enviando()" (click)="arquivo.click()">
+          <mat-icon>upload</mat-icon>
+          {{ c.tem_logo ? 'Trocar logo' : 'Enviar logo' }}
+        </button>
+        @if (c.tem_logo) {
+          <button mat-button [disabled]="enviando()" (click)="removerLogo()">Remover</button>
+        }
+        @if (enviando()) { <mat-spinner diameter="22" /> }
+      </div>
+      @if (erroArquivo()) {
+        <p class="erro" role="alert">{{ erroArquivo() }}</p>
+      }
+    </section>
+
+    <section class="cartao" aria-labelledby="t-opcoes">
+      <h2 id="t-opcoes">Marca-d'água e rodapé</h2>
+
+      <mat-slide-toggle [ngModel]="marcaDagua()" (ngModelChange)="marcaDagua.set($event)">
+        Usar o logo como marca-d'água
+      </mat-slide-toggle>
+      <p class="nota">
+        @if (marcaAtiva()) { O logo aparece bem claro ao fundo de cada página, atrás do texto. }
+        @else if (marcaDagua()) { Envie um logo para a marca-d'água aparecer. }
+        @else { As páginas saem sem imagem ao fundo. }
+      </p>
+
+      <mat-form-field appearance="outline">
+        <mat-label>Linha de rodapé (opcional)</mat-label>
+        <input
+          matInput
+          [maxlength]="tamanhoRodape"
+          placeholder="Ex.: Atendimento de segunda a sexta, das 8h às 18h"
+          [ngModel]="rodape()"
+          (ngModelChange)="rodape.set($event)" />
+        <mat-hint align="end">{{ rodape().length }}/{{ tamanhoRodape }}</mat-hint>
+      </mat-form-field>
+      <p class="nota">Nome, endereço e telefone da unidade já saem no cabeçalho, a partir do cadastro.</p>
+
+      <div class="acoes">
+        <button mat-flat-button color="primary" [disabled]="!alterado() || salvando()" (click)="salvar()">
+          Salvar opções
+        </button>
+      </div>
+    </section>
+  </div>
+
+  <p class="aviso">
+    <mat-icon>info</mat-icon>
+    A personalização vale também para documentos já emitidos quando forem abertos de novo. O conteúdo deles não muda.
+  </p>
+}

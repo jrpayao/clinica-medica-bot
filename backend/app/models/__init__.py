@@ -34,6 +34,7 @@ from app.models.slot import Slot, SlotStatus
 from app.models.teleconsulta import (
     DocumentoClinico,
     Modalidade,
+    PapelTimbrado,
     RegistroClinico,
     Teleconsulta,
     TipoDocumento,
@@ -80,6 +81,7 @@ __all__ = [
     "TipoAtendimento",
     "DocumentoClinico",
     "Modalidade",
+    "PapelTimbrado",
     "RegistroClinico",
     "Teleconsulta",
     "TipoDocumento",

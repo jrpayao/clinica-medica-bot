@@ -1,0 +1,61 @@
+.centro { display: flex; justify-content: center; padding: 64px 0; }
+
+.grade {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+  align-items: start;
+
+  @media (max-width: 900px) { grid-template-columns: minmax(0, 1fr); }
+}
+
+.cartao {
+  display: grid;
+  gap: 12px;
+  min-width: 0;
+  padding: 18px 20px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--border-radius);
+
+  h2 { margin: 0; font-size: 16px; font-weight: 600; color: var(--color-text); }
+  mat-form-field { width: 100%; }
+}
+
+.nota { margin: 0; font-size: 13px; line-height: 1.5; color: var(--color-text-secondary); }
+.erro { margin: 0; font-size: 13.5px; color: var(--color-danger); }
+
+.logo {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 150px;
+  padding: 16px;
+  font-size: 13px;
+  color: var(--color-text-secondary);
+  // quadriculado discreto: deixa visível onde o logo é transparente
+  background:
+    repeating-conic-gradient(#f1f5f9 0% 25%, #ffffff 0% 50%) 50% / 16px 16px;
+  border: 1px dashed var(--color-border);
+  border-radius: var(--border-radius-sm);
+
+  &--vazio { background: #f8fafc; }
+  img { max-width: 100%; max-height: 140px; object-fit: contain; }
+  mat-icon { font-size: 36px; width: 36px; height: 36px; opacity: .5; }
+}
+
+.acoes { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+
+.aviso {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin: 16px 0 0;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--color-text-secondary);
+
+  mat-icon { font-size: 18px; width: 18px; height: 18px; flex-shrink: 0; margin-top: 1px; }
+}

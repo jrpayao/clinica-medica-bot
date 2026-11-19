@@ -3,7 +3,7 @@
 import enum
 from datetime import datetime
 
-from sqlalchemy import DateTime, Enum, ForeignKey, String, Text, func
+from sqlalchemy import Boolean, DateTime, Enum, ForeignKey, LargeBinary, String, Text, func
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -82,5 +82,21 @@ class DocumentoClinico(Base):
     conteudo: Mapped[dict] = mapped_column(JSONB, nullable=False)
     codigo: Mapped[str] = mapped_column(String(16), unique=True, nullable=False)
     emitido_em: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+
+
+class PapelTimbrado(Base):
+    """Identidade da unidade nos documentos clinicos: logo, marca-d'agua e rodape. Um por unidade."""
+
+    __tablename__ = "papeis_timbrados"
+
+    estabelecimento_id: Mapped[int] = mapped_column(
+        ForeignKey("estabelecimentos.id", ondelete="CASCADE"), primary_key=True
+    )
+    logo: Mapped[bytes | None] = mapped_column(LargeBinary, nullable=True)
+    marca_dagua: Mapped[bool] = mapped_column(Boolean, default=True, server_default="true", nullable=False)
+    rodape: Mapped[str | None] = mapped_column(String(300), nullable=True)
+    updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )

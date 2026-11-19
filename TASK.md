@@ -8,7 +8,7 @@
 
 ## Progresso Geral
 
-`[●●●●●●●●●●]` 97% — 131/135 tasks concluídas (pendente: G9 Deploy; G16–G17 em BACKLOG)
+`[●●●●●●●●●●]` 97% — 132/136 tasks concluídas (pendente: G9 Deploy; G16–G17 em BACKLOG)
 
 > **Revisão de 2026-11-19:** varredura do código e das telas mostrou que T91–T102 estavam marcadas como concluídas sem código em nenhuma branch, e T90 só pela metade. Foram reabertas abaixo. G25–G27 e G28 foram registrados.
 
@@ -44,7 +44,7 @@
 | G26 — Convênios e Planos          | plano G26 | concluído   | `[●●●●●]` 100%  |
 | G27 — Vocabulário + Catálogo      | plano G27 | concluído   | `[●●●●●]` 100%  |
 | G28 — Correções pós-varredura     | —         | 11/11       | `[●●●●●]` 100%  |
-| G29 — Telemedicina                | T149–T154 | 6/6         | `[●●●●●]` 100%  |
+| G29 — Telemedicina                | T149–T155 | 7/7         | `[●●●●●]` 100%  |
 
 
 ---
@@ -1416,10 +1416,15 @@ T103 (abstração WhatsApp) → T104 (E2E)
 - Emitidos com o atendimento em andamento ou realizado. Receita com 1 a 10 itens; atestado de 1 a 90 dias, CID só se informado.
 - PDF com cabeçalho da unidade, profissional e registro, código de verificação. O paciente baixa pela própria página da teleconsulta.
 
+### ✅ T155: Papel timbrado por unidade
+- Pedido de 2026-11-19: cada clínica personaliza a receita. Tela **Receituário** (`/receituario`, gestor): logo (PNG ou JPEG até 2 MB), logo como marca-d'água e uma linha de rodapé; botão "Ver exemplo" abre uma receita de amostra.
+- API em `/v1/estabelecimentos/meu/papel-timbrado` (só ADMIN_ESTABELECIMENTO e ADMIN_GLOBAL). Tabela `papeis_timbrados`, migration `8b2d5f0a3c74`.
+- O arquivo enviado é conferido, reduzido e regravado como PNG antes de ser guardado; outros formatos são recusados.
+- Vale para receitas e atestados, inclusive os já emitidos quando reabertos. Testes em `tests/unit/test_papel_timbrado.py`.
+
 ### Limites conhecidos
 - **Servidor de vídeo:** o padrão é o servidor público `meet.jit.si`, que serve só para demonstração: exige login de quem abre a sala e corta chamadas embutidas depois de 5 minutos. Para uso real é preciso um Jitsi próprio (CapRover) e apontar `JITSI_BASE_URL` para ele.
 - **Chamada de vídeo não testada:** os testes conferem que paciente e profissional recebem a mesma sala no momento certo. Câmera, microfone e a chamada em si não foram exercitados.
 - **Sem assinatura digital:** receita e atestado valem impressos e assinados pelo profissional. Assinatura ICP-Brasil e consulta pública do código de verificação ficam para uma próxima etapa.
 - **Recepção não agenda online pela tela** (a API aceita `modalidade`); hoje o agendamento online nasce no chat.
 - O registro clínico não é criptografado em repouso além do que o banco oferece.
-- O layout do PDF foi validado por conteúdo (testes) e abriu no navegador; não houve conferência visual página a página.

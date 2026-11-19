@@ -24,7 +24,7 @@ describe('rotaPermitida — RECEPCIONISTA', () => {
   );
 
   it.each([
-    '/dashboard', '/relatorios', '/billing', '/billing/config', '/usuarios', '/minha-licenca', '/auditoria',
+    '/dashboard', '/relatorios', '/receituario', '/billing', '/billing/config', '/usuarios', '/minha-licenca', '/auditoria',
     '/vocabulario', '/catalogo', '/convenios', '/documentos', '/especialidades',
     '/estabelecimentos', '/licencas', '/platform-dashboard',
   ])('não acessa %s', (rota) => expect(rotaPermitida('RECEPCIONISTA', rota)).toBe(false));

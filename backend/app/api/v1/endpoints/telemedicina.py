@@ -21,7 +21,7 @@ from datetime import date
 from typing import Annotated
 
 import structlog
-from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
+from fastapi import APIRouter, Depends, File, HTTPException, Request, Response, UploadFile, status
 from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -33,13 +33,16 @@ from app.api.v1.dependencies import (
 )
 from app.core.database import get_db
 from app.models.teleconsulta import TipoDocumento
+from app.services import papel_timbrado_service as timbre
 from app.services import telemedicina_service as tele
+from app.services.documentos_pdf import gerar_pdf
 
 log = structlog.get_logger(__name__)
 
 publico = APIRouter(prefix="/teleconsulta", tags=["Teleconsulta (paciente)"])
 profissional = APIRouter(prefix="/profissional/atendimentos/{atendimento_id}", tags=["Teleconsulta (profissional)"])
 agenda = APIRouter(prefix="/agenda", tags=["Agenda"])
+papel = APIRouter(prefix="/estabelecimentos/meu/papel-timbrado", tags=["Papel timbrado"])
 
 ROLES_AGENDA_ONLINE = ("ADMIN_GLOBAL", "ADMIN_ESTABELECIMENTO", "MEDICO")
 _LINK_INVALIDO = HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Link de teleconsulta inválido")
@@ -214,3 +217,82 @@ async def slots_online(
     )
     await db.commit()
     return {"alterados": alterados}
+
+
+# ── Papel timbrado da unidade (logo, marca-d'água e rodapé de receitas e atestados) ─────────
+
+ROLES_PAPEL = ("ADMIN_GLOBAL", "ADMIN_ESTABELECIMENTO")
+_Gestor = Annotated[dict, Depends(require_role(*ROLES_PAPEL))]
+
+
+class PapelTimbradoRequest(BaseModel):
+    marca_dagua: bool
+    rodape: str | None = Field(None, max_length=timbre.TAMANHO_RODAPE)
+
+
+@papel.get("", summary="Configuração do papel timbrado da unidade")
+async def papel_timbrado(_: _Gestor, unidade: _Unidade, db: AsyncSession = Depends(get_db)) -> dict:
+    return await timbre.obter(db, unidade)
+
+
+@papel.put("", summary="Marca-d'água e rodapé dos documentos")
+async def salvar_papel_timbrado(
+    dados: PapelTimbradoRequest, _: _Gestor, unidade: _Unidade, db: AsyncSession = Depends(get_db)
+) -> dict:
+    await timbre.salvar_opcoes(db, unidade, marca_dagua=dados.marca_dagua, rodape=dados.rodape)
+    await db.commit()
+    return await timbre.obter(db, unidade)
+
+
+@papel.post("/logo", summary="Enviar o logo da unidade (PNG ou JPEG, até 2 MB)")
+async def enviar_logo(
+    _: _Gestor, unidade: _Unidade, arquivo: UploadFile = File(...), db: AsyncSession = Depends(get_db)
+) -> dict:
+    bruto = await arquivo.read(timbre.TAMANHO_MAXIMO_BYTES + 1)
+    try:
+        await timbre.salvar_logo(db, unidade, bruto)
+    except timbre.LogoInvalidoError as e:
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(e))
+    await db.commit()
+    return await timbre.obter(db, unidade)
+
+
+@papel.get("/logo", summary="Logo atual da unidade")
+async def ver_logo(_: _Gestor, unidade: _Unidade, db: AsyncSession = Depends(get_db)) -> Response:
+    imagem = await timbre.logo(db, unidade)
+    if imagem is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="A unidade não tem logo")
+    return Response(content=imagem, media_type="image/png", headers={"Cache-Control": "no-store"})
+
+
+@papel.delete("/logo", status_code=status.HTTP_204_NO_CONTENT, summary="Remover o logo")
+async def remover_logo(_: _Gestor, unidade: _Unidade, db: AsyncSession = Depends(get_db)) -> None:
+    await timbre.remover_logo(db, unidade)
+    await db.commit()
+
+
+@papel.get("/exemplo.pdf", summary="Receita de exemplo com o papel timbrado atual")
+async def exemplo(_: _Gestor, unidade: _Unidade, db: AsyncSession = Depends(get_db)) -> Response:
+    from app.models.estabelecimento import EstabelecimentoSaude
+
+    est = await db.get(EstabelecimentoSaude, unidade)
+    if est is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Unidade não encontrada")
+    endereco = ", ".join(p for p in (est.endereco, est.cidade) if p) + (f"/{est.estado}" if est.estado else "")
+    pdf = gerar_pdf({
+        "tipo": "RECEITA",
+        "codigo": "EXEMPLO",
+        "emitido_em": tele.agora_local(est.timezone).strftime("%d/%m/%Y"),
+        "unidade": {"nome": est.nome, "endereco": endereco.strip("/") or None, "telefone": est.telefone},
+        "profissional": {"nome": "Nome do profissional", "registro": "Registro profissional"},
+        "paciente": {"nome": "Nome do paciente"},
+        "conteudo": {
+            "itens": [
+                {"medicamento": "Medicamento de exemplo 500 mg", "posologia": "Tomar 1 comprimido a cada 8 horas por 5 dias."},
+                {"medicamento": "Segundo medicamento de exemplo", "posologia": "Aplicar 2 vezes ao dia."},
+            ],
+            "observacoes": "Documento de exemplo, sem validade.",
+        },
+        "timbre": await timbre.para_o_pdf(db, unidade),
+    })
+    return _pdf(pdf, "exemplo-receita.pdf")

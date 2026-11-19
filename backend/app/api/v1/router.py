@@ -60,6 +60,7 @@ api_router.include_router(fila_espera.router, dependencies=_LICENCA_DEP)
 api_router.include_router(relatorios.router, dependencies=_LICENCA_DEP)
 api_router.include_router(telemedicina.profissional, dependencies=_LICENCA_DEP)
 api_router.include_router(telemedicina.agenda, dependencies=_LICENCA_DEP)
+api_router.include_router(telemedicina.papel, dependencies=_LICENCA_DEP)
 # Página do paciente: sem login, o acesso é o token do link
 api_router.include_router(telemedicina.publico)
 
