@@ -270,6 +270,7 @@ def gerar_slots(profissional_id: int, duracao_min: int, estabelecimento_id: int,
                         hora_inicio=atual.time(),
                         hora_fim=fim.time(),
                         status=SlotStatus.DISPONIVEL,
+                        aceita_online=inicio_turno.hour >= 14,  # tarde: presencial ou por video
                         estabelecimento_id=estabelecimento_id,
                     ))
                     atual = fim

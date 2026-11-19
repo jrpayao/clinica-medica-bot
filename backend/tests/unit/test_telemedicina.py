@@ -1,5 +1,6 @@
 """Testes — Telemedicina (G29): horários online, sala, consentimento, sala de espera, registro e documentos."""
 
+import re
 from datetime import datetime, timedelta
 from unittest.mock import patch
 
@@ -430,3 +431,17 @@ def test_pdf_nao_quebra_com_caracteres_fora_do_latin1():
         "conteudo": {"itens": [{"medicamento": "Vitamina D — 2.000 UI “gotas” 😀", "posologia": "1× ao dia"}]},
     })
     assert pdf.startswith(b"%PDF")
+
+
+def test_pdf_de_receita_longa_quebra_pagina_e_assina_uma_vez_so():
+    itens = [
+        {"medicamento": f"Medicamento {n} 500 mg", "posologia": "Tomar 1 comprimido a cada 8 horas, " * 6}
+        for n in range(1, 11)
+    ]
+    pdf = gerar_pdf({**BASE_PDF, "tipo": "RECEITA", "conteudo": {"itens": itens}})
+    texto = _texto_do_pdf(pdf)
+
+    paginas = len(re.findall(rb"/Type /Page\b(?!s)", pdf))
+    assert paginas >= 2
+    assert "Medicamento 10 500 mg" in texto
+    assert texto.count("CRM 12345") == 1

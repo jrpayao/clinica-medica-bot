@@ -93,3 +93,21 @@
   font-size: 11px;
   opacity: .8;
 }
+
+// Horários que aceitam atendimento online (telemedicina)
+.online-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+  padding: 10px 14px;
+  margin-bottom: 16px;
+  font-size: 14px;
+  color: var(--color-text);
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+  border-radius: var(--border-radius-sm);
+
+  > mat-icon { color: var(--color-primary-light); flex-shrink: 0; }
+  > span { flex: 1; min-width: 220px; }
+}

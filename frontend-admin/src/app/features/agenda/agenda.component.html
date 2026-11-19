@@ -72,6 +72,22 @@
       description="Gere a agenda de um médico para criar slots de atendimento." />
   }
 
+  @if (podeDefinirOnline() && livres().length) {
+    <div class="online-bar">
+      <mat-icon>videocam</mat-icon>
+      <span>
+        @if (livresOnline() === 0) { Nenhum horário livre deste dia aceita atendimento online. }
+        @else { {{ livresOnline() }} de {{ livres().length }} horários livres deste dia aceitam atendimento online. }
+      </span>
+      @if (livresOnline() < livres().length) {
+        <button mat-stroked-button [disabled]="salvandoOnline()" (click)="definirOnline(true)">Aceitar online nos horários livres</button>
+      }
+      @if (livresOnline() > 0) {
+        <button mat-button [disabled]="salvandoOnline()" (click)="definirOnline(false)">Deixar só presencial</button>
+      }
+    </div>
+  }
+
   <!-- Grade de horários -->
   <div class="calendar-grid">
     @for (hora of horas(); track hora) {
@@ -88,6 +104,9 @@
               [matTooltip]="slot.profissional_nome + ' — ' + slot.status">
 
               <mat-icon class="slot-icon">{{ iconSlot(slot.status) }}</mat-icon>
+              @if (slot.atendimento ? slot.atendimento.modalidade === 'ONLINE' : slot.aceita_online) {
+                <mat-icon class="slot-icon" [attr.aria-label]="slot.atendimento ? 'Atendimento online' : 'Aceita atendimento online'">videocam</mat-icon>
+              }
 
               <div class="slot-info">
                 <span class="slot-medico">{{ slot.profissional_nome }}</span>

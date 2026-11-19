@@ -16,6 +16,7 @@ export interface SlotSugerido {
   hora_inicio: string;
   hora_fim: string;
   profissional_nome: string;
+  aceita_online?: boolean;
 }
 
 export interface Convenio {
@@ -31,6 +32,7 @@ export interface WsMensagem {
   quick_replies?: string[];
   convenios?: Convenio[];
   confirmacao?: { mensagem?: string };
+  teleconsulta_link?: string | null;
   sessao_expirada?: boolean;
 }
 
@@ -52,6 +54,8 @@ export class ChatService {
   readonly convenios = signal<Convenio[]>([]);
   readonly estado = signal<string>('START');
   readonly slotsSugeridos = signal<SlotSugerido[]>([]);
+  /** Link da sala quando o agendamento confirmado foi online */
+  readonly teleconsultaLink = signal<string | null>(null);
 
   // Injetável em testes para interceptar o envio
   _enviarFn: ((msg: string) => void) | null = null;
@@ -106,6 +110,7 @@ export class ChatService {
 
     if (data.confirmacao) {
       this.confirmando.set(false);
+      this.teleconsultaLink.set(data.teleconsulta_link ?? null);
       this.slotsSugeridos.set([]);
       this.mensagens.update((msgs) => [
         ...msgs,

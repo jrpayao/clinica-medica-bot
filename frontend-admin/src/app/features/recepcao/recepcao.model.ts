@@ -14,6 +14,7 @@ export interface AtendimentoRecepcao {
   canal_origem: string;
   convenio_nome: string | null;
   observacoes?: string | null;
+  modalidade?: 'PRESENCIAL' | 'ONLINE';
   /** Só no painel do profissional: o que o paciente relatou no chat antes do atendimento. */
   triagem?: TriagemResumo | null;
   /** Status para os quais a recepção pode levar este atendimento (definido pela API). */

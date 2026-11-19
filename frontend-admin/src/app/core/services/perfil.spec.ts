@@ -44,7 +44,7 @@ describe('rotaPermitida — administradores', () => {
 });
 
 describe('rotaPermitida — MEDICO', () => {
-  it.each(['/meu-dia', '/agenda', '/meus-pacientes'])('acessa %s', (rota) =>
+  it.each(['/meu-dia', '/atender/42', '/agenda', '/meus-pacientes'])('acessa %s', (rota) =>
     expect(rotaPermitida('MEDICO', rota)).toBe(true),
   );
 

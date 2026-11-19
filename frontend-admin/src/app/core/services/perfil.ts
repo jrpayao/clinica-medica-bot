@@ -11,7 +11,7 @@ const ROTULOS: Record<string, string> = {
 /** Rotas do painel liberadas para perfis operacionais. Perfil ausente daqui não é restringido pelo guard. */
 const ROTAS_POR_PERFIL: Record<string, readonly string[]> = {
   RECEPCIONISTA: ['/recepcao', '/fila-espera', '/agenda', '/atendimentos', '/clientes', '/profissionais'],
-  MEDICO: ['/meu-dia', '/agenda', '/meus-pacientes'],
+  MEDICO: ['/meu-dia', '/atender', '/agenda', '/meus-pacientes'],
 };
 
 const ROTA_INICIAL: Record<string, string> = {

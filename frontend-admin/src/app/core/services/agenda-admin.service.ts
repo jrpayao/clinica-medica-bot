@@ -11,6 +11,7 @@ export interface SlotAdmin {
   hora_inicio: string;
   hora_fim: string;
   status: 'DISPONIVEL' | 'AGENDADO' | 'BLOQUEADO';
+  aceita_online?: boolean;
   atendimento?: ConsultaAdmin;
 }
 
@@ -24,6 +25,7 @@ export interface ConsultaAdmin {
   observacoes: string | null;
   canal_origem: string;
   created_at: string;
+  modalidade?: 'PRESENCIAL' | 'ONLINE';
 }
 
 @Injectable({ providedIn: 'root' })
@@ -47,6 +49,17 @@ export class AgendaAdminService {
     } finally {
       this.carregando.set(false);
     }
+  }
+
+  /** Marca (ou desmarca) os horários livres do dia do profissional como "aceita online". */
+  async definirOnline(data: string, aceita: boolean, profissionalId: number | null): Promise<number> {
+    const r = await firstValueFrom(
+      this.api.patch<{ alterados: number }>('/agenda/slots/online', {
+        data, aceita_online: aceita, profissional_id: profissionalId,
+      }),
+    );
+    await this.carregarPorData(data);
+    return r.alterados;
   }
 
   selecionarSlot(slot: SlotAdmin): void {

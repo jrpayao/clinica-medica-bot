@@ -99,12 +99,24 @@
 
           <div class="item__selos">
             <span class="selo selo--{{ etapa(a.status) }}">{{ rotuloStatus[a.status] || a.status }}</span>
+            @if (a.modalidade === 'ONLINE') {
+              <span class="selo selo--online"><mat-icon>videocam</mat-icon>Online</span>
+            }
             @if (a.urgencia === 'ALTA' || a.urgencia === 'EMERGENCIA') {
               <span class="selo selo--urgente">Urgência {{ rotuloUrgencia[a.urgencia].toLowerCase() }}</span>
             }
           </div>
 
           <div class="item__acoes">
+            @if (modo === 'profissional') {
+              <a
+                mat-stroked-button
+                [routerLink]="['/atender', a.atendimento_id]"
+                [attr.aria-label]="'Abrir atendimento de ' + a.cliente_nome">
+                <mat-icon>{{ a.modalidade === 'ONLINE' ? 'videocam' : 'edit_note' }}</mat-icon>
+                {{ a.modalidade === 'ONLINE' ? 'Teleconsulta' : 'Abrir' }}
+              </a>
+            }
             @if (salvandoId() === a.atendimento_id) {
               <mat-spinner diameter="24" />
             } @else {

@@ -16,8 +16,17 @@ export class ApiService {
     return this.http.post<T>(`${this.base}${path}`, body);
   }
 
+  put<T>(path: string, body: unknown): Observable<T> {
+    return this.http.put<T>(`${this.base}${path}`, body);
+  }
+
   patch<T>(path: string, body: unknown): Observable<T> {
     return this.http.patch<T>(`${this.base}${path}`, body);
+  }
+
+  /** Arquivo protegido por login (PDF): baixado com o token e entregue como Blob. */
+  getBlob(path: string): Observable<Blob> {
+    return this.http.get(`${this.base}${path}`, { responseType: 'blob' });
   }
 
   delete<T>(path: string): Observable<T> {

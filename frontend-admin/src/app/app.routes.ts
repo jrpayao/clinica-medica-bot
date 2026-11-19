@@ -43,6 +43,11 @@ export const routes: Routes = [
           import('./features/recepcao/recepcao.component').then((m) => m.RecepcaoComponent),
       },
       {
+        path: 'atender/:id',
+        loadComponent: () =>
+          import('./features/atender/atender.component').then((m) => m.AtenderComponent),
+      },
+      {
         path: 'fila-espera',
         loadComponent: () =>
           import('./features/fila-espera/fila-espera.component').then((m) => m.FilaEsperaComponent),

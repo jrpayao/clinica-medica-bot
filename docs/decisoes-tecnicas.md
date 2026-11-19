@@ -404,3 +404,19 @@ Quando o agente ou o desenvolvedor tomar uma decisão técnica não prevista no 
 - **Aprovado por:** Junior Payão
 
 <!-- Adicionar novas decisões abaixo -->
+
+## ADR-038: G15 — diferenciais entregues com desvios em relação às tasks
+- **Data:** 2026-11-19
+- **Contexto:** As tasks T90–T102 descreviam jobs Celery para tudo, gráficos em Chart.js e não diziam o que fazer quando a recepção cancela a pedido do paciente.
+- **Decisão:** (1) A oferta de reagendamento sai na hora do cancelamento; o job só vence ofertas sem resposta. (2) Gráficos dos relatórios em HTML/CSS. (3) O cancelamento registra a origem; só MEDICO e ESTABELECIMENTO disparam mensagem, e sem origem informada nada é enviado. (4) Cancelamento pelo profissional bloqueia o horário. (5) NPS em escala 1–5 (5 promotor, 4 neutro, 1–3 detrator). (6) Uma pergunta em aberto por número de WhatsApp, guardada no Redis com identidade do número independente do nono dígito.
+- **Justificativa:** Funciona com o worker parado, não manda mensagem falsa ao paciente e não devolve à agenda um horário em que o profissional não vai atender.
+- **Trade-off:** Uma segunda pergunta ao mesmo número substitui a primeira; o pedido de avaliação espera a vez.
+- **Correções associadas:** beat do Celery deixou de cancelar atendimentos AGENDADA com mais de 10 minutos; módulos de task passaram a ser importados; sessão de chat passou a ser gravada, o que fez o uso de tokens voltar a ser registrado.
+
+## ADR-039: Telemedicina com Jitsi Meet e estado derivado do atendimento
+- **Data:** 2026-11-19
+- **Contexto:** Pedido de teleconsulta com agendamento online, sala de vídeo, registro do atendimento e receita/atestado. Vídeo escolhido: Jitsi Meet (código aberto, sem custo por minuto, mesma linha da Evolution API).
+- **Decisão:** (1) A teleconsulta não tem máquina de estados própria: vale o status do atendimento (PRESENTE → EM_ATENDIMENTO → REALIZADA). (2) O paciente entra por um token aleatório no link, sem login, e só recebe o nome da sala depois de aceitar o termo e de o profissional iniciar. (3) Entrar na sala de espera faz o check-in. (4) A sala é embutida por iframe; com `JITSI_APP_ID`/`JITSI_APP_SECRET` a entrada leva JWT. (5) Registro clínico e documentos são acessíveis só pelo profissional do atendimento. (6) PDF gerado com fpdf2 a partir do conteúdo guardado; sem assinatura digital nesta etapa.
+- **Justificativa:** Um só fluxo de status para presencial e online evita divergência entre recepção, profissional e paciente. Segurar o nome da sala impede que o paciente entre antes da hora ou depois do encerramento.
+- **Trade-off:** `meet.jit.si` não serve para produção (login para abrir sala, corte de 5 minutos em chamadas embutidas): produção exige Jitsi próprio. Receita sem ICP-Brasil vale só impressa e assinada.
+- **Arquivos:** `backend/app/services/telemedicina_service.py`, `documentos_pdf.py`, `api/v1/endpoints/telemedicina.py`, `frontend-admin/src/app/features/atender/`, `frontend-portal/src/app/features/teleconsulta/`.

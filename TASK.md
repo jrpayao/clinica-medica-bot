@@ -8,7 +8,7 @@
 
 ## Progresso Geral
 
-`[●●●●●●●●●●]` 97% — 125/129 tasks concluídas (pendente: G9 Deploy; G16–G17 em BACKLOG)
+`[●●●●●●●●●●]` 97% — 131/135 tasks concluídas (pendente: G9 Deploy; G16–G17 em BACKLOG)
 
 > **Revisão de 2026-11-19:** varredura do código e das telas mostrou que T91–T102 estavam marcadas como concluídas sem código em nenhuma branch, e T90 só pela metade. Foram reabertas abaixo. G25–G27 e G28 foram registrados.
 
@@ -44,6 +44,7 @@
 | G26 — Convênios e Planos          | plano G26 | concluído   | `[●●●●●]` 100%  |
 | G27 — Vocabulário + Catálogo      | plano G27 | concluído   | `[●●●●●]` 100%  |
 | G28 — Correções pós-varredura     | —         | 11/11       | `[●●●●●]` 100%  |
+| G29 — Telemedicina                | T149–T154 | 6/6         | `[●●●●●]` 100%  |
 
 
 ---
@@ -1378,3 +1379,47 @@ T103 (abstração WhatsApp) → T104 (E2E)
 - Lembrete WhatsApp enviado 24h antes da consulta
 - Deploy em Railway (demo) e Hostinger KVM 4 + CapRover (produção) com Evolution API para WhatsApp e HTTPS automático via CapRover
 
+---
+
+## GRUPO 29 — Telemedicina `[●●●●●]` 100% ✅
+
+> Concluído em 2026-11-19 (branch `feature/telemedicina`). Decisões em ADR-039. Backend: 746 testes passando
+> (`tests/unit/test_telemedicina.py`, `tests/integration/test_telemedicina_fluxo.py`). Admin: 126 testes. Portal: 21 testes.
+> Conferido no navegador com paciente e profissional ao mesmo tempo (`tools/video/sonda-teleconsulta.mjs`).
+> Migration `7a1c4e9f2b63_g29_telemedicina`.
+
+### ✅ T149: Horários que aceitam atendimento online
+- `slots.aceita_online`; `PATCH /v1/agenda/slots/online` marca os horários livres do dia. O profissional altera só a própria agenda; o gestor precisa informar o profissional; a recepção não altera.
+- Agenda do painel mostra quantos horários livres do dia aceitam online e os botões para abrir ou fechar.
+
+### ✅ T150: Agendamento com modalidade
+- `atendimentos.modalidade` (PRESENCIAL | ONLINE). Agendar online em horário só presencial é recusado.
+- Chat: quando o horário escolhido aceita online, pergunta "presencial ou online"; o resumo e a confirmação informam a modalidade e o link da sala. Horário só presencial segue sem a pergunta.
+- Recepção e "Meu dia" mostram o selo Online.
+
+### ✅ T151: Sala de teleconsulta (Jitsi Meet)
+- Link do paciente `/teleconsulta/{token}` no portal, sem login. O link vai na confirmação do chat e por WhatsApp e e-mail.
+- Termo de consentimento versionado; aceite registrado com data, IP e versão.
+- Sala de espera abre 30 minutos antes; ao entrar, o atendimento vira "Na recepção" (check-in automático).
+- O endereço da sala só é entregue ao paciente depois do aceite e de o profissional iniciar o atendimento. Encerrado ou cancelado, a sala não é mais entregue.
+- Servidor próprio: com `JITSI_APP_ID` e `JITSI_APP_SECRET`, cada entrada leva um JWT assinado (profissional como moderador).
+
+### ✅ T152: Tela de atendimento do profissional
+- `/atender/:id` (só MEDICO, só os próprios atendimentos; recepção e gestor recebem 403).
+- Vídeo, presença do paciente em tempo real, resumo de triagem e triagens anteriores, link do paciente (copiar e reenviar).
+- Serve também ao atendimento presencial, sem a coluna de vídeo.
+
+### ✅ T153: Registro do atendimento
+- Queixa, evolução e conduta por atendimento, com salvamento automático. Não é aceito em atendimento cancelado ou com falta.
+
+### ✅ T154: Receita e atestado em PDF
+- Emitidos com o atendimento em andamento ou realizado. Receita com 1 a 10 itens; atestado de 1 a 90 dias, CID só se informado.
+- PDF com cabeçalho da unidade, profissional e registro, código de verificação. O paciente baixa pela própria página da teleconsulta.
+
+### Limites conhecidos
+- **Servidor de vídeo:** o padrão é o servidor público `meet.jit.si`, que serve só para demonstração: exige login de quem abre a sala e corta chamadas embutidas depois de 5 minutos. Para uso real é preciso um Jitsi próprio (CapRover) e apontar `JITSI_BASE_URL` para ele.
+- **Chamada de vídeo não testada:** os testes conferem que paciente e profissional recebem a mesma sala no momento certo. Câmera, microfone e a chamada em si não foram exercitados.
+- **Sem assinatura digital:** receita e atestado valem impressos e assinados pelo profissional. Assinatura ICP-Brasil e consulta pública do código de verificação ficam para uma próxima etapa.
+- **Recepção não agenda online pela tela** (a API aceita `modalidade`); hoje o agendamento online nasce no chat.
+- O registro clínico não é criptografado em repouso além do que o banco oferece.
+- O layout do PDF foi validado por conteúdo (testes) e abriu no navegador; não houve conferência visual página a página.

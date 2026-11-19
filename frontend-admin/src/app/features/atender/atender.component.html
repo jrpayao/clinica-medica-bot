@@ -1,0 +1,253 @@
+@if (carregando()) {
+  <div class="centro"><mat-spinner diameter="40" /></div>
+} @else if (naoEncontrado() || !sala()) {
+  <app-empty-state
+    icon="search_off"
+    [title]="vocab.atendimento() + ' não encontrado'"
+    description="Ele pode ser de outro profissional ou de outra unidade."
+    ctaLabel="Voltar para Meu dia"
+    (ctaClick)="voltarParaMeuDia()" />
+} @else {
+  @let s = sala()!;
+
+  <header class="topo">
+    <a mat-icon-button routerLink="/meu-dia" aria-label="Voltar para Meu dia" matTooltip="Voltar para Meu dia">
+      <mat-icon>arrow_back</mat-icon>
+    </a>
+    <div class="topo__paciente">
+      <h1>{{ s.cliente_nome }}</h1>
+      <p>
+        {{ s.hora_inicio }} às {{ s.hora_fim }} · {{ s.especialidade_nome }}
+        @if (idade() !== null) { · {{ idade() }} anos }
+        @if (s.cliente_telefone) { · {{ s.cliente_telefone }} }
+      </p>
+    </div>
+    <div class="topo__selos">
+      <span class="selo" [class.selo--online]="s.modalidade === 'ONLINE'">
+        <mat-icon>{{ s.modalidade === 'ONLINE' ? 'videocam' : 'meeting_room' }}</mat-icon>
+        {{ s.modalidade === 'ONLINE' ? 'Online' : 'Presencial' }}
+      </span>
+      <span class="selo selo--status">{{ rotuloStatus[s.status] || s.status }}</span>
+    </div>
+    @if (acao(); as a) {
+      <button mat-flat-button color="primary" [disabled]="mudandoStatus()" (click)="mudarStatus(a.status)">
+        <mat-icon>{{ a.icone }}</mat-icon>
+        {{ a.texto }}
+      </button>
+    }
+  </header>
+
+  <div class="grade" [class.grade--com-video]="s.teleconsulta">
+
+    <!-- ── Coluna do vídeo (só atendimento online) ── -->
+    @if (s.teleconsulta; as t) {
+      <section class="video" aria-label="Sala de vídeo">
+        @if (paciente(); as p) {
+          <div class="presenca presenca--{{ p.situacao }}" role="status">
+            <span class="presenca__ponto" aria-hidden="true"></span>
+            {{ p.rotulo }}
+          </div>
+        }
+
+        @if (videoAberto()) {
+          <iframe
+            class="video__quadro"
+            title="Chamada de vídeo com o paciente"
+            [src]="videoUrl()"
+            allow="camera; microphone; fullscreen; display-capture; autoplay"></iframe>
+          <div class="video__acoes">
+            <button mat-stroked-button (click)="abrirVideoEmNovaAba()">
+              <mat-icon>open_in_new</mat-icon>
+              Abrir em nova aba
+            </button>
+            <button mat-button (click)="fecharVideo()">Sair da sala</button>
+          </div>
+        } @else {
+          <div class="video__espera">
+            <mat-icon>videocam</mat-icon>
+            @if (s.status === 'REALIZADA') {
+              <p>Atendimento concluído. A sala foi encerrada para o paciente.</p>
+            } @else {
+              <p>
+                O paciente só recebe a sala depois que você clicar em <strong>Iniciar atendimento</strong>.
+                Você pode entrar antes para testar câmera e microfone.
+              </p>
+              <button mat-flat-button color="primary" (click)="abrirVideo()">
+                <mat-icon>videocam</mat-icon>
+                Entrar na sala
+              </button>
+              <button mat-button (click)="abrirVideoEmNovaAba()">Abrir em nova aba</button>
+            }
+          </div>
+        }
+
+        <div class="link">
+          <span class="link__rotulo">Link do paciente</span>
+          <code class="link__url">{{ t.link_paciente }}</code>
+          <div class="link__acoes">
+            <button mat-stroked-button (click)="copiarLink()">
+              <mat-icon>content_copy</mat-icon>
+              Copiar
+            </button>
+            <button mat-stroked-button (click)="reenviarLink()">
+              <mat-icon>send</mat-icon>
+              Reenviar
+            </button>
+          </div>
+          <span class="link__nota">
+            {{ t.link_enviado_em ? 'Link já enviado ao paciente por WhatsApp ou e-mail.' : 'O link ainda não foi enviado automaticamente.' }}
+          </span>
+        </div>
+      </section>
+    }
+
+    <!-- ── Coluna clínica ── -->
+    <div class="clinico">
+
+      @if (s.triagem; as tr) {
+        <section class="cartao" aria-labelledby="t-triagem">
+          <h2 id="t-triagem"><mat-icon>assignment</mat-icon> Resumo da triagem pelo chat</h2>
+          <p class="cartao__texto">{{ tr.texto }}</p>
+          @if (tr.historico.length) {
+            <p class="cartao__subtitulo">Triagens anteriores</p>
+            <ul class="historico">
+              @for (h of tr.historico; track $index) {
+                <li><strong>{{ h.data }}{{ h.especialidade ? ' · ' + h.especialidade : '' }}</strong> {{ h.resumo }}</li>
+              }
+            </ul>
+          }
+          <p class="cartao__nota">Traz apenas o relato do paciente. Não substitui a sua avaliação.</p>
+        </section>
+      } @else if (s.observacoes) {
+        <section class="cartao" aria-labelledby="t-obs">
+          <h2 id="t-obs"><mat-icon>notes</mat-icon> Observações do agendamento</h2>
+          <p class="cartao__texto">{{ s.observacoes }}</p>
+        </section>
+      }
+
+      <section class="cartao" aria-labelledby="t-registro">
+        <div class="cartao__cabecalho">
+          <h2 id="t-registro"><mat-icon>edit_note</mat-icon> Registro do atendimento</h2>
+          <span class="salvamento salvamento--{{ estadoRegistro() }}" role="status">
+            @switch (estadoRegistro()) {
+              @case ('salvando') { Salvando… }
+              @case ('pendente') { Alterações não salvas }
+              @case ('erro') { Não foi possível salvar }
+              @default { {{ s.registro.atualizado_em || queixa() || evolucao() || conduta() ? 'Salvo' : '' }} }
+            }
+          </span>
+        </div>
+
+        @if (!podeRegistrar()) {
+          <p class="cartao__nota">{{ vocab.atendimento() }} cancelado ou com falta não recebe registro.</p>
+        } @else {
+          <mat-form-field appearance="outline" subscriptSizing="dynamic">
+            <mat-label>Queixa principal</mat-label>
+            <textarea matInput rows="2" maxlength="5000" [ngModel]="queixa()" (ngModelChange)="editarRegistro('queixa', $event)"></textarea>
+          </mat-form-field>
+          <mat-form-field appearance="outline" subscriptSizing="dynamic">
+            <mat-label>Evolução</mat-label>
+            <textarea matInput rows="6" maxlength="20000" [ngModel]="evolucao()" (ngModelChange)="editarRegistro('evolucao', $event)"></textarea>
+          </mat-form-field>
+          <mat-form-field appearance="outline" subscriptSizing="dynamic">
+            <mat-label>Conduta e orientações</mat-label>
+            <textarea matInput rows="3" maxlength="5000" [ngModel]="conduta()" (ngModelChange)="editarRegistro('conduta', $event)"></textarea>
+          </mat-form-field>
+          @if (estadoRegistro() === 'erro') {
+            <button mat-stroked-button (click)="salvarRegistro()">Tentar salvar de novo</button>
+          }
+        }
+      </section>
+
+      <section class="cartao" aria-labelledby="t-docs">
+        <h2 id="t-docs"><mat-icon>description</mat-icon> Receita e atestado</h2>
+
+        @if (s.documentos.length) {
+          <ul class="documentos">
+            @for (d of s.documentos; track d.id) {
+              <li>
+                <span>{{ resumoDoc(d) }}</span>
+                <button mat-button (click)="abrirPdf(d.id)">
+                  <mat-icon>picture_as_pdf</mat-icon>
+                  Abrir PDF
+                </button>
+              </li>
+            }
+          </ul>
+        }
+
+        @if (!podeEmitir()) {
+          <p class="cartao__nota">Inicie o atendimento para emitir receita ou atestado.</p>
+        } @else if (!formulario()) {
+          <div class="botoes">
+            <button mat-stroked-button (click)="abrirFormulario('receita')">
+              <mat-icon>medication</mat-icon>
+              Nova receita
+            </button>
+            <button mat-stroked-button (click)="abrirFormulario('atestado')">
+              <mat-icon>event_busy</mat-icon>
+              Novo atestado
+            </button>
+          </div>
+        } @else {
+          <form class="formulario" (ngSubmit)="emitir()">
+            @if (formulario() === 'receita') {
+              @for (item of itens(); track $index; let i = $index) {
+                <fieldset class="item">
+                  <legend>Item {{ i + 1 }}</legend>
+                  <mat-form-field appearance="outline" subscriptSizing="dynamic">
+                    <mat-label>Medicamento e apresentação</mat-label>
+                    <input matInput maxlength="200" [name]="'med' + i" [ngModel]="item.medicamento" (ngModelChange)="editarItem(i, 'medicamento', $event)" />
+                  </mat-form-field>
+                  <mat-form-field appearance="outline" subscriptSizing="dynamic">
+                    <mat-label>Como usar</mat-label>
+                    <input matInput maxlength="500" [name]="'pos' + i" [ngModel]="item.posologia" (ngModelChange)="editarItem(i, 'posologia', $event)" />
+                  </mat-form-field>
+                  @if (itens().length > 1) {
+                    <button mat-icon-button type="button" (click)="removerItem(i)" [attr.aria-label]="'Remover item ' + (i + 1)">
+                      <mat-icon>delete</mat-icon>
+                    </button>
+                  }
+                </fieldset>
+              }
+              @if (itens().length < 10) {
+                <button mat-button type="button" (click)="adicionarItem()">
+                  <mat-icon>add</mat-icon>
+                  Adicionar medicamento
+                </button>
+              }
+              <mat-form-field appearance="outline" subscriptSizing="dynamic">
+                <mat-label>Observações (opcional)</mat-label>
+                <input matInput maxlength="500" name="obs" [ngModel]="observacoesReceita()" (ngModelChange)="observacoesReceita.set($event)" />
+              </mat-form-field>
+            } @else {
+              <div class="atestado">
+                <mat-form-field appearance="outline" subscriptSizing="dynamic">
+                  <mat-label>Dias de afastamento</mat-label>
+                  <input matInput type="number" min="1" max="90" name="dias" [ngModel]="dias()" (ngModelChange)="dias.set($event)" />
+                </mat-form-field>
+                <mat-form-field appearance="outline" subscriptSizing="dynamic">
+                  <mat-label>CID (só a pedido do paciente)</mat-label>
+                  <input matInput maxlength="10" name="cid" [ngModel]="cid()" (ngModelChange)="cid.set($event)" />
+                </mat-form-field>
+              </div>
+            }
+
+            @if (erroFormulario()) {
+              <p class="erro" role="alert">{{ erroFormulario() }}</p>
+            }
+            <p class="cartao__nota">
+              O PDF sai sem assinatura digital: vale impresso e assinado por você. Depois de emitido, o documento não é editado.
+            </p>
+            <div class="botoes">
+              <button mat-button type="button" (click)="formulario.set(null)">Cancelar</button>
+              <button mat-flat-button color="primary" type="submit" [disabled]="emitindo()">
+                Emitir {{ formulario() === 'receita' ? 'receita' : 'atestado' }}
+              </button>
+            </div>
+          </form>
+        }
+      </section>
+    </div>
+  </div>
+}

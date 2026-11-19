@@ -1,0 +1,106 @@
+@if (carregando()) {
+  <p class="estado">Carregando…</p>
+} @else if (linkInvalido()) {
+  <section class="cartao cartao--centro">
+    <h2>Link inválido</h2>
+    <p>Não encontramos uma teleconsulta para este link. Confira se ele foi copiado por inteiro ou peça um novo à clínica.</p>
+  </section>
+} @else if (dados(); as d) {
+
+  <header class="resumo">
+    <h2>Teleconsulta com {{ d.profissional_nome }}</h2>
+    <p>{{ d.especialidade_nome }} · {{ d.data }} às {{ d.hora }} · {{ d.unidade_nome }}</p>
+  </header>
+
+  @if (semConexao()) {
+    <p class="aviso" role="alert">Sem conexão com o servidor. Tentando de novo…</p>
+  }
+
+  @switch (d.situacao) {
+
+    @case ('AGUARDANDO_CONSENTIMENTO') {
+      <section class="cartao" aria-labelledby="t-termo">
+        <h3 id="t-termo">Olá, {{ d.paciente_nome }}. Antes de entrar, leia e aceite o termo</h3>
+        @if (termo(); as t) {
+          <div class="termo">
+            @for (p of t.paragrafos; track $index) { <p>{{ p }}</p> }
+            <ol>
+              @for (item of t.itens; track $index) { <li>{{ item }}</li> }
+            </ol>
+          </div>
+        }
+        <label class="aceite">
+          <input type="checkbox" [checked]="aceito()" (change)="aceito.set($any($event.target).checked)" />
+          <span>Li e concordo em ser atendido(a) por teleconsulta.</span>
+        </label>
+        <button class="botao" type="button" [disabled]="!aceito() || enviando()" (click)="aceitar()">
+          {{ enviando() ? 'Entrando…' : 'Aceitar e entrar' }}
+        </button>
+      </section>
+    }
+
+    @case ('CEDO') {
+      <section class="cartao cartao--centro" role="status">
+        <h3>Ainda é cedo</h3>
+        <p>A sala de espera abre às <strong>{{ d.abre_as }}</strong>. Pode deixar esta página aberta: ela avança sozinha.</p>
+      </section>
+    }
+
+    @case ('SALA_DE_ESPERA') {
+      <section class="cartao cartao--centro" role="status">
+        <div class="pulso" aria-hidden="true"></div>
+        <h3>Você está na sala de espera</h3>
+        <p>{{ d.profissional_nome }} já foi avisado(a) de que você chegou. A chamada começa nesta página, sem precisar recarregar.</p>
+        <ul class="dicas">
+          <li>Quando o navegador pedir, permita o uso da câmera e do microfone.</li>
+          <li>Fique em um local reservado e com boa conexão.</li>
+        </ul>
+      </section>
+    }
+
+    @case ('EM_ANDAMENTO') {
+      @if (salaUrl(); as url) {
+        <iframe
+          class="video"
+          title="Chamada de vídeo com o profissional"
+          [src]="url"
+          allow="camera; microphone; fullscreen; display-capture; autoplay"></iframe>
+        <p class="nota">
+          Se o vídeo não abrir aqui,
+          <a [href]="d.sala_url" target="_blank" rel="noopener">abra a chamada em outra aba</a>.
+        </p>
+      }
+    }
+
+    @case ('ENCERRADA') {
+      <section class="cartao cartao--centro">
+        <h3>Atendimento encerrado</h3>
+        <p>Obrigado, {{ d.paciente_nome }}. Se precisar de algo, fale com a {{ d.unidade_nome }}@if (d.unidade_telefone) { pelo telefone {{ d.unidade_telefone }}}.</p>
+      </section>
+    }
+
+    @case ('CANCELADA') {
+      <section class="cartao cartao--centro">
+        <h3>Este atendimento não está mais marcado</h3>
+        <p>Para remarcar, fale com a {{ d.unidade_nome }}@if (d.unidade_telefone) { pelo telefone {{ d.unidade_telefone }}}.</p>
+      </section>
+    }
+  }
+
+  @if (d.documentos.length) {
+    <section class="cartao" aria-labelledby="t-docs">
+      <h3 id="t-docs">Documentos do atendimento</h3>
+      <ul class="documentos">
+        @for (doc of d.documentos; track doc.id) {
+          <li>
+            <span>{{ rotuloDocumento[doc.tipo] }}</span>
+            <a class="botao botao--secundario" [href]="urlDoDocumento(doc.id)" target="_blank" rel="noopener">Abrir PDF</a>
+          </li>
+        }
+      </ul>
+      <p class="nota">Receita e atestado valem impressos e assinados pelo profissional.</p>
+    </section>
+  }
+
+  <p class="emergencia">Em caso de emergência, ligue para o SAMU: <strong>192</strong>.</p>
+}

@@ -31,6 +31,7 @@ import { SlotDetalheDialogComponent } from './slot-detalhe-dialog.component';
 import { EmptyStateComponent } from '../../shared/components/empty-state/empty-state.component';
 import { PageHeaderComponent } from '../../shared/components/page-header/page-header.component';
 import { localDateString } from '../../core/utils/date.utils';
+import { ToastService } from '../../core/services/toast.service';
 import { VocabularioService } from '../../core/services/vocabulario.service';
 
 @Component({
@@ -56,6 +57,17 @@ export class AgendaComponent implements OnInit {
   /** Profissional vê só a própria agenda (a API já restringe): filtros por pessoa não fazem sentido */
   readonly agendaPropria = this.auth.usuario()?.role === 'MEDICO';
   private readonly dialog = inject(MatDialog);
+  private readonly toast = inject(ToastService);
+
+  /** Quem define horário online: o próprio profissional, ou o gestor com um profissional filtrado. */
+  readonly podeDefinirOnline = computed(() => {
+    const role = this.auth.usuario()?.role;
+    if (role === 'MEDICO') return true;
+    return (role === 'ADMIN_GLOBAL' || role === 'ADMIN_ESTABELECIMENTO') && this.filtroMedicoId() !== null;
+  });
+  readonly livres = computed(() => this.slotsFiltrados().filter((s) => s.status === 'DISPONIVEL'));
+  readonly livresOnline = computed(() => this.livres().filter((s) => s.aceita_online).length);
+  readonly salvandoOnline = signal(false);
 
   readonly dataCtrl                = new FormControl<Date>(new Date());
   readonly filtroEspecialidadeCtrl = new FormControl<number | null>(null);
@@ -131,6 +143,24 @@ export class AgendaComponent implements OnInit {
       this.agenda.filtroMedicoId.set(id);
       await this._recarregar(this.dataSelecionada());
     });
+  }
+
+  async definirOnline(aceita: boolean): Promise<void> {
+    this.salvandoOnline.set(true);
+    try {
+      const alterados = await this.agenda.definirOnline(
+        this.dataSelecionada(), aceita, this.agendaPropria ? null : this.filtroMedicoId(),
+      );
+      this.toast.sucesso(
+        aceita
+          ? `${alterados} ${alterados === 1 ? 'horário livre passou' : 'horários livres passaram'} a aceitar atendimento online.`
+          : `${alterados} ${alterados === 1 ? 'horário voltou' : 'horários voltaram'} a ser só presencial.`,
+      );
+    } catch (e: unknown) {
+      this.toast.erro((e as { error?: { detail?: string } })?.error?.detail ?? 'Não foi possível alterar os horários.');
+    } finally {
+      this.salvandoOnline.set(false);
+    }
   }
 
   private async _recarregar(data: string): Promise<void> {

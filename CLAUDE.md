@@ -73,7 +73,7 @@ Resumo das regras criticas (detalhes completos no arquivo):
 
 ## DASHBOARD DE FEATURES — Ver `TASK.md`
 
-**Progresso geral:** `[●●●●●●●●●●]` 97% — 125 de 129 tasks concluidas (pendente: G9 Deploy)
+**Progresso geral:** `[●●●●●●●●●●]` 97% — 131 de 135 tasks concluidas (pendente: G9 Deploy)
 
 | Grupo | Status |
 |---|---|
@@ -106,6 +106,7 @@ Resumo das regras criticas (detalhes completos no arquivo):
 | G26 Convenios e Planos | ✅ 100% |
 | G27 Vocabulario + Catalogo | ✅ 100% — rotulos aplicados no admin em 2026-11-19 |
 | G28 Correcoes pos-varredura | ✅ 100% (11/11) — 2026-11-19 |
+| G29 Telemedicina | ✅ 100% (6/6) — 2026-11-19 (Jitsi; producao exige servidor proprio, ver ADR-039) |
 
 **Tasks pendentes em aberto:**
 - G9: T47–T50 (Deploy Hostinger + CapRover)

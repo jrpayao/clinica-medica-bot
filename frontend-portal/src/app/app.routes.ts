@@ -17,6 +17,11 @@ export const routes: Routes = [
       import('./features/chat/chat.component').then((m) => m.ChatComponent),
   },
   {
+    path: 'teleconsulta/:token',
+    loadComponent: () =>
+      import('./features/teleconsulta/teleconsulta.component').then((m) => m.TeleconsultaComponent),
+  },
+  {
     path: 'agendamentos',
     loadComponent: () =>
       import('./features/agendamentos/agendamentos.component').then(

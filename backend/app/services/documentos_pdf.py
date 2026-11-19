@@ -53,7 +53,7 @@ def gerar_pdf(dados: dict) -> bytes:
     pdf = FPDF(format="A4")
     pdf.set_compression(True)
     pdf.set_margins(22, 20, 22)
-    pdf.set_auto_page_break(True, margin=42)
+    pdf.set_auto_page_break(True, margin=84)  # o texto nunca invade a area da assinatura
     pdf.set_title(f"{TITULOS[dados['tipo']]} - {paciente}")
     pdf.add_page()
     largura = pdf.epw
@@ -93,7 +93,8 @@ def gerar_pdf(dados: dict) -> bytes:
             pdf.ln(4)
             linha(f"CID: {conteudo['cid']} (informado a pedido do paciente)", 11)
 
-    # Assinatura e rodapé
+    # Assinatura e rodapé, sempre no pé da última página
+    pdf.set_auto_page_break(False)
     pdf.set_y(-78)
     pdf.set_font("Helvetica", "", 11)
     pdf.set_text_color(20)

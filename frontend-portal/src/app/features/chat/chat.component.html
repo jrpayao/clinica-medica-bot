@@ -78,9 +78,18 @@
           >
             <span class="slot-data">{{ slot.data }} — {{ slot.hora_inicio }} às {{ slot.hora_fim }}</span>
             <span class="slot-medico">{{ slot.profissional_nome }}</span>
+            @if (slot.aceita_online) {
+              <span class="slot-online">Presencial ou online</span>
+            }
           </button>
         }
       </div>
+    }
+
+    @if (chat.teleconsultaLink(); as link) {
+      <a class="teleconsulta-link" [href]="link" target="_blank" rel="noopener">
+        Abrir a página da teleconsulta
+      </a>
     }
 
     <!-- Indicador digitando -->
