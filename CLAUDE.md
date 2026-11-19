@@ -73,7 +73,7 @@ Resumo das regras criticas (detalhes completos no arquivo):
 
 ## DASHBOARD DE FEATURES — Ver `TASK.md`
 
-**Progresso geral:** `[●●●●●●●●●●]` 97% — 135 de 139 tasks concluidas (pendente: G9 Deploy)
+**Progresso geral:** `[●●●●●●●●●●]` 97% — 139 de 143 tasks concluidas (pendente: G9 Deploy)
 
 | Grupo | Status |
 |---|---|
@@ -107,6 +107,7 @@ Resumo das regras criticas (detalhes completos no arquivo):
 | G27 Vocabulario + Catalogo | ✅ 100% — rotulos aplicados no admin em 2026-11-19 |
 | G28 Correcoes pos-varredura | ✅ 100% (11/11) — 2026-11-19 |
 | G29 Telemedicina | ✅ 100% (10/10) — Jitsi proprio com a identidade do MedBot e o logo de cada unidade; falta subir no VPS (G9) |
+| G30 Observabilidade e cache | ✅ 100% (4/4) — cache Redis, Prometheus + Grafana, GlitchTip; falta subir no VPS (G9) |
 
 **Tasks pendentes em aberto:**
 - G9: T47–T50 (Deploy Hostinger + CapRover)
@@ -155,6 +156,10 @@ cd frontend-admin && ng serve --port 4201
 python infra/jitsi/configurar.py && (cd infra/jitsi && docker compose up -d) && python infra/jitsi/apontar_backend.py
 # teleconsulta de demonstracao que comeca em 10 minutos
 cd backend && uv run python scripts/demo_teleconsulta.py
+
+# Observabilidade: Grafana http://localhost:3000 | Prometheus http://localhost:9090 | GlitchTip http://localhost:8020
+python infra/observabilidade/configurar.py --aplicar-banco --apontar-backend && (cd infra/observabilidade && docker compose up -d)
+python infra/glitchtip/configurar.py && (cd infra/glitchtip && docker compose up -d) && python infra/glitchtip/configurar.py --preparar --apontar-backend
 ```
 
 ## LLM LOCAL — Ollama (ADR-009/010)

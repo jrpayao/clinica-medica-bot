@@ -7,7 +7,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.v1.router import api_router
-from app.core import metricas
+from app.core import erros, metricas
 from app.core.config import settings
 from app.core.logging import setup_logging
 
@@ -92,6 +92,9 @@ def origens_permitidas() -> list[str]:
         origens.append(f"{jitsi.scheme}://{jitsi.netloc}")
     return origens
 
+
+# Erros vão ao GlitchTip quando SENTRY_DSN está definido (sem dados pessoais: app/core/erros.py)
+erros.iniciar("api")
 
 app = FastAPI(
     title=settings.app_name,

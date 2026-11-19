@@ -1,0 +1,52 @@
+# GlitchTip: recebe os erros da API e do worker do MedBot e avisa por e-mail.
+# Compatível com o SDK do Sentry. Configuração gerada por configurar.py (passo a passo no README.md).
+name: medbot-glitchtip
+
+x-ambiente: &ambiente
+    DATABASE_URL: postgres://glitchtip:${POSTGRES_SENHA:?rode configurar.py}@postgres:5432/glitchtip
+    VALKEY_URL: redis://valkey:6379/0
+    SECRET_KEY: ${SECRET_KEY:?rode configurar.py}
+    GLITCHTIP_URL: ${GLITCHTIP_URL:-http://localhost:8020}
+    ALLOWED_HOSTS: ${ALLOWED_HOSTS:-localhost,127.0.0.1}
+    DEFAULT_FROM_EMAIL: ${EMAIL_REMETENTE:-glitchtip@medbot.local}
+    # SMTP para os avisos de erro (ex.: smtp+tls://usuario:senha@smtp.servidor.com:587).
+    # Vazio: os e-mails só aparecem no log do contêiner.
+    EMAIL_URL: ${EMAIL_URL:-consolemail://}
+    ENABLE_USER_REGISTRATION: "false"
+    ENABLE_ORGANIZATION_CREATION: "false"
+    GLITCHTIP_RETENTION_DAYS: ${RETENCAO_DIAS:-30}
+
+services:
+    postgres:
+        image: postgres:17-alpine
+        restart: unless-stopped
+        environment:
+            POSTGRES_USER: glitchtip
+            POSTGRES_PASSWORD: ${POSTGRES_SENHA:?rode configurar.py}
+            POSTGRES_DB: glitchtip
+        # recomendado pelo GlitchTip: consultas sobre partições travam muitos índices de uma vez
+        command: ["postgres", "-c", "max_locks_per_transaction=512"]
+        volumes:
+            - postgres-dados:/var/lib/postgresql/data
+
+    valkey:
+        image: valkey/valkey:8-alpine
+        restart: unless-stopped
+
+    web:
+        image: glitchtip/glitchtip:7.0.0
+        restart: unless-stopped
+        # um contêiner só: páginas, recebimento de eventos e tarefas (avisos, limpeza)
+        command: ./bin/run-all-in-one.sh
+        depends_on:
+            - postgres
+            - valkey
+        environment: *ambiente
+        ports:
+            - "127.0.0.1:${PORTA:-8020}:8000"
+        volumes:
+            - arquivos:/code/uploads
+
+volumes:
+    postgres-dados:
+    arquivos:

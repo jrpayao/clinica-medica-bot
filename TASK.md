@@ -8,7 +8,7 @@
 
 ## Progresso Geral
 
-`[●●●●●●●●●●]` 97% — 135/139 tasks concluídas (pendente: G9 Deploy; G16–G17 em BACKLOG)
+`[●●●●●●●●●●]` 97% — 139/143 tasks concluídas (pendente: G9 Deploy; G16–G17 em BACKLOG)
 
 > **Revisão de 2026-11-19:** varredura do código e das telas mostrou que T91–T102 estavam marcadas como concluídas sem código em nenhuma branch, e T90 só pela metade. Foram reabertas abaixo. G25–G27 e G28 foram registrados.
 
@@ -45,6 +45,7 @@
 | G27 — Vocabulário + Catálogo      | plano G27 | concluído   | `[●●●●●]` 100%  |
 | G28 — Correções pós-varredura     | —         | 11/11       | `[●●●●●]` 100%  |
 | G29 — Telemedicina                | T149–T158 | 10/10       | `[●●●●●]` 100%  |
+| G30 — Observabilidade e cache     | T159–T162 | 4/4         | `[●●●●●]` 100%  |
 
 
 ---
@@ -1450,3 +1451,40 @@ T103 (abstração WhatsApp) → T104 (E2E)
 - **Sem assinatura digital:** receita e atestado valem impressos e assinados pelo profissional. Assinatura ICP-Brasil e consulta pública do código de verificação ficam para uma próxima etapa.
 - **Recepção não agenda online pela tela** (a API aceita `modalidade`); hoje o agendamento online nasce no chat.
 - O registro clínico não é criptografado em repouso além do que o banco oferece.
+
+---
+
+## GRUPO 30 — Observabilidade e cache `[●●●●●]` 100% ✅
+
+> Concluído em 2026-11-19 (branch `feature/observabilidade-cache`, a partir de `feature/telemedicina`). Decisões em ADR-040.
+> Backend: 837 testes passando. Admin: 130 testes. Pedido do usuário: cache para economizar tokens e observabilidade,
+> sem o atalho de triagem sem IA (descartado por ele) e sem RabbitMQ (o Celery já usa o Redis).
+
+### ✅ T159: Histórico enxuto para a IA
+- A IA recebe só a conversa da triagem (da pergunta "me conte o que está sentindo" em diante), no máximo 12 mensagens. Nome, convênio e plano ficam de fora.
+- Medido: 10% a 12% menos tokens de entrada numa triagem típica de 3 mensagens. 85% do que sobra é o texto fixo de instruções (~360 tokens por chamada); encurtá-lo daria mais economia, mas mexe na qualidade da triagem e não foi feito.
+
+### ✅ T160: Cache no Redis
+- `app/core/cache.py`: valores em JSON com validade; erro do Redis nunca derruba a requisição (vai ao banco).
+- Licença (checada em toda requisição): 60 s, só a válida; suspensão, ativação e renovação apagam a chave. Medido: 1 consulta ao banco em cada 5 requisições no teste, 99% de acerto com tráfego contínuo.
+- Catálogo do chat (especialidades, convênios e planos): 10 min por unidade; qualquer alteração apaga.
+- Relatórios e NPS: 60 s; o botão Atualizar recalcula. Ganho pequeno hoje (~10 ms → ~6 ms com a base de demonstração).
+- O seed limpa o cache.
+
+### ✅ T161: Métricas e painel (Prometheus + Grafana)
+- `GET /metrics` (protegido por `METRICS_TOKEN`): HTTP, tokens, custo, latência da IA, modelos sem preço, cache e fila do Celery.
+- `infra/observabilidade/`: Prometheus e Grafana com o painel **MedBot — visão geral** (15 painéis). O Grafana lê o banco com o usuário `grafana_leitura`, só leitura e só colunas sem dado de paciente (testado: nome, CPF, sintomas e observações são negados).
+- Preço dos modelos de produção em `PRECOS_MODELOS`; antes, o custo de modelo pago sairia zerado.
+- Conferido: `tools/video/sonda-grafana.mjs` roda a consulta de cada painel (15 com dados) e captura a tela.
+
+### ✅ T162: Erros com aviso (GlitchTip)
+- `app/core/erros.py`: SDK do Sentry na API e no worker, ligado por `SENTRY_DSN`. Antes de sair do servidor, oculta CPF, e-mail, telefone, código do link da teleconsulta, tokens e os valores das consultas ao banco; não envia corpo de requisição, cookies, cabeçalho de autorização nem variáveis locais.
+- `infra/glitchtip/`: GlitchTip 7.0.0 com organização, projeto e alerta "Erro novo" por e-mail criados por `configurar.py --preparar`.
+- Conferido: erro real enviado ao GlitchTip local chegou com os dados ocultos, e o alerta foi gerado em menos de um minuto.
+
+### Limites conhecidos
+- Alertas por e-mail precisam de SMTP (`--email-url`); sem ele, só aparecem no log do GlitchTip.
+- O painel não avisa (sem alertas do Grafana); quem avisa é o GlitchTip, e só sobre erros.
+- Contadores das métricas ficam na memória da API (um worker do uvicorn hoje).
+- Frontends (portal e painel) ainda não mandam erros ao GlitchTip.
+- Nada disso foi para o VPS: depende do deploy (G9).

@@ -1,4 +1,11 @@
-from collections.abc import AsyncGenerator
+import os
+
+# Os testes não usam a observabilidade da máquina: sem envio de erros ao GlitchTip local e sem
+# token no /metrics. Variável de ambiente vale mais que o backend/.env, e precisa vir antes de importar a app.
+os.environ["SENTRY_DSN"] = ""
+os.environ["METRICS_TOKEN"] = ""
+
+from collections.abc import AsyncGenerator  # noqa: E402
 from unittest.mock import AsyncMock
 
 import pytest

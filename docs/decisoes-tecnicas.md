@@ -405,6 +405,13 @@ Quando o agente ou o desenvolvedor tomar uma decisão técnica não prevista no 
 
 <!-- Adicionar novas decisões abaixo -->
 
+## ADR-040: Cache e observabilidade sem RabbitMQ e sem cache de respostas da IA
+- **Data:** 2026-11-19
+- **Contexto:** Pedido de cache ("Redis para economizar tokens") e observabilidade. Só dois pontos chamam a IA (conversa de sintomas e resumo de triagem), e o resto do fluxo já é feito sem IA.
+- **Decisão:** (1) Economia de tokens mandando à IA só a conversa da triagem, com teto de 12 mensagens; nada de cache de respostas da IA, porque reutilizar a orientação dada a um paciente com outro de sintomas parecidos é arriscado e acertaria pouco. O atalho de triagem sem IA foi descartado pelo usuário. (2) Cache no Redis para leituras repetidas do banco (licença, catálogo do chat, relatórios), com validade curta, invalidação nas alterações e queda para o banco se o Redis falhar. (3) Sem RabbitMQ: o Celery já usa o Redis e o volume de tarefas não justifica outro serviço. (4) Métricas com Prometheus + Grafana; o Grafana lê o banco por usuário com privilégio por coluna, sem dado de paciente. (5) Erros com GlitchTip (compatível com Sentry), com limpeza de dados pessoais no próprio backend antes do envio. (6) Langfuse (rastro de cada conversa com a IA) adiado: exige ClickHouse e não cabe junto com o resto no VPS de 16 GB.
+- **Trade-off:** a economia de tokens medida foi de 10% a 12%, menor que a estimativa inicial de 20% a 30%; o grosso do custo é o texto fixo de instruções. Contadores das métricas ficam na memória da API (um worker).
+
+
 ## ADR-038: G15 — diferenciais entregues com desvios em relação às tasks
 - **Data:** 2026-11-19
 - **Contexto:** As tasks T90–T102 descreviam jobs Celery para tudo, gráficos em Chart.js e não diziam o que fazer quando a recepção cancela a pedido do paciente.

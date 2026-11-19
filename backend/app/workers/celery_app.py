@@ -1,6 +1,10 @@
 from celery import Celery
 
+from app.core import erros
 from app.core.config import settings
+
+# Erros das tarefas agendadas também vão ao GlitchTip (quando SENTRY_DSN está definido)
+erros.iniciar("worker")
 
 celery_app = Celery(
     "medbot",
