@@ -41,6 +41,10 @@ log = structlog.get_logger(__name__)
 
 CHAT_SESSION_TTL = 1800  # 30 minutos
 
+# Na triagem, a IA recebe só a conversa sobre sintomas, e no máximo estas últimas mensagens.
+# Nome, convênio e plano são coletados sem IA: mandá-los a cada chamada só gasta tokens.
+MAX_MENSAGENS_TRIAGEM = 12
+
 # Mapeamento estado → feature key para roteamento de modelos
 _ESTADO_FEATURE: dict[str, str] = {
     # Fluxo guiado (v2)
@@ -667,6 +671,9 @@ class ChatService:
             resposta_texto, proximo_estado = resposta_direta
             mensagens.append({"role": "user", "content": mensagem})
             mensagens.append({"role": "assistant", "content": resposta_texto})
+            if proximo_estado == ChatEstado.OUVINDO_SINTOMAS and estado_atual != ChatEstado.OUVINDO_SINTOMAS:
+                # a triagem começa na pergunta "me conte o que está sentindo"
+                session_data["inicio_triagem"] = len(mensagens) - 1
             session_data["mensagens"] = mensagens
             session_data["estado"] = proximo_estado
             session_data["dados_coletados"] = dados_coletados
@@ -707,7 +714,7 @@ class ChatService:
 
         # 4. Construir historico e chamar LLM
         messages = [SystemMessage(content=system_prompt)]
-        for msg in mensagens:
+        for msg in self._historico_para_ia(estado_atual, session_data, mensagens):
             if msg["role"] == "user":
                 messages.append(HumanMessage(content=msg["content"]))
             else:
@@ -986,6 +993,20 @@ class ChatService:
                 "Por favor, fale com a recepção para garantir o seu lugar."
             )
         return await self._responder(session_token, session_data, mensagem, resposta, ChatEstado.FINALIZADO)
+
+    @staticmethod
+    def _historico_para_ia(estado: str, session_data: dict, mensagens: list[dict]) -> list[dict]:
+        """Mensagens anteriores que vão para a IA.
+
+        Na triagem: da pergunta que abriu a etapa de sintomas em diante, limitado às últimas
+        MAX_MENSAGENS_TRIAGEM. Nos fluxos antigos (sessões legadas), a conversa inteira, como antes.
+        """
+        if estado != ChatEstado.OUVINDO_SINTOMAS:
+            return mensagens
+        inicio = session_data.get("inicio_triagem")
+        if isinstance(inicio, int) and 0 <= inicio < len(mensagens):
+            mensagens = mensagens[inicio:]
+        return mensagens[-MAX_MENSAGENS_TRIAGEM:]
 
     async def _buscar_slots(self, session_data: dict, dados_coletados: dict) -> list[dict]:
         """Busca até 5 slots disponíveis na agenda para a especialidade detectada.
