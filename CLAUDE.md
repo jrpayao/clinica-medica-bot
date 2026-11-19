@@ -73,7 +73,7 @@ Resumo das regras criticas (detalhes completos no arquivo):
 
 ## DASHBOARD DE FEATURES — Ver `TASK.md`
 
-**Progresso geral:** `[●●●●●●●●●●]` 95% — 124 de 129 tasks concluidas (G9 Deploy + T85 + T103-T104 + G16-G17 BACKLOG pendentes)
+**Progresso geral:** `[●●●●●●●●●○]` 91% — 118 de 129 tasks concluidas (revisao de 2026-11-19: T90–T102 reabertas por falta de codigo)
 
 | Grupo | Status |
 |---|---|
@@ -92,7 +92,7 @@ Resumo das regras criticas (detalhes completos no arquivo):
 | G12 Licenciamento | ✅ 100% (11/11) |
 | G13 Revisao Qualidade | ✅ 100% (3/3) |
 | G14 Fluxo Guiado Agendamento | 🔄 87% (7/8) — pendente: T85 |
-| G15 Diferenciais de Mercado | 🔄 89% (17/19) — pendente: T103, T104 |
+| G15 Diferenciais de Mercado | 🔄 26% (5/19) — T90–T102 reabertas (sem codigo), T104 pendente |
 | G16 N3 Enterprise | ⛔ BACKLOG (0/3) |
 | G17 Plataforma BotFlow | ⛔ BACKLOG (0/4) |
 | G18 Qualidade: Correcoes IA | ✅ 100% (3/3) |
@@ -100,14 +100,17 @@ Resumo das regras criticas (detalhes completos no arquivo):
 | G20 Agenda Gerencial | ✅ 100% (4/4) |
 | G21 Multi-tenancy UX Fixes | ✅ 100% (6/6) |
 | G22 ADMIN_GLOBAL Platform | ✅ 100% (13/13) — concluido 2026-04-08 |
-| G23 Painel RECEPCIONISTA | ⛔ BACKLOG (0/3) — iniciar apos G22 ✅ |
-| G24 Painel MEDICO | ⛔ BACKLOG (0/3) — iniciar apos G23 |
+| G23 Painel RECEPCIONISTA | ✅ 100% (3/3) — concluido 2026-11-19 |
+| G24 Painel MEDICO | ✅ 100% (3/3) — concluido 2026-11-19 |
+| G25 Refatoracao Agnostica | ✅ 100% |
+| G26 Convenios e Planos | ✅ 100% |
+| G27 Vocabulario + Catalogo | ✅ 100% — rotulos aplicados no admin em 2026-11-19 |
+| G28 Correcoes pos-varredura | ✅ 100% (11/11) — 2026-11-19 |
 
 **Tasks pendentes em aberto:**
 - G14: T85 (frontend fluxo guiado — renderizacao chat)
-- G15: T103 (abstracao WhatsApp provider) + T104 (E2E diferenciais)
+- G15: T90–T102 (fila de espera, resumo de triagem, relatorios, reagendamento, avaliacao/NPS) + T104 (E2E)
 - G9: T47–T50 (Deploy Hostinger + CapRover)
-- G23: T143–T145 (Painel RECEPCIONISTA) — **PROXIMA ENTREGA**
 
 ---
 

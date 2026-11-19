@@ -8,7 +8,9 @@
 
 ## Progresso Geral
 
-`[●●●●●●●●●●]` 95% — 124/129 tasks concluídas (G9 Deploy + T85 + T103-T104 + G16-G17 BACKLOG pendentes)
+`[●●●●●●●●●○]` 91% — 118/129 tasks concluídas (pendentes: G9 Deploy, T85, T90–T102 reabertas, T104; G16–G17 em BACKLOG)
+
+> **Revisão de 2026-11-19:** varredura do código e das telas mostrou que T91–T102 estavam marcadas como concluídas sem código em nenhuma branch, e T90 só pela metade. Foram reabertas abaixo. G25–G27 e G28 foram registrados.
 
 
 | Grupo                             | Tasks     | Concluídas  | Progresso       |
@@ -28,7 +30,7 @@
 | G12 — Licenciamento por Cliente   | T64–T74   | 11/11       | `[●●●●●]` 100%  |
 | G13 — Revisão de Qualidade        | T75–T77   | 3/3         | `[●●●●●]` 100%  |
 | G14 — Fluxo Guiado Agendamento    | T78–T85   | 7/8 (T85🔄) | `[●●●●○]` 87%   |
-| G15 — Diferenciais de Mercado     | T86–T104  | 17/19       | `[●●●●○]` 89%   |
+| G15 — Diferenciais de Mercado     | T86–T104  | 5/19        | `[●○○○○]` 26%   |
 | G16 — N3 Enterprise               | T105–T107 | 0/3         | `[BACKLOG]`     |
 | G17 — Plataforma BotFlow          | T108–T111 | 0/4         | `[BACKLOG]`     |
 | G18 — Qualidade: Correções IA     | T112–T114 | 3/3         | `[●●●●●]` 100%  |
@@ -36,8 +38,12 @@
 | G20 — Agenda Gerencial            | T120–T123 | 4/4         | `[●●●●●]` 100%  |
 | G21 — Multi-tenancy UX Fixes      | T124–T129 | 6/6         | `[●●●●●]` 100%  |
 | G22 — ADMIN_GLOBAL Platform       | T130–T142 | 13/13       | `[●●●●●]` 100%  |
-| G23 — Painel RECEPCIONISTA        | T143–T145 | 0/3         | `[BACKLOG]`     |
-| G24 — Painel MÉDICO               | T146–T148 | 0/3         | `[BACKLOG]`     |
+| G23 — Painel RECEPCIONISTA        | T143–T145 | 3/3         | `[●●●●●]` 100%  |
+| G24 — Painel MÉDICO               | T146–T148 | 3/3         | `[●●●●●]` 100%  |
+| G25 — Refatoração Agnóstica       | plano G25 | concluído   | `[●●●●●]` 100%  |
+| G26 — Convênios e Planos          | plano G26 | concluído   | `[●●●●●]` 100%  |
+| G27 — Vocabulário + Catálogo      | plano G27 | concluído   | `[●●●●●]` 100%  |
+| G28 — Correções pós-varredura     | —         | 11/11       | `[●●●●●]` 100%  |
 
 
 ---
@@ -734,7 +740,10 @@
 
 ---
 
-## GRUPO 15 — Diferenciais de Mercado `[○○○○○○○○○○○○○○○○○○]` 0%
+## GRUPO 15 — Diferenciais de Mercado `[●○○○○]` 26% (5/19)
+
+> **Reabertura em 2026-11-19.** Existem no código: histórico clínico (T86–T88), model e service da fila de espera (T89 e parte da T90) e a abstração de provedor WhatsApp (T103).
+> Não existe em nenhuma branch: endpoints e job da fila de espera, resumo de triagem, relatórios, reagendamento, avaliação/NPS. As tasks correspondentes voltaram a pendente; a descrição de cada uma segue válida como escopo.
 
 ### N1 — Alto Impacto, Baixo Esforço
 
@@ -766,7 +775,7 @@
 - **TDAD:** `tests/unit/test_fila_espera_model.py` (RED primeiro)
 - **Verificação:** migration roda | status transita corretamente
 
-### ✅ T90: Fila de espera — Endpoint + service
+### 🔄 T90: Fila de espera — Endpoint + service (reaberta: só o service existe; faltam os endpoints e a oferta no chat)
 - **Depende de:** T89
 - **Arquivos:** `backend/app/services/fila_espera_service.py`, `backend/app/api/v1/endpoints/fila_espera.py`
 - **Endpoints:** POST /v1/fila-espera | DELETE /v1/fila-espera/{id} | GET /v1/admin/fila-espera
@@ -774,21 +783,21 @@
 - **TDAD:** `tests/unit/test_fila_espera_service.py` (RED primeiro)
 - **Verificação:** paciente entra na fila | admin vê fila | paciente sai da fila
 
-### ✅ T91: Fila de espera — Job Celery monitora slots
+### ⬜ T91: Fila de espera — Job Celery monitora slots (reaberta 2026-11-19 — sem código)
 - **Depende de:** T90
 - **Arquivos:** `backend/app/workers/fila_espera.py`
 - **Lógica:** a cada 5 min, verificar slots DISPONIVEL que atendam pacientes na fila (especialidade + convenio). Se encontrar → WhatsApp → slot RESERVADO por 30 min → se não responder → próximo da fila
 - **TDAD:** `tests/unit/test_fila_espera_worker.py` (RED primeiro)
 - **Verificação:** paciente recebe WhatsApp quando slot abre | slot fica RESERVADO | próximo notificado se timeout
 
-### ✅ T92: Resumo de triagem — Gerar resumo estruturado
+### ⬜ T92: Resumo de triagem — Gerar resumo estruturado (reaberta 2026-11-19 — sem código)
 - **Depende de:** T87
 - **Arquivos:** `backend/app/services/ia/resumo_triagem.py`
 - **Lógica:** após consulta confirmada, gerar resumo com LLM (modelo econômico). Máx 200 palavras. Nunca usa termos de diagnóstico.
 - **TDAD:** `tests/unit/test_resumo_triagem.py` (RED primeiro)
 - **Verificação:** resumo gerado | sem diagnóstico | máx 200 palavras | dados corretos
 
-### ✅ T93: Resumo de triagem — Enviar para o médico
+### ⬜ T93: Resumo de triagem — Enviar para o médico (reaberta 2026-11-19 — sem código)
 - **Depende de:** T92
 - **Arquivos:** `backend/app/workers/resumo_medico.py`
 - **Lógica:** 30 min antes da consulta, job Celery envia ao médico (WhatsApp + email). Beat schedule a cada 15 min.
@@ -799,21 +808,21 @@
 
 ### N2 — Alto Impacto, Médio Esforço
 
-### ✅ T94: Relatórios — Endpoints de analytics
+### ⬜ T94: Relatórios — Endpoints de analytics (reaberta 2026-11-19 — sem código)
 - **Depende de:** T27
 - **Arquivos:** `backend/app/api/v1/endpoints/relatorios.py`, `backend/app/services/relatorio_service.py`
 - **Endpoints (ADMIN):** GET /v1/relatorios/ocupacao | /confirmacao | /sintomas | /custo-por-agendamento | /fila-espera
 - **TDAD:** `tests/unit/test_relatorio_service.py` (RED primeiro)
 - **Verificação:** todos endpoints retornam dados agregados | filtro por período funciona | filtro por medico_id opcional
 
-### ✅ T95: Relatórios — Dashboard frontend-admin
+### ⬜ T95: Relatórios — Dashboard frontend-admin (reaberta 2026-11-19 — sem código)
 - **Depende de:** T94
 - **Arquivos:** `frontend-admin/src/app/features/relatorios/`
 - **Componentes:** KPI cards | gráfico de barras (Chart.js) | doughnut top sintomas | tabela médicos | date range picker
 - **TDAD:** specs dos componentes (RED primeiro)
 - **Verificação:** ng build sem erros | dados carregam | filtro de período atualiza gráficos
 
-### ✅ T96: Reagendamento — Detectar cancelamento pelo médico/admin
+### ⬜ T96: Reagendamento — Detectar cancelamento pelo médico/admin (reaberta 2026-11-19 — sem código)
 - **Depende de:** T12
 - **Arquivos:** `backend/app/services/consulta_service.py`, `backend/app/workers/reagendamento.py`
 - **Novo campo:** Consulta.motivo_cancelamento ENUM(PACIENTE, MEDICO, ESTABELECIMENTO, SISTEMA)
@@ -821,42 +830,42 @@
 - **TDAD:** `tests/unit/test_cancelamento_motivo.py` (RED primeiro)
 - **Verificação:** motivo persiste | job disparado apenas para cancelamentos do lado do estabelecimento
 
-### ✅ T97: Reagendamento — Buscar e oferecer novos slots
+### ⬜ T97: Reagendamento — Buscar e oferecer novos slots (reaberta 2026-11-19 — sem código)
 - **Depende de:** T96
 - **Arquivos:** `backend/app/workers/reagendamento.py`
 - **Lógica:** busca 3 slots disponíveis (mesma especialidade + convenio). WhatsApp com 3 opções numeradas. Timeout 30 min → notificar recepção.
 - **TDAD:** `tests/unit/test_reagendamento_worker.py` (RED primeiro)
 - **Verificação:** WhatsApp enviado com 3 opções | resposta "1" agenda slot 1 | timeout notifica recepção
 
-### ✅ T98: Reagendamento — Webhook de resposta WhatsApp
+### ⬜ T98: Reagendamento — Webhook de resposta WhatsApp (reaberta 2026-11-19 — sem código)
 - **Depende de:** T97, T21
 - **Arquivos:** `backend/app/api/v1/endpoints/chat.py`, `backend/app/services/reagendamento_service.py`
 - **Lógica:** webhook recebe "1"/"2"/"3" → identifica contexto via sessão Redis → agenda slot → confirma via WhatsApp
 - **TDAD:** `tests/unit/test_reagendamento_webhook.py` (RED primeiro)
 - **Verificação:** resposta "1" agenda slot 1 | resposta inválida → orientação | "0" → cancela e notifica recepção
 
-### ✅ T99: Avaliação — Model Avaliacao + migration
+### ⬜ T99: Avaliação — Model Avaliacao + migration (reaberta 2026-11-19 — sem código)
 - **Depende de:** T12
 - **Arquivos:** `backend/app/models/avaliacao.py`, `backend/app/schemas/avaliacao.py`, migration Alembic
 - **Campos:** id, consulta_id (FK unique), paciente_id (FK), medico_id (FK), nota INT (1-5), comentario TEXT nullable, canal ENUM(WHATSAPP, PORTAL), created_at
 - **TDAD:** `tests/unit/test_avaliacao_model.py` (RED primeiro)
 - **Verificação:** migration roda | nota entre 1-5 | uma avaliação por consulta (unique)
 
-### ✅ T100: Avaliação — Job Celery dispara 24h após consulta
+### ⬜ T100: Avaliação — Job Celery dispara 24h após consulta (reaberta 2026-11-19 — sem código)
 - **Depende de:** T99
 - **Arquivos:** `backend/app/workers/avaliacao.py`
 - **Lógica:** a cada hora, verificar consultas REALIZADA há 24h e sem avaliação. Enviar WhatsApp com opções 1-5. Timeout 48h.
 - **TDAD:** `tests/unit/test_avaliacao_worker.py` (RED primeiro)
 - **Verificação:** WhatsApp enviado 24h após REALIZADA | não envia se já avaliado | não envia se cancelada
 
-### ✅ T101: Avaliação — Webhook de resposta + comentário opcional
+### ⬜ T101: Avaliação — Webhook de resposta + comentário opcional (reaberta 2026-11-19 — sem código)
 - **Depende de:** T100, T21
 - **Arquivos:** `backend/app/services/avaliacao_service.py`, expandir webhook em `chat.py`
 - **Lógica:** resposta com nota → pedir comentário opcional → "pular" aceito → salvar → encerrar. Nota < 3 → notificar recepção via email.
 - **TDAD:** `tests/unit/test_avaliacao_webhook.py` (RED primeiro)
 - **Verificação:** nota salva | comentário opcional | nota baixa notifica recepção | "pular" encerra sem comentário
 
-### ✅ T102: Avaliação — Endpoints e NPS no painel admin
+### ⬜ T102: Avaliação — Endpoints e NPS no painel admin (reaberta 2026-11-19 — sem código)
 - **Depende de:** T101
 - **Arquivos:** `backend/app/api/v1/endpoints/avaliacoes.py`, `frontend-admin/src/app/features/relatorios/`
 - **Endpoints:** GET /v1/admin/avaliacoes | GET /v1/admin/avaliacoes/nps
@@ -1068,6 +1077,64 @@ T103 (abstração WhatsApp) → T104 (E2E)
 
 ---
 
+## GRUPO 25 — Refatoração Agnóstica `[●●●●●]` 100% ✅
+
+> Plano: `docs/superpowers/plans/2026-04-09-g25-refatoracao-agnostica.md` · branch `feature/g25-refatoracao-agnostica`
+
+- Renomeação de domínio para atender qualquer negócio de agendamento: `Medico → Profissional`, `Paciente → Cliente`, `Consulta → Atendimento` (models, schemas, services, endpoints, migration e frontends).
+- Novos status de atendimento e tabela `atendimento_status_historico`.
+
+## GRUPO 26 — Convênios e Planos `[●●●●●]` 100% ✅
+
+> Plano: `docs/superpowers/plans/2026-04-09-g26-convenios.md` · branch `feature/g26-convenios`
+
+- Operadoras com planos (`convenio_planos`), carteirinhas por cliente (`cliente_convenios`) e campos de autorização no atendimento.
+- Endpoints `/convenios`, `/convenios/{id}/planos`, `/clientes/{id}/convenios` e tela de gestão no admin.
+
+## GRUPO 27 — Vocabulário + Catálogo de Serviços `[●●●●●]` 100% ✅
+
+> Plano: `docs/superpowers/plans/2026-04-09-g27-vocabulario-catalogo.md` · branch `feature/g27-vocabulario`
+
+- Catálogo `tipo_atendimentos` com vínculo N:N a profissionais; rótulos configuráveis por estabelecimento.
+- **Concluído em 2026-11-19:** os rótulos passaram a ser aplicados no admin (menu, títulos, filtros e botões) via `VocabularioService`; antes eram apenas salvos.
+
+## GRUPO 28 — Correções pós-varredura `[●●●●●]` 100% ✅
+
+> Concluído em 2026-11-19. Defeitos encontrados ao subir o ambiente e percorrer todas as telas com três perfis
+> (`tools/video/varredura.mjs`). Backend: 482 testes passando.
+
+- **Chat público:** `/chat/sessao`, `/chat/encerrar` e o webhook do WhatsApp exigiam JWT por causa da dependency de licença no router. Agora são públicos; a licença é validada pelo estabelecimento da sessão (`validar_licenca_do_estabelecimento`).
+- **Chat resiliente:** falha do modelo de IA devolve a mensagem de contingência em vez de derrubar o WebSocket.
+- **Nome do paciente:** "Meu nome é Pedro" deixava o bot chamar o paciente de "Meu" (`extrair_nome_informado`); mensagens do bot e de emergência acentuadas.
+- **Contrato admin ↔ API após G25:** Profissionais, Atendimentos, Agenda e Dashboard ainda usavam `crm`, `duracao_consulta_min`, `consulta`, `paciente_cpf_mascarado`, `consulta_id`.
+- **Usuários (ADMIN_GLOBAL):** `GET /admin/usuarios` respondia 403; agora lista a plataforma inteira com a coluna de estabelecimento.
+- **Auditoria:** `AuditoriaService.registrar` nunca era chamado. Passou a registrar a entrada em uma clínica e a alteração de licença.
+- **Seed:** reescrito para os models atuais; cria licenças, planos, catálogo, carteirinhas e atendimentos do dia.
+- **Config:** `Settings` ignora variáveis desconhecidas do `.env`; compose de dev com `restart: unless-stopped`.
+- **Admin:** locale pt-BR (datas dd/MM/aaaa), título da página por modo, "Billing IA" no menu do admin da clínica.
+
+### Gaps registrados (não resolvidos)
+
+- Fora do chat, `lembretes.py`, `sugestao.py` e o billing ainda usam o relógio do servidor para "hoje".
+- Em bases já existentes fora do ambiente de dev, clientes criados pelo chat antes de 2026-11-19 têm CPF `00000000000`.
+
+### Gaps do chat resolvidos em 2026-11-19 (backend: 542 testes; `tests/unit/test_chat_convenio_cpf.py`)
+
+- **Botões de convênio:** a sessão carrega os convênios ativos da unidade e o chat os envia junto com a pergunta. Convênio fora da lista é recusado com a relação dos aceitos; unidade sem convênios cadastrados aceita texto livre.
+- **Plano:** convênio com planos gera uma segunda pergunta com respostas rápidas (mais "Não sei informar"). Os horários oferecidos passam a ser filtrados pelo convênio.
+- **CPF real:** horário escolhido → CPF (validado pelos dígitos verificadores) → telefone → e-mail. O cliente é localizado/criado pelo CPF na unidade; o resumo mostra o CPF mascarado sem asteriscos (viravam negrito).
+- **Fuso horário por unidade:** coluna `estabelecimentos.timezone` (migration `3c9a7e5d1b42`, padrão America/Sao_Paulo), editável no cadastro da unidade. `app/core/tempo.py` (`agora_local`, `hoje_local`, `fuso_do_estabelecimento`) substitui o relógio do servidor na disponibilidade, no painel da recepção e no dashboard.
+- **Carteirinha:** paciente de convênio informa o número depois do CPF (ou "Não tenho em mãos"). Com número, o chat cria a carteirinha em `cliente_convenios` (com o plano) e a vincula ao atendimento; sem número, a observação pede conferência na recepção.
+- **Edição de estabelecimento (admin):** o formulário não salvava na edição, porque os campos obrigatórios ocultos (CNPJ, responsável) o deixavam inválido. Corrigido junto com o campo de fuso.
+- Backend: 552 testes passando.
+- Webhook do WhatsApp cria sessão sem `estabelecimento_id` (multi-tenant indefinido para o canal).
+- Limites de billing ficam em memória e se perdem ao reiniciar.
+- Profissional compartilhado tem uma única especialidade, ligada a um estabelecimento (aparece "—" na outra unidade).
+- Portal: `/agendamentos` abre sem login; chat começa sem saudação.
+- Enums crus na interface (`EM_ATENDIMENTO`, `ADMIN_GLOBAL`).
+
+---
+
 ## GRUPO 16 — N3 Enterprise `[BACKLOG — NÃO INICIAR]` ⛔
 > Não iniciar sem aprovação explícita após validação do MVP.
 
@@ -1218,43 +1285,56 @@ T103 (abstração WhatsApp) → T104 (E2E)
 
 ---
 
-## GRUPO 23 — Painel RECEPCIONISTA `[BACKLOG — NÃO INICIAR]` ⛔
+## GRUPO 23 — Painel RECEPCIONISTA `[●●●●●]` 100% ✅
 
-> Aguardar conclusão de G22 (T130–T142).
+> Concluído em 2026-11-19. Backend: 511 testes passando (26 novos em `tests/unit/test_recepcao.py`). Admin: 57 testes. Conferido no navegador com o usuário `bruno@clinica-vida.com` (`tools/video/sonda-recepcao.mjs`).
 
-### T143: Backend — Endpoints operacionais para RECEPCIONISTA (agenda, consultas, pacientes)
+- **Entregue (T143):** `GET /v1/recepcao/painel` (resumo + fila do dia, CPF mascarado, isolado pelo estabelecimento do token) e `PATCH /v1/recepcao/atendimentos/{id}/status` (check-in e avanço de status, com registro em `atendimento_status_historico`). Perfis: RECEPCIONISTA, ADMIN_ESTABELECIMENTO, ADMIN_GLOBAL. Fluxo: Agendado/Confirmado → Na recepção → Em atendimento → Realizado; Falta; cancelamento segue no endpoint da agenda.
+- **Entregue (T144):** menu da recepção (Recepção, Agenda, Atendimentos, Clientes, Profissionais em leitura), login cai em `/recepcao`, `perfilGuard` bloqueia as demais rotas pela URL, perfil exibido por extenso no rodapé.
+- **Entregue (T145):** tela `/recepcao` com contadores por etapa (que filtram a fila), alerta de urgência, próxima chegada, ações por linha e atualização automática a cada minuto.
+- **Junto com o G23:** o chat deixou de oferecer horário de hoje que já passou e de escrever "Dr(a). Dr. Fulano".
+
+### ✅ T143: Backend — Endpoints operacionais para RECEPCIONISTA (agenda, consultas, pacientes)
 
 - **Grupo:** G23 — BACKLOG
 - **Descrição:** Verificar e ajustar RBAC dos endpoints de Agenda, Consultas, Pacientes para aceitar o role RECEPCIONISTA. Garantir isolamento por estabelecimento_id do JWT.
 
-### T144: Frontend — Menu e dashboard operacional para RECEPCIONISTA
+### ✅ T144: Frontend — Menu e dashboard operacional para RECEPCIONISTA
 
 - **Grupo:** G23 — BACKLOG
 - **Descrição:** NAV_ITEMS para RECEPCIONISTA: Dashboard (operacional), Agenda, Consultas, Pacientes, Médicos (somente leitura). Sem Billing, Licença, Auditoria.
 
-### T145: Frontend — Dashboard operacional (consultas do dia, próximos atendimentos)
+### ✅ T145: Frontend — Dashboard operacional (consultas do dia, próximos atendimentos)
 
 - **Grupo:** G23 — BACKLOG
 - **Descrição:** Dashboard focado no dia a dia da recepção: consultas agendadas hoje, pacientes aguardando, alertas de urgência.
 
 ---
 
-## GRUPO 24 — Painel MÉDICO `[BACKLOG — NÃO INICIAR]` ⛔
+## GRUPO 24 — Painel MÉDICO `[●●●●●]` 100% ✅
 
-> Aguardar conclusão de G23.
+> Concluído em 2026-11-19. Backend: 577 testes passando (`tests/unit/test_painel_profissional.py`). Admin: 70 testes.
+> Conferido no navegador com `fernando.alves@medbot.com` (uma unidade) e `carlos.mendes@medbot.com` (duas unidades), senha `Medico@123` (`tools/video/sonda-profissional.mjs`).
+
+- **T146 — vínculo:** `usuarios.profissional_id` já existia e já ia no token; faltava exigir. Criar usuário MEDICO agora pede o profissional da agenda, valida que ele atende na unidade e recusa um segundo acesso para a mesma agenda. MEDICO sem vínculo recebe 403 em tudo.
+- **T147 — isolamento:** `/v1/profissional/painel`, `/atendimentos/{id}/status`, `/clientes`, `/unidades` e `/selecionar-unidade` usam o `profissional_id` do token. Nos endpoints existentes, MEDICO vê só a própria agenda e os próprios atendimentos (os de outro profissional respondem 404) e não acessa o cadastro geral de clientes. Ele só inicia e conclui atendimento; chegada, confirmação e falta continuam da recepção.
+- **T148 — painel:** menu Meu dia, Minha agenda e Meus pacientes; login cai em `/meu-dia` (a mesma fila da recepção, filtrada, com a observação do agendamento); agenda sem filtros de pessoa; troca de unidade na barra superior quando o profissional atende em mais de uma; demais rotas bloqueadas pelo `perfilGuard`.
+- **Junto:** o token passou a levar o nome do usuário (o rodapé mostrava o trecho do e-mail) e a tela de usuários mostra o perfil por extenso.
+
+> Histórico do planejamento:
 > **Atenção:** o model `Medico` (agenda) precisa ser vinculado ao role `MEDICO` (usuário de login) — consultar ADR antes de iniciar.
 
-### T146: Backend — Vincular Usuario.role=MEDICO ao model Medico (agenda)
+### ✅ T146: Backend — Vincular Usuario.role=MEDICO ao model Medico (agenda)
 
 - **Grupo:** G24 — BACKLOG
 - **Descrição:** Criar ou utilizar FK entre `usuarios.id` e `medicos.usuario_id`. Médico faz login com email+senha e recebe `medico_id` no JWT para filtrar dados.
 
-### T147: Backend — Endpoints com filtro por medico_id no JWT
+### ✅ T147: Backend — Endpoints com filtro por medico_id no JWT
 
 - **Grupo:** G24 — BACKLOG
 - **Descrição:** Agenda, Consultas e Pacientes filtrados automaticamente por `medico_id` quando role=MEDICO.
 
-### T148: Frontend — Painel do Médico (agenda própria, consultas próprias)
+### ✅ T148: Frontend — Painel do Médico (agenda própria, consultas próprias)
 
 - **Grupo:** G24 — BACKLOG
 - **Descrição:** NAV_ITEMS para MEDICO: Minha Agenda, Minhas Consultas, Meus Pacientes. Médico pode atender em múltiplos estabelecimentos — considerar seleção de contexto.
