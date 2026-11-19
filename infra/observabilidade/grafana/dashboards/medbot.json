@@ -712,7 +712,7 @@
       "type": "timeseries",
       "id": 15,
       "title": "Acerto do cache, por área",
-      "description": "Parte das leituras atendida pelo Redis sem ir ao banco. licenca: checagem de toda requisição; chat: catálogo de cada conversa nova; relatorio: painel de relatórios.",
+      "description": "Parte das leituras atendida pelo Redis sem ir ao banco. Hoje só a checagem de licença, feita em toda requisição, passa pelo cache.",
       "datasource": {
         "type": "prometheus",
         "uid": "prometheus"

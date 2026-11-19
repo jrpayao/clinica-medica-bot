@@ -16,7 +16,7 @@ from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
 from langchain_openai import ChatOpenAI
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core import cache, metricas
+from app.core import metricas
 from app.services.agenda_service import AgendaService
 from app.services.ia import billing
 from app.services.ia.dados_paciente import localizar_por_nome, mascarar_cpf, normalizar_cpf
@@ -182,29 +182,20 @@ class ChatService:
 
         session_token = str(uuid.uuid4())
 
-        # Especialidades e convênios reais da unidade, em cache (a clínica altera pouco; quem altera invalida)
+        # Buscar especialidades reais do estabelecimento no banco
         especialidades: list[str] = []
-        convenios: list[dict] = []
         if estabelecimento_id:
-
-            async def carregar() -> dict:
-                result = await self.db.execute(
-                    select(Especialidade.nome)
-                    .where(
-                        Especialidade.estabelecimento_id == estabelecimento_id,
-                        Especialidade.ativo == True,  # noqa: E712
-                    )
-                    .order_by(Especialidade.nome)
+            result = await self.db.execute(
+                select(Especialidade.nome)
+                .where(
+                    Especialidade.estabelecimento_id == estabelecimento_id,
+                    Especialidade.ativo == True,  # noqa: E712
                 )
-                return {
-                    "especialidades": list(result.scalars().all()),
-                    "convenios": await self._carregar_convenios(estabelecimento_id),
-                }
-
-            catalogo = await cache.lembrar(
-                cache.chave_catalogo_chat(estabelecimento_id), cache.TTL_CATALOGO_CHAT, carregar
+                .order_by(Especialidade.nome)
             )
-            especialidades, convenios = catalogo["especialidades"], catalogo["convenios"]
+            especialidades = list(result.scalars().all())
+
+        convenios = await self._carregar_convenios(estabelecimento_id) if estabelecimento_id else []
         sessao_id = await self._registrar_sessao(session_token, canal, estabelecimento_id)
 
         session_data = {

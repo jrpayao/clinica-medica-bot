@@ -2,7 +2,6 @@ import structlog
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core import cache
 from app.models.cliente_convenio import ClienteConvenio
 from app.models.convenio import Convenio
 from app.models.convenio_plano import ConvenioPlano
@@ -39,7 +38,6 @@ class ConvenioService:
         convenio = Convenio(**dados.model_dump(), estabelecimento_id=estabelecimento_id)
         self.db.add(convenio)
         await self.db.commit()
-        await cache.apagar(cache.chave_catalogo_chat(estabelecimento_id))
         await self.db.refresh(convenio)
         return convenio
 
@@ -50,15 +48,8 @@ class ConvenioService:
         for campo, valor in dados.model_dump(exclude_unset=True).items():
             setattr(convenio, campo, valor)
         await self.db.commit()
-        await cache.apagar(cache.chave_catalogo_chat(convenio.estabelecimento_id))
         await self.db.refresh(convenio)
         return convenio
-
-    async def _invalidar_catalogo_do_convenio(self, convenio_id: int) -> None:
-        """Plano mudou: o chat da unidade dona do convênio precisa da lista nova."""
-        convenio = await self.db.get(Convenio, convenio_id)
-        if convenio is not None:
-            await cache.apagar(cache.chave_catalogo_chat(convenio.estabelecimento_id))
 
     # ── Planos ───────────────────────────────────────────────────
 
@@ -74,7 +65,6 @@ class ConvenioService:
         plano = ConvenioPlano(**dados.model_dump(), convenio_id=convenio_id)
         self.db.add(plano)
         await self.db.commit()
-        await self._invalidar_catalogo_do_convenio(convenio_id)
         await self.db.refresh(plano)
         return plano
 
@@ -85,7 +75,6 @@ class ConvenioService:
         for campo, valor in dados.model_dump(exclude_unset=True).items():
             setattr(plano, campo, valor)
         await self.db.commit()
-        await self._invalidar_catalogo_do_convenio(plano.convenio_id)
         await self.db.refresh(plano)
         return plano
 

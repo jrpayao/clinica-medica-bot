@@ -1,9 +1,9 @@
-"""Testes — Cache no Redis: módulo, licença, catálogo do chat e relatórios.
+"""Testes — Cache no Redis: módulo e licença (checada em toda requisição).
 
 Regra geral: cache nunca derruba nada. Se o Redis cair, tudo volta a consultar o banco.
 """
 
-from datetime import UTC, date, datetime, timedelta
+from datetime import UTC, datetime, timedelta
 from unittest.mock import AsyncMock
 
 import pytest
@@ -13,20 +13,9 @@ from sqlalchemy import update
 from app.api.v1.dependencies import validar_licenca_do_estabelecimento
 from app.core import cache
 from app.models.licenca import Licenca, LicencaStatus
-from app.schemas.convenio import ConvenioCreate, ConvenioUpdate
-from app.schemas.convenio_plano import ConvenioPlanoCreate
-from app.schemas.especialidade import EspecialidadeCreate, EspecialidadeUpdate
-from app.services.convenio_service import ConvenioService
-from app.services.especialidade_service import EspecialidadeService
-from app.services.ia.chat_service import ChatService
 from app.services.licenca_service import LicencaService
 from tests.fabrica import (
-    RedisFalso,
-    cabecalho,
-    criar_especialidade,
     criar_estabelecimento,
-    criar_profissional,
-    criar_slot,
 )
 
 # ── Módulo de cache ─────────────────────────────────────────────────────────
@@ -119,104 +108,3 @@ async def test_licenca_em_cache_respeita_a_data_de_vencimento(db_session):
     with pytest.raises(HTTPException) as erro:
         await validar_licenca_do_estabelecimento(db_session, est.id)
     assert erro.value.status_code == 402
-
-
-# ── Catálogo do chat (especialidades e convênios de cada sessão) ────────────
-
-async def _sessao(db, est):
-    servico = ChatService(db, RedisFalso())
-    token = await servico.criar_sessao(estabelecimento_id=est.id)
-    return await servico._carregar_sessao(token)
-
-
-async def test_catalogo_do_chat_fica_em_cache(db_session):
-    est = await criar_estabelecimento(db_session)
-    await criar_especialidade(db_session, est, nome="Cardiologia")
-    await _sessao(db_session, est)
-
-    await criar_especialidade(db_session, est, nome="Ortopedia")   # direto no banco, sem invalidar
-
-    assert (await _sessao(db_session, est))["especialidades"] == ["Cardiologia"]
-
-
-@pytest.mark.parametrize("alteracao", ["criar", "atualizar", "desativar"])
-async def test_mudar_especialidade_atualiza_o_chat(db_session, alteracao):
-    est = await criar_estabelecimento(db_session)
-    esp = await criar_especialidade(db_session, est, nome="Cardiologia")
-    await _sessao(db_session, est)
-    servico = EspecialidadeService(db_session)
-
-    if alteracao == "criar":
-        await servico.criar(EspecialidadeCreate(nome="Ortopedia"), est.id)
-        esperado = ["Cardiologia", "Ortopedia"]
-    elif alteracao == "atualizar":
-        await servico.atualizar(esp.id, EspecialidadeUpdate(nome="Cardiologia Clínica"), est.id)
-        esperado = ["Cardiologia Clínica"]
-    else:
-        await servico.desativar(esp.id, est.id)
-        esperado = []
-
-    assert (await _sessao(db_session, est))["especialidades"] == esperado
-
-
-async def test_mudar_convenio_ou_plano_atualiza_o_chat(db_session):
-    est = await criar_estabelecimento(db_session)
-    await _sessao(db_session, est)
-    servico = ConvenioService(db_session)
-
-    convenio = await servico.criar(ConvenioCreate(nome="Unimed"), est.id)
-    assert [c["nome"] for c in (await _sessao(db_session, est))["convenios"]] == ["Unimed"]
-
-    plano = await servico.criar_plano(convenio.id, ConvenioPlanoCreate(nome="Especial"))
-    assert (await _sessao(db_session, est))["convenios"][0]["planos"] == [{"id": plano.id, "nome": "Especial"}]
-
-    await servico.atualizar(convenio.id, ConvenioUpdate(ativo=False))
-    assert (await _sessao(db_session, est))["convenios"] == []
-
-
-async def test_catalogo_e_por_unidade(db_session):
-    a = await criar_estabelecimento(db_session)
-    b = await criar_estabelecimento(db_session)
-    await criar_especialidade(db_session, a, nome="Cardiologia")
-    await criar_especialidade(db_session, b, nome="Dermatologia")
-
-    assert (await _sessao(db_session, a))["especialidades"] == ["Cardiologia"]
-    assert (await _sessao(db_session, b))["especialidades"] == ["Dermatologia"]
-
-
-# ── Relatórios ──────────────────────────────────────────────────────────────
-
-async def test_relatorio_fica_em_cache_e_atualizar_busca_de_novo(db_session, async_client):
-    est = await criar_estabelecimento(db_session)
-    esp = await criar_especialidade(db_session, est)
-    prof = await criar_profissional(db_session, est, esp)
-    await criar_slot(db_session, est, prof, data=date.today())
-    gestor = cabecalho(est)
-    periodo = {"inicio": str(date.today()), "fim": str(date.today())}
-
-    primeiro = (await async_client.get("/v1/relatorios/ocupacao", params=periodo, headers=gestor)).json()
-    await criar_slot(db_session, est, prof, data=date.today())
-    do_cache = (await async_client.get("/v1/relatorios/ocupacao", params=periodo, headers=gestor)).json()
-    atualizado = (
-        await async_client.get("/v1/relatorios/ocupacao", params={**periodo, "atualizar": "true"}, headers=gestor)
-    ).json()
-    depois = (await async_client.get("/v1/relatorios/ocupacao", params=periodo, headers=gestor)).json()
-
-    assert primeiro["geral"]["total_slots"] == do_cache["geral"]["total_slots"] == 1
-    assert atualizado["geral"]["total_slots"] == depois["geral"]["total_slots"] == 2
-
-
-async def test_relatorio_em_cache_nao_vaza_para_outra_unidade_nem_outro_periodo(db_session, async_client):
-    a = await criar_estabelecimento(db_session)
-    b = await criar_estabelecimento(db_session)
-    esp = await criar_especialidade(db_session, a)
-    prof = await criar_profissional(db_session, a, esp)
-    await criar_slot(db_session, a, prof, data=date.today())
-    hoje = {"inicio": str(date.today()), "fim": str(date.today())}
-    ontem = {"inicio": str(date.today() - timedelta(days=1)), "fim": str(date.today() - timedelta(days=1))}
-
-    da_a = (await async_client.get("/v1/relatorios/ocupacao", params=hoje, headers=cabecalho(a))).json()
-    da_b = (await async_client.get("/v1/relatorios/ocupacao", params=hoje, headers=cabecalho(b))).json()
-    outro_dia = (await async_client.get("/v1/relatorios/ocupacao", params=ontem, headers=cabecalho(a))).json()
-
-    assert (da_a["geral"]["total_slots"], da_b["geral"]["total_slots"], outro_dia["geral"]["total_slots"]) == (1, 0, 0)

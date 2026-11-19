@@ -92,14 +92,14 @@ async def test_latencia_da_ia_e_medida():
 # ── Cache ───────────────────────────────────────────────────────────────────
 
 async def test_cache_conta_acertos_e_faltas_por_area():
-    antes_falta = _valor("medbot_cache_total", area="relatorio", resultado="falta")
-    antes_acerto = _valor("medbot_cache_total", area="relatorio", resultado="acerto")
+    antes_falta = _valor("medbot_cache_total", area="licenca", resultado="falta")
+    antes_acerto = _valor("medbot_cache_total", area="licenca", resultado="acerto")
 
-    await cache.lembrar("relatorio:x:1", 60, AsyncMock(return_value=1))
-    await cache.lembrar("relatorio:x:1", 60, AsyncMock(return_value=1))
+    await cache.lembrar("licenca:x:1", 60, AsyncMock(return_value=1))
+    await cache.lembrar("licenca:x:1", 60, AsyncMock(return_value=1))
 
-    assert _valor("medbot_cache_total", area="relatorio", resultado="falta") - antes_falta == 1
-    assert _valor("medbot_cache_total", area="relatorio", resultado="acerto") - antes_acerto == 1
+    assert _valor("medbot_cache_total", area="licenca", resultado="falta") - antes_falta == 1
+    assert _valor("medbot_cache_total", area="licenca", resultado="acerto") - antes_acerto == 1
 
 
 async def test_cache_conta_erro_do_redis(monkeypatch):

@@ -40,7 +40,7 @@ Métricas publicadas pela API (`backend/app/core/metricas.py`):
 | `medbot_ia_chamadas_total`, `medbot_ia_custo_usd_total` | chamadas e custo estimado |
 | `medbot_ia_latencia_segundos{feature}` | tempo de resposta do modelo |
 | `medbot_ia_modelo_sem_preco_total{modelo}` | chamadas a modelo sem preço cadastrado (custo zerado) |
-| `medbot_cache_total{area,resultado}` | acerto, falta e erro do cache (licença, chat, relatório) |
+| `medbot_cache_total{area,resultado}` | acerto, falta e erro do cache (hoje só a licença) |
 | `medbot_celery_fila_tamanho` | tarefas esperando na fila do Celery (-1: Redis fora do ar) |
 
 ## Preço dos modelos de produção

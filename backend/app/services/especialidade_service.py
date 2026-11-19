@@ -2,7 +2,6 @@ import structlog
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core import cache
 from app.models.especialidade import Especialidade
 from app.schemas.especialidade import EspecialidadeCreate, EspecialidadeUpdate
 
@@ -53,7 +52,6 @@ class EspecialidadeService:
         self.db.add(especialidade)
         await self.db.flush()
         await self.db.refresh(especialidade)
-        await cache.apagar(cache.chave_catalogo_chat(estabelecimento_id))
         log.info(
             "especialidade_criada",
             nome=especialidade.nome,
@@ -79,7 +77,6 @@ class EspecialidadeService:
 
         await self.db.flush()
         await self.db.refresh(especialidade)
-        await cache.apagar(cache.chave_catalogo_chat(estabelecimento_id))
         log.info("especialidade_atualizada", id=especialidade_id)
         return especialidade
 
@@ -96,6 +93,5 @@ class EspecialidadeService:
         especialidade.ativo = False
         await self.db.flush()
         await self.db.refresh(especialidade)
-        await cache.apagar(cache.chave_catalogo_chat(estabelecimento_id))
         log.info("especialidade_desativada", id=especialidade_id)
         return especialidade

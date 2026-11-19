@@ -1457,18 +1457,17 @@ T103 (abstração WhatsApp) → T104 (E2E)
 ## GRUPO 30 — Observabilidade e cache `[●●●●●]` 100% ✅
 
 > Concluído em 2026-11-19 (branch `feature/observabilidade-cache`, a partir de `feature/telemedicina`). Decisões em ADR-040.
-> Backend: 837 testes passando. Admin: 130 testes. Pedido do usuário: cache para economizar tokens e observabilidade,
+> Backend: 829 testes passando. Admin: 130 testes. Pedido do usuário: cache para economizar tokens e observabilidade,
 > sem o atalho de triagem sem IA (descartado por ele) e sem RabbitMQ (o Celery já usa o Redis).
 
 ### ✅ T159: Histórico enxuto para a IA
 - A IA recebe só a conversa da triagem (da pergunta "me conte o que está sentindo" em diante), no máximo 12 mensagens. Nome, convênio e plano ficam de fora.
 - Medido: 10% a 12% menos tokens de entrada numa triagem típica de 3 mensagens. 85% do que sobra é o texto fixo de instruções (~360 tokens por chamada); encurtá-lo daria mais economia, mas mexe na qualidade da triagem e não foi feito.
 
-### ✅ T160: Cache no Redis
+### ✅ T160: Cache no Redis (só a licença)
 - `app/core/cache.py`: valores em JSON com validade; erro do Redis nunca derruba a requisição (vai ao banco).
-- Licença (checada em toda requisição): 60 s, só a válida; suspensão, ativação e renovação apagam a chave. Medido: 1 consulta ao banco em cada 5 requisições no teste, 99% de acerto com tráfego contínuo.
-- Catálogo do chat (especialidades, convênios e planos): 10 min por unidade; qualquer alteração apaga.
-- Relatórios e NPS: 60 s; o botão Atualizar recalcula. Ganho pequeno hoje (~10 ms → ~6 ms com a base de demonstração).
+- Licença (checada em toda requisição): 60 s, só a válida; suspensão, ativação e renovação apagam a chave. Medido: 99% de acerto com tráfego contínuo.
+- **Revisto no mesmo dia, a pedido do usuário:** os caches do catálogo do chat (10 min) e dos relatórios (60 s) foram feitos e depois removidos. O ganho era de milissegundos (relatórios: ~10 ms → ~6 ms) e o custo era manter invalidações em cada alteração de especialidade, convênio e plano, além de relatórios até 1 minuto atrasados. Voltam se o volume real pedir.
 - O seed limpa o cache.
 
 ### ✅ T161: Métricas e painel (Prometheus + Grafana)

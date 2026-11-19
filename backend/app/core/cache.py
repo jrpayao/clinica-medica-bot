@@ -21,8 +21,6 @@ log = structlog.get_logger(__name__)
 PREFIXO = "cache:"
 
 TTL_LICENCA = 60            # consultada em toda requisição; suspensão invalida na hora
-TTL_CATALOGO_CHAT = 600     # especialidades e convênios de cada sessão nova do chat
-TTL_RELATORIO = 60          # agregações do painel; o botão Atualizar ignora o cache
 
 
 def _cliente():
@@ -33,10 +31,6 @@ def _cliente():
 
 def chave_licenca(estabelecimento_id: int) -> str:
     return f"licenca:{estabelecimento_id}"
-
-
-def chave_catalogo_chat(estabelecimento_id: int) -> str:
-    return f"chat:catalogo:{estabelecimento_id}"
 
 
 async def obter(chave: str) -> Any | None:
