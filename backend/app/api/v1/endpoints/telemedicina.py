@@ -33,6 +33,7 @@ from app.api.v1.dependencies import (
 )
 from app.core.database import get_db
 from app.models.teleconsulta import TipoDocumento
+from app.services import marca_sala_service
 from app.services import papel_timbrado_service as timbre
 from app.services import telemedicina_service as tele
 from app.services.documentos_pdf import gerar_pdf
@@ -43,6 +44,8 @@ publico = APIRouter(prefix="/teleconsulta", tags=["Teleconsulta (paciente)"])
 profissional = APIRouter(prefix="/profissional/atendimentos/{atendimento_id}", tags=["Teleconsulta (profissional)"])
 agenda = APIRouter(prefix="/agenda", tags=["Agenda"])
 papel = APIRouter(prefix="/estabelecimentos/meu/papel-timbrado", tags=["Papel timbrado"])
+# Marca da sala de vídeo: lida pelo Jitsi, do navegador, sem login
+salas = APIRouter(prefix="/salas", tags=["Sala de vídeo"])
 
 ROLES_AGENDA_ONLINE = ("ADMIN_GLOBAL", "ADMIN_ESTABELECIMENTO", "MEDICO")
 _LINK_INVALIDO = HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Link de teleconsulta inválido")
@@ -296,3 +299,22 @@ async def exemplo(_: _Gestor, unidade: _Unidade, db: AsyncSession = Depends(get_
         "timbre": await timbre.para_o_pdf(db, unidade),
     })
     return _pdf(pdf, "exemplo-receita.pdf")
+
+
+# ── Marca da sala de vídeo (T158) ──────────────────────────────────────────────
+
+@salas.get("/marca", summary="Marca da sala de vídeo (lida pelo Jitsi ao entrar)")
+async def marca_da_sala(
+    request: Request,
+    conferenceFqn: str | None = None,  # noqa: N803 — nome do parâmetro definido pelo Jitsi
+    db: AsyncSession = Depends(get_db),
+) -> dict:
+    return await marca_sala_service.marca_da_sala(db, conferenceFqn, base_url=str(request.base_url))
+
+
+@salas.get("/{sala}/logo.png", summary="Logo da unidade para a sala de vídeo")
+async def logo_da_sala(sala: str, db: AsyncSession = Depends(get_db)) -> Response:
+    imagem = await marca_sala_service.logo_da_sala(db, sala)
+    if imagem is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Sem logo para esta sala")
+    return Response(content=imagem, media_type="image/png", headers={"Cache-Control": "public, max-age=300"})

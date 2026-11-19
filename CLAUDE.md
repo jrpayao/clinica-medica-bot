@@ -73,7 +73,7 @@ Resumo das regras criticas (detalhes completos no arquivo):
 
 ## DASHBOARD DE FEATURES — Ver `TASK.md`
 
-**Progresso geral:** `[●●●●●●●●●●]` 97% — 134 de 139 tasks concluidas (pendente: G9 Deploy)
+**Progresso geral:** `[●●●●●●●●●●]` 97% — 135 de 139 tasks concluidas (pendente: G9 Deploy)
 
 | Grupo | Status |
 |---|---|
@@ -106,7 +106,7 @@ Resumo das regras criticas (detalhes completos no arquivo):
 | G26 Convenios e Planos | ✅ 100% |
 | G27 Vocabulario + Catalogo | ✅ 100% — rotulos aplicados no admin em 2026-11-19 |
 | G28 Correcoes pos-varredura | ✅ 100% (11/11) — 2026-11-19 |
-| G29 Telemedicina | 🔄 90% (9/10) — Jitsi proprio com a identidade do MedBot; pendente T158 (logo da unidade na sala) e subir no VPS |
+| G29 Telemedicina | ✅ 100% (10/10) — Jitsi proprio com a identidade do MedBot e o logo de cada unidade; falta subir no VPS (G9) |
 
 **Tasks pendentes em aberto:**
 - G9: T47–T50 (Deploy Hostinger + CapRover)

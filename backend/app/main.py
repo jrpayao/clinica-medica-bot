@@ -81,6 +81,17 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     log.info("medbot_api_shutting_down")
 
 
+def origens_permitidas() -> list[str]:
+    """Portal e painel, mais o servidor de vídeo: o Jitsi busca do navegador a marca da sala (T158)."""
+    from urllib.parse import urlparse
+
+    origens = list(settings.allowed_origins)
+    jitsi = urlparse(settings.jitsi_base_url)
+    if jitsi.scheme and jitsi.netloc:
+        origens.append(f"{jitsi.scheme}://{jitsi.netloc}")
+    return origens
+
+
 app = FastAPI(
     title=settings.app_name,
     version="0.1.0",
@@ -91,7 +102,7 @@ app = FastAPI(
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=settings.allowed_origins,
+    allow_origins=origens_permitidas(),
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

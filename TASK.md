@@ -8,7 +8,7 @@
 
 ## Progresso Geral
 
-`[●●●●●●●●●●]` 97% — 134/139 tasks concluídas (pendente: G9 Deploy; G16–G17 em BACKLOG)
+`[●●●●●●●●●●]` 97% — 135/139 tasks concluídas (pendente: G9 Deploy; G16–G17 em BACKLOG)
 
 > **Revisão de 2026-11-19:** varredura do código e das telas mostrou que T91–T102 estavam marcadas como concluídas sem código em nenhuma branch, e T90 só pela metade. Foram reabertas abaixo. G25–G27 e G28 foram registrados.
 
@@ -44,7 +44,7 @@
 | G26 — Convênios e Planos          | plano G26 | concluído   | `[●●●●●]` 100%  |
 | G27 — Vocabulário + Catálogo      | plano G27 | concluído   | `[●●●●●]` 100%  |
 | G28 — Correções pós-varredura     | —         | 11/11       | `[●●●●●]` 100%  |
-| G29 — Telemedicina                | T149–T158 | 9/10        | `[●●●●○]` 90%   |
+| G29 — Telemedicina                | T149–T158 | 10/10       | `[●●●●●]` 100%  |
 
 
 ---
@@ -1437,8 +1437,11 @@ T103 (abstração WhatsApp) → T104 (E2E)
 - **Corrigido junto:** o português configurado antes (`ptBR`) não valia nesta versão do Jitsi, que usa `pt-BR`; a sala aparecia no idioma do navegador.
 - **Tela de encerramento** (pedido de 2026-11-19): quem sai da chamada vê "Você saiu da chamada" com a marca do MedBot e o botão "Voltar para a chamada", que reabre a mesma sala com o acesso assinado guardado na aba. Antes a tela ficava preta. A sonda confere a tela, o celular e a volta (20 verificações).
 
-### ⬜ T158: Identidade da unidade na sala de vídeo (para depois)
-- Logo da clínica na sala, reaproveitando o enviado no Receituário. Caminho provável: o arquivo de marca (`dynamicBrandingUrl`) servido pelo backend por sala; confirmar na documentação do Jitsi antes.
+### ✅ T158: Logo da unidade na sala de vídeo
+- A sala pede a marca à API ao entrar (`BRANDING_DATA_URL` → `GET /v1/salas/marca?conferenceFqn=<sala>`, público). A API devolve o logo da unidade dona do atendimento, o mesmo do Receituário, num selo branco (`GET /v1/salas/{sala}/logo.png`). Sem logo ou sala desconhecida: marca do MedBot. Cores e fundo seguem os do MedBot; avatares passaram a usar a paleta do MedBot.
+- A resposta não traz dado do atendimento: só o endereço do logo. O nome da sala é aleatório (24 caracteres) e é validado antes da consulta.
+- CORS: o backend libera automaticamente a origem de `JITSI_BASE_URL`.
+- Testes: `tests/unit/test_marca_sala.py` (21). No navegador: sala da Clínica Vida mostra o logo da clínica; sala sem logo mostra o MedBot (`sonda-jitsi-marca.mjs`, com `logoUnidade: true` no arquivo de salas).
 
 ### Limites conhecidos
 - **Sem `JITSI_BASE_URL` configurado**, o padrão continua sendo o servidor público `meet.jit.si`, que serve só para demonstração.

@@ -66,8 +66,22 @@ try {
   conferir(/^pt/i.test(info.idioma ?? ''), `idioma da interface: ${info.idioma}`)
   conferir(info.marcaPronta, 'identidade carregada do arquivo de marca')
   conferir(info.fundo?.toLowerCase() === '#0f172a', `cor de fundo: ${info.fundo}`)
-  conferir(/medbot/i.test(info.logoMarca ?? ''), `logo da sala: ${info.logoMarca}`)
-  conferir(info.logos.some((l) => /medbot/i.test(l)) && !info.logos.some((l) => /watermark\.svg|jitsilogo/i.test(l)), `logo exibido: ${info.logos.join(' | ').slice(0, 160)}`)
+  if (urls.logoUnidade) {
+    // sala de uma unidade com logo no Receituário: o logo vem da API, num selo branco
+    conferir(/\/v1\/salas\/[^/]+\/logo\.png$/.test(info.logoMarca ?? ''), `logo da unidade na sala: ${info.logoMarca}`)
+    // carrega como a sala carrega (imagem), e não por fetch: o service worker do Jitsi recusa fetch para outra origem
+    const imagem = await medico.evaluate((url) => new Promise((ok) => {
+      const img = new Image()
+      img.onload = () => ok(`${img.naturalWidth}x${img.naturalHeight}`)
+      img.onerror = () => ok('erro')
+      img.src = url
+    }), info.logoMarca)
+    conferir(/^\d+x86$/.test(imagem), `logo da unidade carregado (${imagem})`)
+    conferir(info.logos.some((l) => l.includes(info.logoMarca)), `logo exibido: ${info.logos.join(' | ').slice(0, 160)}`)
+  } else {
+    conferir(info.logoMarca === '/images/medbot-logo.svg', `logo da sala: ${info.logoMarca}`)
+    conferir(info.logos.some((l) => /medbot-logo/i.test(l)) && !info.logos.some((l) => /watermark\.svg|jitsilogo/i.test(l)), `logo exibido: ${info.logos.join(' | ').slice(0, 160)}`)
+  }
   conferir(info.larguraLogo >= 120, `largura do logo no computador: ${info.larguraLogo}px`)
   const botoes = info.botoes ?? []
   conferir(ESPERADOS.every((b) => botoes.includes(b)), `botões presentes: ${botoes.join(', ')}`)
@@ -105,8 +119,11 @@ try {
     await voltar.click()
     const voltou = await paciente.waitForFunction(() => { try { return globalThis.APP.conference.isJoined() } catch { return false } }, null, { timeout: 60000 })
       .then(() => true).catch(() => false)
-    const participantes = voltou ? await medico.evaluate(() => globalThis.APP.conference._room.getParticipants().length + 1) : 0
-    conferir(voltou && participantes === 2, `paciente voltou para a mesma chamada (${participantes} na sala)`)
+    // confere pelo identificador da conexão: sobras de execuções anteriores na mesma sala não atrapalham
+    const meuId = voltou ? await paciente.evaluate(() => globalThis.APP.conference._room.myUserId()) : null
+    await medico.waitForTimeout(2000)
+    const medicoVe = await medico.evaluate((id) => globalThis.APP.conference._room.getParticipants().some((p) => p.getId() === id), meuId)
+    conferir(voltou && medicoVe, `paciente voltou para a mesma chamada e o profissional o vê (${meuId})`)
   }
 } catch (e) {
   console.log('ERRO:', e.message.split('\n').slice(0, 4).join(' | '))

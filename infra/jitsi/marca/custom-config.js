@@ -1,8 +1,8 @@
 // Identidade e comportamento da sala de teleconsulta do MedBot (T157).
 // Anexado ao fim do config.js gerado pela imagem oficial: só sobrescreve o que está aqui.
 
-// Cores, fundo e logo: arquivo servido pelo próprio Jitsi
-config.dynamicBrandingUrl = '/static/medbot-branding.json';
+// Cores, fundo e logo vêm da API do MedBot (logo da unidade dona da sala) ou, sem API, de
+// /static/medbot-branding.json. O endereço é definido no .env por configurar.py.
 
 // Só o que uma consulta por vídeo precisa. Sem convite, gravação, transmissão, quadro, enquete etc.
 config.toolbarButtons = [

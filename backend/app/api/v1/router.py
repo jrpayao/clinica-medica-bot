@@ -63,6 +63,7 @@ api_router.include_router(telemedicina.agenda, dependencies=_LICENCA_DEP)
 api_router.include_router(telemedicina.papel, dependencies=_LICENCA_DEP)
 # Página do paciente: sem login, o acesso é o token do link
 api_router.include_router(telemedicina.publico)
+api_router.include_router(telemedicina.salas)
 
 # Chat é público: paciente anônimo no portal e webhook do WhatsApp não têm JWT.
 # A licença é validada em criar_sessao, pelo estabelecimento da sessão.

@@ -54,6 +54,10 @@ def main() -> None:
                    help="IP que os participantes alcançam (pode repetir). Padrão: 127.0.0.1 e o IP da rede local")
     p.add_argument("--letsencrypt", metavar="EMAIL",
                    help="emite certificado HTTPS para o domínio da --url (exige portas 80 e 443 abertas)")
+    p.add_argument("--api", default="http://localhost:8100",
+                   help="endereço público da API do MedBot, de onde a sala busca o logo da unidade (padrão: http://localhost:8100)")
+    p.add_argument("--sem-api", action="store_true",
+                   help="usa só a marca do MedBot, sem buscar o logo da unidade (ex.: Jitsi sem backend)")
     p.add_argument("--fuso", default="America/Sao_Paulo")
     p.add_argument("--novo-segredo", action="store_true",
                    help="troca o segredo das salas (o backend precisa ser atualizado junto)")
@@ -102,6 +106,10 @@ def main() -> None:
         # o acesso assinado é conferido pelo servidor de salas; se o controlador de conferência também
         # autenticar, ele promove todo participante a moderador
         "JICOFO_ENABLE_AUTH=0",
+        "",
+        "# Marca da sala: logo da unidade dona do atendimento, buscado na API do MedBot (T158)",
+        ("DYNAMIC_BRANDING_URL=/static/medbot-branding.json" if args.sem_api
+         else f"BRANDING_DATA_URL={args.api.rstrip('/')}/v1/salas/marca"),
         "",
         "# Chamada entra direto, sem tela de boas-vindas nem convite para criar salas",
         "ENABLE_WELCOME_PAGE=0",

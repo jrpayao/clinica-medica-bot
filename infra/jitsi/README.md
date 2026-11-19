@@ -22,7 +22,7 @@ por cima do compose oficial.
 
 | Arquivo | O que define |
 |---|---|
-| `marca/medbot-branding.json` | cor de fundo, logo da sala e cores dos botões (tema) |
+| `marca/medbot-branding.json` | cores e logo do MedBot quando o Jitsi roda sem a API (`configurar.py --sem-api`) |
 | `marca/custom-config.js` | botões da barra, nome técnico da sala escondido, privacidade (sem avatar, estatística ou pesquisa de terceiros), sem convite |
 | `marca/custom-interface_config.js` | nome do aplicativo, idioma fixo em português, sem propaganda do Jitsi |
 | `marca/title.html` e `marca/favicon.svg` | título e ícone da aba |
@@ -32,6 +32,11 @@ por cima do compose oficial.
 
 Botões da sala: microfone, câmera, compartilhar tela, chat, fundo virtual (desfocar ou trocar, para quem
 atende de casa), mosaico, tela cheia, configurações de aparelhos e sair.
+
+**Logo da clínica na sala.** Ao entrar, a sala pede a marca à API do MedBot (`BRANDING_DATA_URL`, gravado por
+`configurar.py --api <endereço da API>`). A API responde com o logo que a unidade dona do atendimento enviou no
+Receituário, num selo branco para ficar legível no fundo escuro. Sem logo, ou sala desconhecida, vale a marca do MedBot.
+Cores e fundo são sempre os do MedBot. A API libera o endereço do Jitsi (`JITSI_BASE_URL`) para essa consulta.
 
 Depois de editar algo em `marca/`:
 
@@ -48,7 +53,7 @@ cd tools/video && node sonda-jitsi-marca.mjs out/salas.json
 ## Na sua máquina
 
 ```bash
-python infra/jitsi/configurar.py          # gera infra/jitsi/.env (https://localhost:8443)
+python infra/jitsi/configurar.py          # gera infra/jitsi/.env (https://localhost:8443, API em http://localhost:8100)
 cd infra/jitsi && docker compose up -d    # sobe os 4 serviços
 python infra/jitsi/apontar_backend.py     # grava endereço e segredo no backend/.env
 ```
@@ -86,7 +91,7 @@ Pré-requisitos: um subdomínio apontando para o servidor (ex.: `video.suaclinic
 python infra/jitsi/configurar.py \
   --url https://video.suaclinica.com.br \
   --ip <IP público do servidor> \
-  --letsencrypt voce@suaclinica.com.br
+  --letsencrypt voce@suaclinica.com.br \n  --api https://api.suaclinica.com.br
 cd infra/jitsi && docker compose up -d
 ```
 

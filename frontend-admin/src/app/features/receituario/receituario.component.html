@@ -17,7 +17,10 @@
 
     <section class="cartao" aria-labelledby="t-logo">
       <h2 id="t-logo">Logo</h2>
-      <p class="nota">Aparece no alto de cada página. PNG ou JPEG, até 2 MB. Fundo transparente fica melhor.</p>
+      <p class="nota">
+        Aparece no alto de cada página da receita e do atestado, e no canto da sala de vídeo das teleconsultas.
+        PNG ou JPEG, até 2 MB. Fundo transparente fica melhor.
+      </p>
 
       <div class="logo" [class.logo--vazio]="!c.tem_logo">
         @if (logoUrl(); as url) {
