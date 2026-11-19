@@ -82,3 +82,12 @@ def _unidades_do_teste():
     UNIDADES_DO_TESTE.clear()
     yield
     UNIDADES_DO_TESTE.clear()
+
+
+@pytest.fixture(autouse=True)
+def _jitsi_padrao(monkeypatch):
+    """Os testes nao dependem do Jitsi configurado no .env da maquina: valem o servidor publico e sala sem JWT."""
+    monkeypatch.setattr(settings, "jitsi_base_url", "https://meet.jit.si")
+    monkeypatch.setattr(settings, "jitsi_app_id", "")
+    monkeypatch.setattr(settings, "jitsi_app_secret", "")
+    monkeypatch.setattr(settings, "portal_url", "http://localhost:4200")

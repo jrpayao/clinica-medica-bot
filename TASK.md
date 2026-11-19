@@ -8,7 +8,7 @@
 
 ## Progresso Geral
 
-`[●●●●●●●●●●]` 97% — 132/136 tasks concluídas (pendente: G9 Deploy; G16–G17 em BACKLOG)
+`[●●●●●●●●●●]` 97% — 133/137 tasks concluídas (pendente: G9 Deploy; G16–G17 em BACKLOG)
 
 > **Revisão de 2026-11-19:** varredura do código e das telas mostrou que T91–T102 estavam marcadas como concluídas sem código em nenhuma branch, e T90 só pela metade. Foram reabertas abaixo. G25–G27 e G28 foram registrados.
 
@@ -44,7 +44,7 @@
 | G26 — Convênios e Planos          | plano G26 | concluído   | `[●●●●●]` 100%  |
 | G27 — Vocabulário + Catálogo      | plano G27 | concluído   | `[●●●●●]` 100%  |
 | G28 — Correções pós-varredura     | —         | 11/11       | `[●●●●●]` 100%  |
-| G29 — Telemedicina                | T149–T155 | 7/7         | `[●●●●●]` 100%  |
+| G29 — Telemedicina                | T149–T156 | 8/8         | `[●●●●●]` 100%  |
 
 
 ---
@@ -1422,9 +1422,16 @@ T103 (abstração WhatsApp) → T104 (E2E)
 - O arquivo enviado é conferido, reduzido e regravado como PNG antes de ser guardado; outros formatos são recusados.
 - Vale para receitas e atestados, inclusive os já emitidos quando reabertos. Testes em `tests/unit/test_papel_timbrado.py`.
 
+### ✅ T156: Jitsi Meet próprio
+- `infra/jitsi/`: compose oficial do docker-jitsi-meet (`stable-11509`) + `configurar.py` (gera o `.env` com senhas e o segredo das salas) + `apontar_backend.py` (grava endereço e segredo no `backend/.env`) + README com o passo a passo local e de servidor.
+- Salas exigem acesso assinado (JWT) emitido pelo backend, válido para uma sala e por 3 horas. Só o profissional é moderador; o paciente entra como participante.
+- Rodando nesta máquina em `https://localhost:8443` (certificado autoassinado: aceitar uma vez em cada navegador).
+- Conferido com chamada real entre dois navegadores, com câmera e microfone simulados (`tools/video/sonda-jitsi.mjs`): os dois entram, o vídeo chega nos dois sentidos, quem vem sem acesso assinado ou com acesso de outra sala fica de fora. O mesmo dentro das telas do sistema (`sonda-teleconsulta.mjs`).
+
 ### Limites conhecidos
-- **Servidor de vídeo:** o padrão é o servidor público `meet.jit.si`, que serve só para demonstração: exige login de quem abre a sala e corta chamadas embutidas depois de 5 minutos. Para uso real é preciso um Jitsi próprio (CapRover) e apontar `JITSI_BASE_URL` para ele.
-- **Chamada de vídeo não testada:** os testes conferem que paciente e profissional recebem a mesma sala no momento certo. Câmera, microfone e a chamada em si não foram exercitados.
+- **Sem `JITSI_BASE_URL` configurado**, o padrão continua sendo o servidor público `meet.jit.si`, que serve só para demonstração.
+- **Vídeo testado com câmera simulada, na mesma máquina.** Falta o teste com duas pessoas, em aparelhos e redes diferentes; em servidor, a porta 10000/UDP precisa estar aberta. Não há servidor TURN para redes que bloqueiam UDP.
+- **O deploy do Jitsi no VPS não foi feito.** O README traz os passos; a parte de CapRover está descrita mas não foi exercitada.
 - **Sem assinatura digital:** receita e atestado valem impressos e assinados pelo profissional. Assinatura ICP-Brasil e consulta pública do código de verificação ficam para uma próxima etapa.
 - **Recepção não agenda online pela tela** (a API aceita `modalidade`); hoje o agendamento online nasce no chat.
 - O registro clínico não é criptografado em repouso além do que o banco oferece.

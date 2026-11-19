@@ -73,7 +73,7 @@ Resumo das regras criticas (detalhes completos no arquivo):
 
 ## DASHBOARD DE FEATURES — Ver `TASK.md`
 
-**Progresso geral:** `[●●●●●●●●●●]` 97% — 132 de 136 tasks concluidas (pendente: G9 Deploy)
+**Progresso geral:** `[●●●●●●●●●●]` 97% — 133 de 137 tasks concluidas (pendente: G9 Deploy)
 
 | Grupo | Status |
 |---|---|
@@ -106,7 +106,7 @@ Resumo das regras criticas (detalhes completos no arquivo):
 | G26 Convenios e Planos | ✅ 100% |
 | G27 Vocabulario + Catalogo | ✅ 100% — rotulos aplicados no admin em 2026-11-19 |
 | G28 Correcoes pos-varredura | ✅ 100% (11/11) — 2026-11-19 |
-| G29 Telemedicina | ✅ 100% (7/7) — 2026-11-19 (Jitsi; producao exige servidor proprio, ver ADR-039) |
+| G29 Telemedicina | ✅ 100% (8/8) — 2026-11-19 (Jitsi proprio em `infra/jitsi/`; falta subir no VPS, ver ADR-039) |
 
 **Tasks pendentes em aberto:**
 - G9: T47–T50 (Deploy Hostinger + CapRover)
@@ -150,6 +150,11 @@ cd frontend-portal && ng serve --port 4200
 
 # Frontend admin
 cd frontend-admin && ng serve --port 4201
+
+# Video da telemedicina (Jitsi proprio, https://localhost:8443)
+python infra/jitsi/configurar.py && (cd infra/jitsi && docker compose up -d) && python infra/jitsi/apontar_backend.py
+# teleconsulta de demonstracao que comeca em 10 minutos
+cd backend && uv run python scripts/demo_teleconsulta.py
 ```
 
 ## LLM LOCAL — Ollama (ADR-009/010)

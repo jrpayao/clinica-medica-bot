@@ -40,3 +40,6 @@ qdrantdata/
 test-results/
 .playwright-mcp/
 .superpowers/
+
+# Jitsi local: configuracao gerada, com chaves
+infra/jitsi/config/

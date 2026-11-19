@@ -14,10 +14,13 @@ const ADMIN = process.env.ADMIN || 'http://localhost:4201'
 const PORTAL = process.env.PORTAL || 'http://localhost:4200'
 const EMAIL = process.env.EMAIL || 'carlos.mendes@medbot.com'
 fs.mkdirSync(OUT, { recursive: true })
-const browser = await chromium.launch()
+// Câmera e microfone simulados pelo navegador, para a chamada acontecer de verdade quando o Jitsi é o próprio
+const browser = await chromium.launch({ args: ['--use-fake-device-for-media-stream', '--use-fake-ui-for-media-stream'] })
 
 async function pagina(nome, largura = 1440) {
-  const contexto = await browser.newContext({ viewport: { width: largura, height: 900 } })
+  const contexto = await browser.newContext({
+    viewport: { width: largura, height: 900 }, permissions: ['camera', 'microphone'], ignoreHTTPSErrors: true,
+  })
   // A sonda confere que a sala certa é entregue; a chamada de vídeo em si não é aberta
   await contexto.route(/meet\.jit\.si/, (rota) => rota.abort())
   const page = await contexto.newPage()
@@ -71,15 +74,28 @@ try {
   console.log('triagem:', limpo(await medico.locator('#t-triagem ~ .cartao__texto').innerText()).slice(0, 120))
   console.log('documentos antes de iniciar:', limpo(await medico.locator('#t-docs ~ .cartao__nota').first().innerText()))
   await medico.getByRole('button', { name: 'Entrar na sala' }).click()
-  console.log('quadro do profissional:', (await medico.locator('iframe.video__quadro').getAttribute('src')).split('#')[0])
+  console.log('quadro do profissional:', (await medico.locator('iframe.video__quadro').getAttribute('src')).split(/[?#]/)[0])
   await medico.screenshot({ path: path.join(OUT, 'tele-4-atender.png'), fullPage: true })
 
   await medico.getByRole('button', { name: 'Iniciar atendimento' }).click()
   await medico.waitForSelector('button:has-text("Concluir")', { timeout: 10000 })
   await paciente.waitForSelector('iframe.video', { timeout: 15000 })
   const salaPaciente = (await paciente.locator('iframe.video').getAttribute('src')).split('#')[0]
-  console.log('paciente recebeu a sala:', salaPaciente, '| mesma do profissional:',
-    salaPaciente === (await medico.locator('iframe.video__quadro').getAttribute('src')).split('#')[0])
+  const salaMedico = (await medico.locator('iframe.video__quadro').getAttribute('src')).split('#')[0]
+  console.log('paciente recebeu a sala:', salaPaciente.split('?')[0], '| mesma do profissional:', salaPaciente.split('?')[0] === salaMedico.split('?')[0],
+    '| acesso assinado:', salaPaciente.includes('jwt='), salaMedico.includes('jwt='))
+  if (!/meet\.jit\.si/.test(salaMedico)) {
+    // Jitsi próprio: confere a chamada dentro dos dois quadros
+    const naChamada = async (page, seletor) => {
+      const quadro = await (await page.locator(seletor).elementHandle()).contentFrame()
+      await quadro.waitForFunction(() => { try { return globalThis.APP?.conference?._room?.getParticipants?.().length === 1 } catch { return false } }, null, { timeout: 60000 })
+      return quadro.evaluate(() => ({ entrou: globalThis.APP.conference.isJoined(), papel: globalThis.APP.conference._room.getRole(), midia: globalThis.APP.conference._room.getConnectionState() }))
+    }
+    console.log('chamada — profissional:', JSON.stringify(await naChamada(medico, 'iframe.video__quadro')))
+    console.log('chamada — paciente:    ', JSON.stringify(await naChamada(paciente, 'iframe.video')))
+    await medico.waitForTimeout(4000)
+    await medico.screenshot({ path: path.join(OUT, 'tele-4b-chamada.png') })
+  }
 
   await medico.locator('textarea').nth(0).fill('Tosse seca há cinco dias')
   await medico.locator('textarea').nth(1).fill('Sem febre. Piora noturna.')
