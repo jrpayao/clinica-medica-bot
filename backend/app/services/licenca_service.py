@@ -14,6 +14,7 @@ import structlog
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core import cache
 from app.core.config import PLANO_QUOTAS, TRIAL_DIAS
 from app.models.atendimento import Atendimento, AtendimentoStatus
 from app.models.licenca import Licenca, LicencaStatus
@@ -117,6 +118,7 @@ class LicencaService:
         )
         self.db.add(licenca)
         await self.db.flush()
+        await cache.apagar(cache.chave_licenca(estabelecimento_id))
         await self.db.refresh(licenca)
         log.info(
             "licenca_trial_criada",
@@ -171,6 +173,7 @@ class LicencaService:
             est.plano = plano
 
         await self.db.flush()
+        await cache.apagar(cache.chave_licenca(estabelecimento_id))
         await self.db.refresh(licenca)
         log.info(
             "licenca_ativada",
@@ -199,6 +202,7 @@ class LicencaService:
         licenca.motivo_suspensao = motivo
 
         await self.db.flush()
+        await cache.apagar(cache.chave_licenca(estabelecimento_id))
         await self.db.refresh(licenca)
         log.info(
             "licenca_suspensa",
@@ -235,6 +239,7 @@ class LicencaService:
         licenca.motivo_suspensao = None
 
         await self.db.flush()
+        await cache.apagar(cache.chave_licenca(estabelecimento_id))
         await self.db.refresh(licenca)
         log.info(
             "licenca_reativada",

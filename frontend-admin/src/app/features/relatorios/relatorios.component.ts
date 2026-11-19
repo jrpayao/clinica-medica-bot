@@ -128,12 +128,14 @@ export class RelatoriosComponent implements OnInit {
     void this.carregar();
   }
 
-  async carregar(): Promise<void> {
+  /** `atualizar`: o botão Atualizar pede números recalculados, sem o cache de 1 minuto do servidor. */
+  async carregar(atualizar = false): Promise<void> {
     if (!this.periodoOk()) return;
     this.carregando.set(true);
     const p = this.periodo();
     const filtro = `?inicio=${p.inicio}&fim=${p.fim}`
-      + (this.profissionalId() !== null ? `&profissional_id=${this.profissionalId()}` : '');
+      + (this.profissionalId() !== null ? `&profissional_id=${this.profissionalId()}` : '')
+      + (atualizar ? '&atualizar=true' : '');
     const buscar = <T>(caminho: string) => firstValueFrom(this.api.get<T>(`${caminho}${filtro}`));
     try {
       const [ocupacao, confirmacao, sintomas, custo, fila, nps, avaliacoes] = await Promise.all([

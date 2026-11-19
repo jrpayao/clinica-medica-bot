@@ -643,7 +643,16 @@ async def seed(db: AsyncSession) -> None:
         ))
 
     await db.commit()
-    log.info("seed_concluido")
+
+    # Base recriada: nada do cache antigo (licença, catálogo do chat, relatórios) pode sobrar
+    from app.core.cache import PREFIXO
+    from app.core.redis import get_redis_client
+
+    redis = get_redis_client()
+    chaves = [chave async for chave in redis.scan_iter(match=PREFIXO + "*")]
+    if chaves:
+        await redis.delete(*chaves)
+    log.info("seed_concluido", cache_limpo=len(chaves))
 
     # ── Resumo ──────────────────────────────────────────────
     sep = "=" * 65

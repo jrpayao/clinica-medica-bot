@@ -10,6 +10,8 @@ Hierarquia:
   require_quota_consulta → bloqueia criação se quota de consultas/mês atingida
 """
 
+from dataclasses import dataclass
+from datetime import UTC, datetime
 from typing import Annotated
 
 import structlog
@@ -17,6 +19,7 @@ from fastapi import Depends, HTTPException, Request, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core import cache
 from app.core.database import get_db
 from app.core.security import verify_token
 from app.models.licenca import Licenca, LicencaStatus
@@ -220,7 +223,27 @@ async def get_estabelecimento_id_opcional(
     )
 
 
-async def validar_licenca_do_estabelecimento(db: AsyncSession, estabelecimento_id: int) -> Licenca:
+@dataclass(frozen=True)
+class LicencaEmCache:
+    """O que se sabe de uma licença válida lida do cache (sem ir ao banco)."""
+
+    estabelecimento_id: int
+    plano: str
+
+
+def _ainda_valida(em_cache: dict) -> bool:
+    valida_ate = em_cache.get("valida_ate")
+    if not valida_ate:
+        return True
+    try:
+        return datetime.fromisoformat(valida_ate) > datetime.now(UTC)
+    except (TypeError, ValueError):
+        return False
+
+
+async def validar_licenca_do_estabelecimento(
+    db: AsyncSession, estabelecimento_id: int
+) -> Licenca | LicencaEmCache:
     """Garante que o estabelecimento tem licença válida.
 
     HTTP 402 → sem licença, TRIAL expirado ou EXPIRADA
@@ -230,6 +253,12 @@ async def validar_licenca_do_estabelecimento(db: AsyncSession, estabelecimento_i
     resolvem o estabelecimento por outro meio.
     """
     from app.services.licenca_service import LicencaService
+
+    # Licença válida fica em cache por TTL_LICENCA: esta checagem roda em toda requisição.
+    # Só a válida é guardada, para liberar na hora quem regulariza; suspensão apaga a chave.
+    em_cache = await cache.obter(cache.chave_licenca(estabelecimento_id))
+    if isinstance(em_cache, dict) and _ainda_valida(em_cache):
+        return LicencaEmCache(estabelecimento_id=estabelecimento_id, plano=em_cache.get("plano", "basico"))
 
     service = LicencaService(db)
     licenca = await service.buscar_por_estabelecimento(estabelecimento_id)
@@ -254,13 +283,19 @@ async def validar_licenca_do_estabelecimento(db: AsyncSession, estabelecimento_i
             detail="Licença expirada. Contate o administrador para renovar.",
         )
 
+    valida_ate = licenca.trial_expira_em if status_efetivo == LicencaStatus.TRIAL else licenca.licenca_expira_em
+    await cache.gravar(
+        cache.chave_licenca(estabelecimento_id),
+        {"plano": licenca.plano, "valida_ate": valida_ate.isoformat() if valida_ate else None},
+        ttl=cache.TTL_LICENCA,
+    )
     return licenca
 
 
 async def verificar_licenca_ativa(
     estabelecimento_id: Annotated[int, Depends(get_estabelecimento_id)],
     db: AsyncSession = Depends(get_db),
-) -> Licenca:
+) -> Licenca | LicencaEmCache:
     """Verifica se a licença do tenant autenticado está válida.
 
     Injetado via dependencies=[] nos routers de domínio (exigem JWT).
@@ -269,7 +304,7 @@ async def verificar_licenca_ativa(
 
 
 async def require_quota_medico(
-    licenca: Annotated[Licenca, Depends(verificar_licenca_ativa)],
+    licenca: Annotated[Licenca | LicencaEmCache, Depends(verificar_licenca_ativa)],
     db: AsyncSession = Depends(get_db),
 ) -> None:
     """Bloqueia criação de médico se quota do plano foi atingida."""
@@ -286,7 +321,7 @@ async def require_quota_medico(
 
 
 async def require_quota_consulta(
-    licenca: Annotated[Licenca, Depends(verificar_licenca_ativa)],
+    licenca: Annotated[Licenca | LicencaEmCache, Depends(verificar_licenca_ativa)],
     db: AsyncSession = Depends(get_db),
 ) -> None:
     """Bloqueia criação de consulta se quota mensal do plano foi atingida."""

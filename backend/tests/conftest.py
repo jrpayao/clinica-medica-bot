@@ -91,3 +91,13 @@ def _jitsi_padrao(monkeypatch):
     monkeypatch.setattr(settings, "jitsi_app_id", "")
     monkeypatch.setattr(settings, "jitsi_app_secret", "")
     monkeypatch.setattr(settings, "portal_url", "http://localhost:4200")
+
+
+@pytest.fixture(autouse=True)
+def _cache_em_memoria(monkeypatch):
+    """Cada teste tem o seu cache vazio: nada do Redis de desenvolvimento vaza entre testes."""
+    from tests.fabrica import RedisFalso
+
+    redis = RedisFalso()
+    monkeypatch.setattr("app.core.cache._cliente", lambda: redis)
+    return redis
