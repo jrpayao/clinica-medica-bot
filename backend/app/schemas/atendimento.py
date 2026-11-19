@@ -2,7 +2,13 @@ from datetime import date, datetime, time
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from app.models.atendimento import AtendimentoCanal, AtendimentoStatus, AtendimentoTipo, AtendimentoUrgencia
+from app.models.atendimento import (
+    AtendimentoCanal,
+    AtendimentoStatus,
+    AtendimentoTipo,
+    AtendimentoUrgencia,
+    MotivoCancelamento,
+)
 from app.models.slot import SlotStatus
 
 
@@ -33,6 +39,8 @@ class AtendimentoCreate(BaseModel):
 
 class AtendimentoCancelar(BaseModel):
     motivo: str = Field(..., min_length=3, max_length=500)
+    # Quem originou o cancelamento. MEDICO e ESTABELECIMENTO fazem o cliente receber novos horários.
+    origem: MotivoCancelamento | None = None
 
 
 class AtendimentoOut(BaseModel):
@@ -49,6 +57,7 @@ class AtendimentoOut(BaseModel):
     urgencia: AtendimentoUrgencia
     canal_origem: AtendimentoCanal
     observacoes: str | None
+    motivo_cancelamento: MotivoCancelamento | None = None
     created_at: datetime
     updated_at: datetime
 

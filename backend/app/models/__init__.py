@@ -10,8 +10,10 @@ from app.models.atendimento import (
     AtendimentoStatus,
     AtendimentoTipo,
     AtendimentoUrgencia,
+    MotivoCancelamento,
 )
 from app.models.atendimento_historico import AtendimentoStatusHistorico
+from app.models.avaliacao import Avaliacao, AvaliacaoCanal
 from app.models.auditoria import AuditoriaAcao, TipoAuditoria
 from app.models.base import Base, TimestampMixin
 from app.models.cliente import Cliente, ModalidadePagamento
@@ -24,6 +26,7 @@ from app.models.fila_espera import FilaEspera, FilaEsperaStatus
 from app.models.licenca import Licenca, LicencaStatus
 from app.models.profissional import Profissional
 from app.models.profissional_estabelecimento import ProfissionalEstabelecimento
+from app.models.reagendamento import ReagendamentoOferta, ReagendamentoStatus
 from app.models.rede_estabelecimento import RedeEstabelecimentos
 from app.models.sessao_chat import SessaoChat
 from app.models.sessao_historico import SessaoHistorico
@@ -39,6 +42,11 @@ __all__ = [
     "AtendimentoTipo",
     "AtendimentoUrgencia",
     "AtendimentoStatusHistorico",
+    "MotivoCancelamento",
+    "Avaliacao",
+    "AvaliacaoCanal",
+    "ReagendamentoOferta",
+    "ReagendamentoStatus",
     "AuditoriaAcao",
     "TipoAuditoria",
     "Base",

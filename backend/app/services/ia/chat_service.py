@@ -19,6 +19,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.services.agenda_service import AgendaService
 from app.services.ia import billing
 from app.services.ia.dados_paciente import localizar_por_nome, mascarar_cpf, normalizar_cpf
+from app.services.ia.resumo_triagem import gerar_resumo_triagem
+from app.services.ia.triagem import classificar_urgencia
+from app.services.mensageria import normalizar_telefone
 from app.services.ia.prompts import ESPECIALIDADES_WHITELIST, obter_params_llm, obter_prompt_conversa, obter_prompt_sistema
 from app.services.ia.robustez import (
     FALLBACK_MESSAGE,
@@ -47,6 +50,7 @@ _ESTADO_FEATURE: dict[str, str] = {
     ChatEstado.OUVINDO_SINTOMAS: "coleta_dados",
     ChatEstado.SUGERINDO_ESPECIALIDADE: "triagem_clinica",
     ChatEstado.APRESENTANDO_SLOTS: "agendamento",
+    ChatEstado.OFERECENDO_FILA: "agendamento",
     ChatEstado.COLETANDO_CONTATO: "agendamento",
     ChatEstado.CONFIRMANDO: "agendamento",
     ChatEstado.FINALIZADO: "agendamento",
@@ -77,6 +81,12 @@ _PREFIXO_NOME = re.compile(
 
 RESPOSTA_PLANO_NAO_SEI = "Não sei informar"
 RESPOSTA_SEM_CARTEIRINHA = "Não tenho em mãos"
+RESPOSTA_ENTRAR_NA_FILA = "Sim, entrar na lista"
+RESPOSTA_RECUSAR_FILA = "Não, obrigado"
+CONVITE_FILA = (
+    "No momento não há horários livres. Quer entrar na lista de espera? "
+    "Avisamos pelo WhatsApp assim que abrir um horário."
+)
 
 
 def descrever_pagamento(dados_coletados: dict) -> str:
@@ -118,6 +128,7 @@ _DADOS_COLETADOS_INICIAL: dict = {
     "slot_id_selecionado": None,
     "numero_carteirinha": None,
     "contato_step": "cpf",  # "cpf" | "carteirinha" (só convênio) | "telefone" | "email"
+    "objetivo": "agendar",  # "agendar" | "fila" (sem horário: entra na lista de espera)
     # Legado + compartilhados
     "sintomas": [],
     "especialidade": None,
@@ -177,9 +188,11 @@ class ChatService:
             especialidades = list(result.scalars().all())
 
         convenios = await self._carregar_convenios(estabelecimento_id) if estabelecimento_id else []
+        sessao_id = await self._registrar_sessao(session_token, canal, estabelecimento_id)
 
         session_data = {
             "token": session_token,
+            "sessao_id": sessao_id,
             "canal": canal,
             "estabelecimento_id": estabelecimento_id,
             "especialidades": especialidades,  # lista real da clínica
@@ -197,6 +210,30 @@ class ChatService:
 
         log.info("sessao_chat_criada", token=session_token[:8] + "...", canal=canal)
         return session_token
+
+    async def _registrar_sessao(
+        self, session_token: str, canal: str, estabelecimento_id: int | None
+    ) -> int | None:
+        """Grava a sessão em `sessoes_chat`: é a ela que o uso de tokens e o histórico se referem.
+
+        Falhar aqui não pode impedir a conversa; sem o registro, só o billing da sessão fica sem lastro.
+        """
+        if not estabelecimento_id:
+            return None
+        from app.models.sessao_chat import SessaoCanal, SessaoChat
+
+        try:
+            sessao = SessaoChat(
+                session_token=session_token,
+                canal=SessaoCanal.WHATSAPP if canal == "WHATSAPP" else SessaoCanal.PORTAL,
+                estabelecimento_id=estabelecimento_id,
+            )
+            self.db.add(sessao)
+            await self.db.flush()
+            return sessao.id if isinstance(sessao.id, int) else None
+        except Exception as erro:
+            log.warning("sessao_chat_nao_registrada", erro=str(erro)[:200])
+            return None
 
     async def _carregar_convenios(self, estabelecimento_id: int) -> list[dict]:
         """Convênios ativos da unidade com seus planos ativos, para os botões do chat."""
@@ -572,6 +609,7 @@ class ChatService:
                 "emergencia": False,
             }
 
+        session_id_db = session_id_db or session_data.get("sessao_id")
         estado_atual = session_data.get("estado", ChatEstado.START)
         mensagens = session_data.get("mensagens", [])
         dados_coletados = session_data.get("dados_coletados", dict(_DADOS_COLETADOS_INICIAL))
@@ -600,6 +638,11 @@ class ChatService:
         # 3a. Estados assíncronos do fluxo guiado (requerem acesso ao DB)
         if estado_atual == ChatEstado.APRESENTANDO_SLOTS and mensagem.startswith("confirmar:"):
             return await self._processar_slot_selecionado(
+                session_token, session_data, mensagem, dados_coletados, mensagens
+            )
+
+        if estado_atual == ChatEstado.OFERECENDO_FILA:
+            return await self._processar_oferta_fila(
                 session_token, session_data, mensagem, dados_coletados, mensagens
             )
 
@@ -642,10 +685,11 @@ class ChatService:
                     await self._salvar_sessao(session_token, session_data)
                     resultado_direto["slots_sugeridos"] = slots
                 else:
-                    resultado_direto["resposta"] = (
-                        resposta_texto
-                        + "\n\nNo momento não encontrei horários disponíveis. "
-                        "Entre em contato com a recepção para verificar disponibilidade."
+                    esp = dados_coletados.get("especialidade") or "essa especialidade"
+                    resultado_direto.update(
+                        await self._convidar_para_fila(
+                            session_token, session_data, f"Procurei horários de {esp}. {CONVITE_FILA}"
+                        )
                     )
             return resultado_direto
 
@@ -706,6 +750,10 @@ class ChatService:
                         f"Com base nos seus sintomas, a especialidade indicada e: **{esp}**.\n"
                         f"{just}\n\nDeseja agendar com essa especialidade?"
                     )
+
+        # O que o paciente relata nesta etapa vira o resumo de triagem do profissional
+        if estado_atual == ChatEstado.OUVINDO_SINTOMAS:
+            dados_coletados["sintomas"] = [*(dados_coletados.get("sintomas") or []), mensagem.strip()]
 
         # 6. Incrementar contador de perguntas em COLETANDO_SINTOMAS
         if estado_atual == ChatEstado.COLETANDO_SINTOMAS:
@@ -779,11 +827,10 @@ class ChatService:
                 resultado["slots_sugeridos"] = slots
             else:
                 resposta_texto = (
-                    f"Com base nos seus sintomas, recomendo uma consulta com **{esp}**. "
-                    "No momento não encontrei horários disponíveis. "
-                    "Entre em contato com a recepção para verificar disponibilidade."
+                    f"Com base nos seus sintomas, recomendo uma consulta com **{esp}**. {CONVITE_FILA}"
                 )
-                proximo_estado = ChatEstado.FINALIZADO
+                proximo_estado = ChatEstado.OFERECENDO_FILA
+                resultado["quick_replies"] = [RESPOSTA_ENTRAR_NA_FILA, RESPOSTA_RECUSAR_FILA]
 
             # Atualizar resposta e estado no resultado e na sessão
             resultado["resposta"] = resposta_texto
@@ -802,13 +849,140 @@ class ChatService:
                 await self._salvar_sessao(session_token, session_data)
                 resultado["slots_sugeridos"] = slots
             else:
-                resultado["resposta"] = (
-                    resposta_texto
-                    + "\n\nNo momento não encontrei horários disponíveis para essa especialidade. "
-                    "Por favor, entre em contato com a recepção para verificar disponibilidade."
+                resultado.update(
+                    await self._convidar_para_fila(
+                        session_token, session_data, f"{resposta_texto}\n\n{CONVITE_FILA}"
+                    )
                 )
 
         return resultado
+
+    async def _especialidade_id(self, estabelecimento_id: int, nome: str | None) -> int | None:
+        """Id da especialidade da unidade a partir do nome detectado na conversa."""
+        if not nome:
+            return None
+        from sqlalchemy import select
+
+        from app.models.especialidade import Especialidade
+
+        result = await self.db.execute(
+            select(Especialidade).where(
+                Especialidade.nome.ilike(f"%{nome}%"),
+                Especialidade.estabelecimento_id == estabelecimento_id,
+            )
+        )
+        esp = result.scalar_one_or_none()
+        return esp.id if esp else None
+
+    async def _convidar_para_fila(self, session_token: str, session_data: dict, texto: str) -> dict:
+        """Sem horário livre: troca a resposta pelo convite à lista de espera e muda o estado."""
+        mensagens = session_data.get("mensagens") or []
+        if mensagens and mensagens[-1]["role"] == "assistant":
+            mensagens[-1]["content"] = texto
+        session_data["estado"] = ChatEstado.OFERECENDO_FILA
+        await self._salvar_sessao(session_token, session_data)
+        return {
+            "resposta": texto,
+            "estado": ChatEstado.OFERECENDO_FILA,
+            "quick_replies": [RESPOSTA_ENTRAR_NA_FILA, RESPOSTA_RECUSAR_FILA],
+        }
+
+    async def _responder(
+        self, session_token: str, session_data: dict, mensagem: str, resposta: str, estado: str, **extras
+    ) -> dict:
+        """Registra a troca na sessão e monta o retorno padrão dos passos sem IA."""
+        mensagens = session_data.get("mensagens") or []
+        mensagens.append({"role": "user", "content": mensagem})
+        mensagens.append({"role": "assistant", "content": resposta})
+        session_data["mensagens"] = mensagens
+        session_data["estado"] = estado
+        await self._salvar_sessao(session_token, session_data)
+        return {"resposta": resposta, "estado": estado, "emergencia": False, "sessao_expirada": False, **extras}
+
+    async def _processar_oferta_fila(
+        self, session_token: str, session_data: dict, mensagem: str, dados_coletados: dict, mensagens: list
+    ) -> dict:
+        """Resposta ao convite para a lista de espera."""
+        session_data["dados_coletados"] = dados_coletados
+        texto = mensagem.lower().strip()
+        aceita = texto.startswith("sim") or any(p in texto for p in ("entrar", "quero", "pode", "aceito"))
+        if not aceita:
+            return await self._responder(
+                session_token, session_data, mensagem,
+                "Tudo bem. Se preferir, fale com a recepção para verificar outros horários.",
+                ChatEstado.FINALIZADO,
+            )
+        dados_coletados["objetivo"] = "fila"
+        dados_coletados["contato_step"] = "cpf"
+        return await self._responder(
+            session_token, session_data, mensagem,
+            "Combinado. Para colocar você na lista, qual é o seu **CPF**?",
+            ChatEstado.COLETANDO_CONTATO,
+        )
+
+    async def _cliente_por_cpf(self, cpf: str, estabelecimento_id: int | None):
+        """Cadastro do paciente na unidade, se já existir."""
+        if not estabelecimento_id:
+            return None
+        from sqlalchemy import select
+
+        from app.models.cliente import Cliente
+
+        result = await self.db.execute(
+            select(Cliente).where(Cliente.cpf == cpf, Cliente.estabelecimento_id == estabelecimento_id).limit(1)
+        )
+        cliente = result.scalar_one_or_none()
+        return cliente if isinstance(cliente, Cliente) else None
+
+    async def _entrar_na_fila(self, session_token: str, session_data: dict, mensagem: str, dados: dict) -> dict:
+        """Cadastra (ou reaproveita) o paciente e coloca na lista de espera da especialidade."""
+        from app.models.cliente import Cliente, ModalidadePagamento
+        from app.services.fila_espera_service import FilaEsperaService
+
+        estabelecimento_id = session_data.get("estabelecimento_id")
+        nome = dados.get("nome") or "Paciente"
+        try:
+            cliente = await self._cliente_por_cpf(dados["cpf"], estabelecimento_id)
+            if cliente is None:
+                cliente = Cliente(
+                    cpf=dados["cpf"],
+                    nome=nome,
+                    telefone=dados.get("telefone"),
+                    convenio_id=dados.get("convenio_id"),
+                    convenio=dados.get("convenio"),
+                    modalidade_pagamento=(
+                        ModalidadePagamento.CONVENIO
+                        if dados.get("tipo_atendimento") == "CONVENIO"
+                        else ModalidadePagamento.PARTICULAR
+                    ),
+                    estabelecimento_id=estabelecimento_id,
+                )
+                self.db.add(cliente)
+                await self.db.flush()
+            else:
+                cliente.telefone = dados.get("telefone") or cliente.telefone
+            await FilaEsperaService(self.db).entrar_sem_duplicar(
+                cliente.id,
+                estabelecimento_id,
+                await self._especialidade_id(estabelecimento_id, dados.get("especialidade")),
+                dados.get("convenio_id"),
+            )
+            await self.db.commit()
+            especialidade = dados.get("especialidade")
+            resposta = (
+                f"Pronto, {nome.split()[0]}! Você está na lista de espera"
+                + (f" de {especialidade}" if especialidade else "")
+                + f". Assim que abrir um horário, avisamos no WhatsApp {dados.get('telefone')}."
+            )
+            log.info("fila_espera_entrada_via_chat", cliente_id=cliente.id, token=session_token[:8] + "...")
+        except Exception as erro:
+            log.error("erro_entrar_fila_chat", erro=str(erro)[:200], token=session_token[:8] + "...")
+            await self.db.rollback()
+            resposta = (
+                "Não consegui registrar você na lista de espera agora. "
+                "Por favor, fale com a recepção para garantir o seu lugar."
+            )
+        return await self._responder(session_token, session_data, mensagem, resposta, ChatEstado.FINALIZADO)
 
     async def _buscar_slots(self, session_data: dict, dados_coletados: dict) -> list[dict]:
         """Busca até 5 slots disponíveis na agenda para a especialidade detectada.
@@ -825,20 +999,9 @@ class ChatService:
         if not estabelecimento_id:
             return []
 
-        especialidade_nome = dados_coletados.get("especialidade")
-
-        # Resolver especialidade_id pelo nome
-        especialidade_id = None
-        if especialidade_nome:
-            result = await self.db.execute(
-                select(Especialidade).where(
-                    Especialidade.nome.ilike(f"%{especialidade_nome}%"),
-                    Especialidade.estabelecimento_id == estabelecimento_id,
-                )
-            )
-            esp = result.scalar_one_or_none()
-            if esp:
-                especialidade_id = esp.id
+        especialidade_id = await self._especialidade_id(
+            estabelecimento_id, dados_coletados.get("especialidade")
+        )
 
         agenda = AgendaService(self.db)
         slots = await agenda.buscar_disponibilidade(
@@ -929,7 +1092,12 @@ class ChatService:
                 resposta = "Não consegui validar esse CPF. Confira os 11 números e envie de novo, por favor."
             else:
                 dados_coletados["cpf"] = cpf
-                if dados_coletados.get("tipo_atendimento") == "CONVENIO" and dados_coletados.get("convenio_id"):
+                conhecido = await self._cliente_por_cpf(cpf, session_data.get("estabelecimento_id"))
+                dados_coletados["cliente_reconhecido"] = conhecido is not None
+                if dados_coletados.get("objetivo") == "fila":
+                    dados_coletados["contato_step"] = "telefone"
+                    resposta = "Obrigado! Qual é o seu **telefone com WhatsApp**? (com DDD)"
+                elif dados_coletados.get("tipo_atendimento") == "CONVENIO" and dados_coletados.get("convenio_id"):
                     dados_coletados["contato_step"] = "carteirinha"
                     resposta = (
                         f"Obrigado! Qual é o **número da sua carteirinha** {dados_coletados.get('convenio') or ''}?"
@@ -938,6 +1106,11 @@ class ChatService:
                 else:
                     dados_coletados["contato_step"] = "telefone"
                     resposta = "Obrigado! Qual é o seu **telefone de contato**? (com DDD)"
+                if conhecido is not None and isinstance(conhecido.nome, str):
+                    resposta = (
+                        f"Encontrei o seu cadastro, {conhecido.nome.split()[0]}. Que bom ter você de volta! "
+                        + resposta.removeprefix("Obrigado! ")
+                    )
 
         elif step == "carteirinha":
             numero = re.sub(r"[^0-9A-Za-z]", "", mensagem)
@@ -950,6 +1123,18 @@ class ChatService:
                 if tem_numero
                 else "Sem problema, a recepção confere no dia. Qual é o seu **telefone de contato**? (com DDD)"
             )
+
+        elif step == "telefone" and dados_coletados.get("objetivo") == "fila":
+            # O aviso da lista de espera chega por WhatsApp: sem número válido não há como avisar
+            if normalizar_telefone(mensagem) is None:
+                return await self._responder(
+                    session_token, session_data, mensagem,
+                    "Não reconheci esse número. Envie o telefone com DDD, por exemplo (11) 98888-7777.",
+                    ChatEstado.COLETANDO_CONTATO,
+                )
+            dados_coletados["telefone"] = mensagem.strip()
+            session_data["dados_coletados"] = dados_coletados
+            return await self._entrar_na_fila(session_token, session_data, mensagem, dados_coletados)
 
         elif step == "telefone":
             telefone = mensagem.strip()
@@ -1015,6 +1200,7 @@ class ChatService:
         mensagens: list,
     ) -> dict:
         """Cria o agendamento no banco após confirmação do usuário."""
+        from app.models.atendimento import AtendimentoCanal
         from app.models.cliente import Cliente, ModalidadePagamento
         from app.schemas.atendimento import AtendimentoCreate
         from sqlalchemy import select
@@ -1148,10 +1334,20 @@ class ChatService:
                     await self.db.refresh(carteirinha)
                 cliente_convenio_id = carteirinha.id
 
+            # Urgência e resumo de triagem a partir do que o paciente relatou
+            relatos = [r for r in (dados_coletados.get("sintomas") or []) if isinstance(r, str)]
+            urgencia = classificar_urgencia(" ".join(relatos))["urgencia"]
+            triagem = await self._resumir_triagem(session_data, dados_coletados, relatos, urgencia, cliente.id)
+
             # Criar atendimento
             agenda = AgendaService(self.db)
             dados_atendimento = AtendimentoCreate(
                 slot_id=slot_id,
+                urgencia=urgencia,
+                triagem_resumo=triagem,
+                canal_origem=(
+                    AtendimentoCanal.WHATSAPP if session_data.get("canal") == "WHATSAPP" else AtendimentoCanal.PORTAL
+                ),
                 cliente_id=cliente.id,
                 profissional_id=slot_obj.profissional_id,
                 especialidade_id=profissional_obj.especialidade_id,
@@ -1163,6 +1359,17 @@ class ChatService:
                 ),
             )
             atendimento = await agenda.agendar_consulta(dados_atendimento, estabelecimento_id)
+            if relatos:
+                from app.services.historico_service import SessaoHistoricoService
+
+                await SessaoHistoricoService(self.db).salvar(
+                    cliente_id=cliente.id,
+                    sessao_id=session_data.get("sessao_id"),
+                    sintomas_relatados=relatos,
+                    especialidade_sugerida=dados_coletados.get("especialidade"),
+                    urgencia=urgencia.value,
+                    resumo_triagem=triagem["texto"] if triagem else None,
+                )
             await self.db.commit()
 
             # Buscar info do slot
@@ -1213,6 +1420,43 @@ class ChatService:
             "emergencia": False,
             "sessao_expirada": False,
         }
+
+    async def _resumir_triagem(
+        self, session_data: dict, dados: dict, relatos: list[str], urgencia, cliente_id: int
+    ) -> dict | None:
+        """Resumo de triagem guardado no atendimento. A chamada ao modelo é registrada no billing."""
+        if not relatos:
+            return None
+        from app.services.historico_service import SessaoHistoricoService
+
+        resumo = await gerar_resumo_triagem({
+            "nome": dados.get("nome"),
+            "sintomas": relatos,
+            "especialidade": dados.get("especialidade"),
+            "pagamento": descrever_pagamento(dados),
+            "urgencia": urgencia.value,
+        })
+        uso = resumo.pop("uso", None)
+        if uso and session_data.get("sessao_id"):
+            await billing.registrar_uso(
+                db=self.db,
+                session_id=session_data["sessao_id"],
+                modelo=uso["modelo"],
+                feature="RESUMO",
+                prompt_tokens=uso["prompt_tokens"],
+                completion_tokens=uso["completion_tokens"],
+                estabelecimento_id=session_data.get("estabelecimento_id"),
+            )
+        anteriores = await SessaoHistoricoService(self.db).buscar_por_paciente(cliente_id)
+        resumo["historico"] = [
+            {
+                "data": h.created_at.strftime("%d/%m/%Y") if h.created_at else None,
+                "especialidade": h.especialidade_sugerida,
+                "resumo": h.resumo_triagem,
+            }
+            for h in (anteriores if isinstance(anteriores, list) else [])
+        ]
+        return resumo
 
     async def encerrar_sessao(
         self, session_token: str, status: str = "ENCERRADA"

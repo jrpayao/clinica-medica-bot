@@ -21,7 +21,9 @@ from app.core.database import AsyncSessionLocal, get_db
 from app.core.redis import get_redis_client  # noqa: E402
 from app.services.ia.chat_service import ChatService
 from app.services.ia.robustez import FALLBACK_MESSAGE
-from app.services.whatsapp_service import enviar_mensagem_whatsapp, extrair_mensagem_evolution
+from app.services.mensageria import mascarar_telefone
+from app.services.whatsapp.factory import get_whatsapp_provider
+from app.services.whatsapp_respostas import tratar_resposta_pendente
 
 log = structlog.get_logger(__name__)
 
@@ -121,6 +123,7 @@ async def websocket_chat(
                         session_token=session_token,
                         mensagem=msg_efetiva,
                     )
+                    await db.commit()
                 except Exception as e:
                     # Falha do modelo de IA (ou de infra) não pode encerrar a conversa:
                     # o paciente é avisado e pode tentar de novo na mesma sessão.
@@ -160,7 +163,7 @@ async def websocket_chat(
 @router.post(
     "/webhook/whatsapp",
     status_code=status.HTTP_200_OK,
-    summary="Webhook Evolution API (WhatsApp)",
+    summary="Webhook do provedor de WhatsApp",
 )
 async def webhook_whatsapp(
     request: Request,
@@ -175,8 +178,9 @@ async def webhook_whatsapp(
     4. Enviar resposta via Evolution API
     """
     payload = await request.json()
+    provedor = get_whatsapp_provider()
 
-    msg_data = extrair_mensagem_evolution(payload)
+    msg_data = provedor.extrair_mensagem(payload)
     if not msg_data:
         return {"status": "ignorado"}
 
@@ -184,6 +188,15 @@ async def webhook_whatsapp(
     mensagem = msg_data["mensagem"]
 
     redis = get_redis_client()
+
+    # Resposta a uma pergunta que o sistema fez (fila de espera, reagendamento, avaliação)
+    resposta_pendente = await tratar_resposta_pendente(db, redis, telefone, mensagem)
+    if resposta_pendente is not None:
+        await db.commit()
+        await provedor.enviar_mensagem(telefone, resposta_pendente)
+        log.info("whatsapp_resposta_pendente_tratada", telefone=mascarar_telefone(telefone))
+        return {"status": "processado"}
+
     service = ChatService(db, redis)
 
     # Buscar sessao existente pelo telefone ou criar nova
@@ -201,13 +214,10 @@ async def webhook_whatsapp(
 
     # Enviar resposta via WhatsApp
     if resultado.get("resposta"):
-        await enviar_mensagem_whatsapp(
-            telefone=telefone,
-            mensagem=resultado["resposta"],
-        )
+        await provedor.enviar_mensagem(telefone, resultado["resposta"])
 
     log.info(
         "whatsapp_webhook_processado",
-        telefone=telefone[:5] + "***",
+        telefone=mascarar_telefone(telefone),
     )
     return {"status": "processado"}

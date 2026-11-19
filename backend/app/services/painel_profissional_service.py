@@ -69,3 +69,31 @@ async def unidades_do_profissional(db: AsyncSession, profissional_id: int) -> li
         .order_by(EstabelecimentoSaude.nome)
     )
     return [{"id": est_id, "nome": nome} for est_id, nome in (await db.execute(q)).all()]
+
+
+async def triagens_dos_atendimentos(db: AsyncSession, atendimento_ids: list[int]) -> dict[int, dict]:
+    """Resumo de triagem (texto, origem e triagens anteriores) de cada atendimento que veio do chat."""
+    if not atendimento_ids:
+        return {}
+    from app.models.atendimento import Atendimento
+    from app.services.ia.resumo_triagem import texto_do_resumo
+
+    linhas = (
+        await db.execute(
+            select(Atendimento.id, Atendimento.triagem_resumo).where(
+                Atendimento.id.in_(atendimento_ids), Atendimento.triagem_resumo.isnot(None)
+            )
+        )
+    ).all()
+    triagens = {}
+    for atendimento_id, resumo in linhas:
+        texto = texto_do_resumo(resumo)
+        if texto is None:
+            continue
+        triagens[atendimento_id] = {
+            "texto": texto,
+            "origem": resumo.get("origem"),
+            "categorias": resumo.get("categorias") or [],
+            "historico": [h for h in (resumo.get("historico") or []) if isinstance(h, dict)],
+        }
+    return triagens

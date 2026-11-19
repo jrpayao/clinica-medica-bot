@@ -24,8 +24,8 @@ class SessaoChat(Base):
 
     id: Mapped[int] = mapped_column(primary_key=True)
     session_token: Mapped[str] = mapped_column(String(100), unique=True, nullable=False)
-    paciente_id: Mapped[int | None] = mapped_column(
-        ForeignKey("pacientes.id"), nullable=True
+    cliente_id: Mapped[int | None] = mapped_column(
+        ForeignKey("clientes.id"), nullable=True
     )
     canal: Mapped[SessaoCanal] = mapped_column(
         Enum(SessaoCanal, name="sessao_canal"),

@@ -1,6 +1,7 @@
 import enum
+from datetime import datetime
 
-from sqlalchemy import Enum, ForeignKey, String, Text
+from sqlalchemy import DateTime, Enum, ForeignKey, String, Text
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -35,6 +36,15 @@ class AtendimentoUrgencia(str, enum.Enum):
     MEDIA      = "MEDIA"
     ALTA       = "ALTA"
     EMERGENCIA = "EMERGENCIA"
+
+
+class MotivoCancelamento(str, enum.Enum):
+    """Quem originou o cancelamento. MEDICO e ESTABELECIMENTO disparam a oferta de reagendamento."""
+
+    PACIENTE = "PACIENTE"
+    MEDICO = "MEDICO"
+    ESTABELECIMENTO = "ESTABELECIMENTO"
+    SISTEMA = "SISTEMA"
 
 
 class AtendimentoCanal(str, enum.Enum):
@@ -77,6 +87,13 @@ class Atendimento(Base, TimestampMixin):
         ForeignKey("cliente_convenios.id", ondelete="SET NULL"), nullable=True
     )
     numero_autorizacao: Mapped[str | None] = mapped_column(String(50), nullable=True)
+    motivo_cancelamento: Mapped[MotivoCancelamento | None] = mapped_column(
+        Enum(MotivoCancelamento, name="motivo_cancelamento"), nullable=True
+    )
+    resumo_enviado_em: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    avaliacao_solicitada_em: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
     estabelecimento_id: Mapped[int] = mapped_column(
         ForeignKey("estabelecimentos.id"), nullable=False, index=True
     )

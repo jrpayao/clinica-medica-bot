@@ -6,6 +6,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.v1.dependencies import get_current_user, get_profissional_restrito, require_estabelecimento
 from app.core.database import get_db
+from app.core.redis import get_redis_client
+from app.models.atendimento import MotivoCancelamento
 from app.schemas.atendimento import (
     AtendimentoCancelar,
     AtendimentoCreate,
@@ -21,6 +23,7 @@ from app.services.agenda_service import (
     SlotNaoEncontradoError,
     listar_slots_dia,
 )
+from app.services.reagendamento_service import cancelar_com_motivo
 
 router = APIRouter(prefix="/agenda", tags=["Agenda"])
 
@@ -34,6 +37,19 @@ def garantir_atendimento_proprio(atendimento, restrito: int | None) -> None:
     """Para MEDICO, atendimento de outro profissional se comporta como inexistente."""
     if restrito is not None and atendimento.profissional_id != restrito:
         raise HTTPException(status_code=404, detail="Atendimento nao encontrado")
+
+
+def origem_do_cancelamento(
+    informada: MotivoCancelamento | None, role: str | None
+) -> MotivoCancelamento | None:
+    """Quem originou o cancelamento.
+
+    Sem informação, o profissional que cancela a própria agenda é a origem; para os demais perfis fica
+    em branco e o cliente não recebe oferta de novos horários. SISTEMA não pode ser informado pela API.
+    """
+    if informada is not None and informada != MotivoCancelamento.SISTEMA:
+        return informada
+    return MotivoCancelamento.MEDICO if role == "MEDICO" else None
 
 
 @router.get(
@@ -123,13 +139,23 @@ async def cancelar_atendimento(
     restrito: Annotated[int | None, Depends(get_profissional_restrito)] = None,
 ) -> AtendimentoOut:
     service = AgendaService(db)
+    origem = origem_do_cancelamento(dados.origem, current_user.get("role"))
     if restrito is not None:
         existente = await service.buscar_consulta_por_id(atendimento_id, estabelecimento_id)
         if not existente:
             raise HTTPException(status_code=404, detail="Atendimento nao encontrado")
         garantir_atendimento_proprio(existente, restrito)
     try:
-        return await service.cancelar_consulta(atendimento_id, dados.motivo, estabelecimento_id)
+        if origem is None:
+            return await service.cancelar_consulta(atendimento_id, dados.motivo, estabelecimento_id)
+        return await cancelar_com_motivo(
+            db,
+            get_redis_client(),
+            atendimento_id=atendimento_id,
+            texto_motivo=dados.motivo,
+            origem=origem,
+            estabelecimento_id=estabelecimento_id,
+        )
     except ConsultaNaoEncontradaError as e:
         raise HTTPException(status_code=404, detail=str(e))
     except (ConsultaJaCanceladaError, ConsultaJaRealizadaError) as e:

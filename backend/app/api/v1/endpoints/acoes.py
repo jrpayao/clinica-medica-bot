@@ -8,6 +8,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
+from app.models.atendimento import MotivoCancelamento
 from app.services.agenda_service import AgendaService, ConsultaNaoEncontradaError
 from app.services.link_tokenizado import (
     TokenAcaoExpiradoError,
@@ -58,7 +59,8 @@ async def executar_acao(
 
     if acao == "cancelar":
         try:
-            await agenda.cancelar_consulta(consulta_id, motivo="Cancelado via link")
+            cancelado = await agenda.cancelar_consulta(consulta_id, motivo="Cancelado via link")
+            cancelado.motivo_cancelamento = MotivoCancelamento.PACIENTE
         except ConsultaNaoEncontradaError:
             raise HTTPException(status_code=404, detail="Consulta nao encontrada")
         return {

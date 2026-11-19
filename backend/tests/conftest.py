@@ -62,3 +62,14 @@ def redis_client() -> AsyncMock:
     mock.set = AsyncMock(return_value=True)
     mock.delete = AsyncMock(return_value=1)
     return mock
+
+
+@pytest.fixture(autouse=True)
+def _sem_ia_no_resumo_de_triagem(monkeypatch):
+    """Nenhum teste chama o modelo de verdade para o resumo de triagem: sem isto, o agendamento pelo
+    chat tentaria a rede. Testes do resumo injetam o proprio `invocar`."""
+
+    async def _indisponivel(_sistema: str, _usuario: str):
+        raise RuntimeError("IA desligada nos testes")
+
+    monkeypatch.setattr("app.services.ia.resumo_triagem._invocar_llm", _indisponivel)

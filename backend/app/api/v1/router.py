@@ -17,11 +17,13 @@ from app.api.v1.endpoints import (
     convenios,
     especialidades,
     estabelecimentos,
+    fila_espera,
     licenca,
     painel_profissional,
     profissionais,
     rag,
     recepcao,
+    relatorios,
     tipo_atendimentos,
 )
 from app.core.database import get_db
@@ -53,6 +55,8 @@ api_router.include_router(agenda.router,         dependencies=_LICENCA_DEP)
 api_router.include_router(tipo_atendimentos.router, dependencies=_LICENCA_DEP)
 api_router.include_router(recepcao.router,      dependencies=_LICENCA_DEP)
 api_router.include_router(painel_profissional.router, dependencies=_LICENCA_DEP)
+api_router.include_router(fila_espera.router, dependencies=_LICENCA_DEP)
+api_router.include_router(relatorios.router, dependencies=_LICENCA_DEP)
 
 # Chat é público: paciente anônimo no portal e webhook do WhatsApp não têm JWT.
 # A licença é validada em criar_sessao, pelo estabelecimento da sessão.

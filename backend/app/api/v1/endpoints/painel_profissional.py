@@ -24,6 +24,7 @@ from app.core.tempo import fuso_do_estabelecimento, hoje_local
 from app.schemas.atendimento import TransicaoStatusRequest
 from app.services.painel_profissional_service import (
     listar_clientes_do_profissional,
+    triagens_dos_atendimentos,
     unidades_do_profissional,
 )
 from app.services.recepcao_service import (
@@ -57,6 +58,9 @@ async def painel_do_profissional(
     atendimentos = await listar_atendimentos_do_dia(
         db, data=dia, estabelecimento_id=estabelecimento_id, profissional_id=profissional_id, perfil=PERFIL,
     )
+    triagens = await triagens_dos_atendimentos(db, [a["atendimento_id"] for a in atendimentos])
+    for atendimento in atendimentos:
+        atendimento["triagem"] = triagens.get(atendimento["atendimento_id"])
     return {"data": str(dia), "resumo": montar_resumo(atendimentos), "atendimentos": atendimentos}
 
 
