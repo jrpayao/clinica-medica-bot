@@ -11,13 +11,13 @@ export interface SlotAdmin {
   hora_inicio: string;
   hora_fim: string;
   status: 'DISPONIVEL' | 'AGENDADO' | 'BLOQUEADO';
-  consulta?: ConsultaAdmin;
+  atendimento?: ConsultaAdmin;
 }
 
 export interface ConsultaAdmin {
   id: number;
   cliente_nome: string;
-  paciente_cpf_mascarado: string;
+  cliente_cpf_mascarado: string;
   urgencia: string;
   status: string;
   triagem_resumo: Record<string, unknown> | null;

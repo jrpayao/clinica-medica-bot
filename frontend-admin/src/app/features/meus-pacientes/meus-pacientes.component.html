@@ -1,0 +1,58 @@
+<app-page-header
+  [titulo]="'Meus ' + vocab.clientes().toLowerCase()"
+  [subtitulo]="'Quem tem ' + vocab.atendimento().toLowerCase() + ' com você nesta unidade'">
+  @if (pacientes().length > 5) {
+    <mat-form-field appearance="outline" class="busca" subscriptSizing="dynamic">
+      <mat-label>Buscar por nome</mat-label>
+      <mat-icon matPrefix>search</mat-icon>
+      <input matInput [ngModel]="busca()" (ngModelChange)="busca.set($event)" />
+    </mat-form-field>
+  }
+</app-page-header>
+
+@if (carregando()) {
+  <div class="centro"><mat-spinner diameter="40" /></div>
+} @else if (falhou()) {
+  <app-empty-state
+    icon="cloud_off"
+    title="Não foi possível carregar a lista"
+    description="Verifique a conexão e recarregue a página." />
+} @else if (!pacientes().length) {
+  <app-empty-state
+    icon="group"
+    [title]="'Nenhum ' + vocab.cliente().toLowerCase() + ' ainda'"
+    description="Quem agendar com você nesta unidade aparece aqui." />
+} @else if (!filtrados().length) {
+  <p class="vazio">Ninguém com esse nome.</p>
+} @else {
+  <div class="tabela">
+    <table mat-table [dataSource]="filtrados()">
+      <ng-container matColumnDef="nome">
+        <th mat-header-cell *matHeaderCellDef>Nome</th>
+        <td mat-cell *matCellDef="let p" class="nome">{{ p.nome }}</td>
+      </ng-container>
+      <ng-container matColumnDef="cpf">
+        <th mat-header-cell *matHeaderCellDef>CPF</th>
+        <td mat-cell *matCellDef="let p" class="numero">{{ p.cpf_mascarado }}</td>
+      </ng-container>
+      <ng-container matColumnDef="telefone">
+        <th mat-header-cell *matHeaderCellDef>Telefone</th>
+        <td mat-cell *matCellDef="let p" class="numero">{{ p.telefone ?? '—' }}</td>
+      </ng-container>
+      <ng-container matColumnDef="convenio">
+        <th mat-header-cell *matHeaderCellDef>Convênio</th>
+        <td mat-cell *matCellDef="let p">{{ p.convenio_nome ?? 'Particular' }}</td>
+      </ng-container>
+      <ng-container matColumnDef="total">
+        <th mat-header-cell *matHeaderCellDef class="direita">{{ vocab.atendimentos() }}</th>
+        <td mat-cell *matCellDef="let p" class="numero direita">{{ p.total_atendimentos }}</td>
+      </ng-container>
+      <ng-container matColumnDef="ultimo">
+        <th mat-header-cell *matHeaderCellDef>Mais recente</th>
+        <td mat-cell *matCellDef="let p" class="numero">{{ p.ultimo_atendimento | date:'dd/MM/yyyy' }}</td>
+      </ng-container>
+      <tr mat-header-row *matHeaderRowDef="colunas"></tr>
+      <tr mat-row *matRowDef="let row; columns: colunas"></tr>
+    </table>
+  </div>
+}

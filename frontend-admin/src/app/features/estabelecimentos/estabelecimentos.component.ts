@@ -32,8 +32,24 @@ interface Estabelecimento {
   estado: string | null;
   email: string | null;
   telefone: string | null;
+  timezone: string;
   created_at: string;
 }
+
+/** Fusos do Brasil, um por deslocamento em relação a Brasília. */
+export const FUSOS_BRASIL = [
+  { valor: 'America/Sao_Paulo',  rotulo: 'Horário de Brasília' },
+  { valor: 'America/Manaus',     rotulo: 'Amazonas, Roraima e Rondônia (1h a menos)' },
+  { valor: 'America/Cuiaba',     rotulo: 'Mato Grosso e Mato Grosso do Sul (1h a menos)' },
+  { valor: 'America/Rio_Branco', rotulo: 'Acre (2h a menos)' },
+  { valor: 'America/Noronha',    rotulo: 'Fernando de Noronha (1h a mais)' },
+] as const;
+
+/** Campos que só existem na criação: na edição ficam ocultos e não podem invalidar o formulário. */
+const CAMPOS_SO_NA_CRIACAO = [
+  'cnpj', 'slug', 'tipo', 'cep', 'endereco',
+  'responsavel_nome', 'responsavel_cpf', 'responsavel_email', 'responsavel_telefone', 'responsavel_cargo',
+] as const;
 
 @Component({
   selector: 'app-estabelecimentos',
@@ -72,6 +88,7 @@ export class EstabelecimentosComponent implements OnInit {
     telefone: [''],
     cidade:   [''],
     estado:   [''],
+    timezone: ['America/Sao_Paulo', Validators.required],
     cep:      [''],
     endereco: [''],
     responsavel_nome:     ['', Validators.required],
@@ -80,6 +97,8 @@ export class EstabelecimentosComponent implements OnInit {
     responsavel_telefone: [''],
     responsavel_cargo:    [''],
   });
+
+  readonly fusos = FUSOS_BRASIL;
 
   async ngOnInit(): Promise<void> {
     await this.carregar();
@@ -97,15 +116,18 @@ export class EstabelecimentosComponent implements OnInit {
 
   abrirNovo(): void {
     this.editando.set(null);
-    this.form.reset({ tipo: 'CLINICA', plano: 'basico' });
+    for (const campo of CAMPOS_SO_NA_CRIACAO) this.form.controls[campo].enable();
+    this.form.reset({ tipo: 'CLINICA', plano: 'basico', timezone: 'America/Sao_Paulo' });
     this.mostrarForm.set(true);
   }
 
   abrirEditar(est: Estabelecimento): void {
     this.editando.set(est);
+    for (const campo of CAMPOS_SO_NA_CRIACAO) this.form.controls[campo].disable();
     this.form.patchValue({
       nome:     est.nome,
       slug:     est.slug,
+      timezone: est.timezone ?? 'America/Sao_Paulo',
       tipo:     est.tipo,
       plano:    est.plano,
       email:    est.email ?? '',
@@ -122,9 +144,12 @@ export class EstabelecimentosComponent implements OnInit {
 
   async salvar(): Promise<void> {
     if (this.form.invalid) return;
-    const dados = this.form.getRawValue();
     try {
       const ed = this.editando();
+      // Na edição vão só os campos habilitados e preenchidos; na criação, o formulário inteiro
+      const dados = ed
+        ? Object.fromEntries(Object.entries(this.form.value).filter(([, v]) => v !== '' && v != null))
+        : this.form.getRawValue();
       if (ed) {
         const atualizado = await firstValueFrom(
           this.api.patch<Estabelecimento>(`/estabelecimentos/${ed.id}`, dados),

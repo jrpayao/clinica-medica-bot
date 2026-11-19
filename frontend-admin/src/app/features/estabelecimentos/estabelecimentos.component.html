@@ -149,6 +149,15 @@
             <input matInput formControlName="estado" maxlength="2" placeholder="SP" />
           </mat-form-field>
         </div>
+        <mat-form-field appearance="outline">
+          <mat-label>Fuso horário</mat-label>
+          <mat-select formControlName="timezone">
+            @for (f of fusos; track f.valor) {
+              <mat-option [value]="f.valor">{{ f.rotulo }}</mat-option>
+            }
+          </mat-select>
+          <mat-hint>Define o "hoje" e os horários já passados da agenda e do chat</mat-hint>
+        </mat-form-field>
 
         @if (!editando()) {
           <p class="section-label">Responsável</p>

@@ -27,7 +27,11 @@ interface UsuarioInterno {
   email: string;
   role: string;
   ativo: boolean;
+  estabelecimento_nome: string | null;
 }
+
+import { VocabularioService } from '../../core/services/vocabulario.service';
+import { rotuloPerfil } from '../../core/services/perfil';
 
 @Component({
   selector: 'app-usuarios',
@@ -60,13 +64,32 @@ export class UsuariosComponent implements OnInit {
   readonly novoEmail = signal('');
   readonly novaSenha = signal('');
   readonly novoRole = signal('RECEPCIONISTA');
+  readonly novoProfissionalId = signal<number | null>(null);
+  readonly profissionais = signal<Array<{ id: number; nome: string }>>([]);
+  readonly vocab = inject(VocabularioService);
+  readonly rotuloPerfil = rotuloPerfil;
   readonly criando = signal(false);
   readonly erroForm = signal<string | null>(null);
 
-  readonly colunas = ['nome', 'email', 'role', 'ativo', 'acoes'];
+  /** No modo plataforma a lista cobre todas as unidades: mostra de qual é cada usuário */
+  readonly colunas = computed(() =>
+    this.isGlobal()
+      ? ['nome', 'email', 'role', 'estabelecimento', 'ativo']
+      : ['nome', 'email', 'role', 'ativo', 'acoes'],
+  );
 
   async ngOnInit(): Promise<void> {
     await this._carregar();
+    if (!this.isGlobal()) {
+      try {
+        const lista = await firstValueFrom(
+          this.api.get<Array<{ id: number; nome: string; ativo: boolean }>>('/profissionais/'),
+        );
+        this.profissionais.set(lista.filter((p) => p.ativo));
+      } catch {
+        // sem a lista, o perfil de profissional não pode ser criado; o formulário avisa ao salvar
+      }
+    }
   }
 
   private async _carregar(): Promise<void> {
@@ -89,15 +112,24 @@ export class UsuariosComponent implements OnInit {
           email: this.novoEmail(),
           senha: this.novaSenha(),
           role: this.novoRole(),
+          profissional_id: this.novoRole() === 'MEDICO' ? this.novoProfissionalId() : null,
         }),
       );
+      this.novoProfissionalId.set(null);
       this.novoNome.set('');
       this.novoEmail.set('');
       this.novaSenha.set('');
       this.novoRole.set('RECEPCIONISTA');
       await this._carregar();
-    } catch {
-      this.erroForm.set('Erro ao criar usuário. Verifique os dados.');
+    } catch (e: unknown) {
+      const detalhe = (e as { error?: { detail?: unknown } })?.error?.detail;
+      this.erroForm.set(
+        typeof detalhe === 'string'
+          ? detalhe
+          : this.novoRole() === 'MEDICO' && !this.novoProfissionalId()
+            ? 'Escolha de quem é a agenda deste acesso.'
+            : 'Erro ao criar usuário. Verifique os dados.',
+      );
     } finally {
       this.criando.set(false);
     }

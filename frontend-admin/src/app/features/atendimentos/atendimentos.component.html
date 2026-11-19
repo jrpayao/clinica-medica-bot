@@ -1,4 +1,4 @@
-<app-page-header titulo="Consultas" subtitulo="Gerenciamento de consultas agendadas">
+<app-page-header [titulo]="vocab.atendimentos()" [subtitulo]="vocab.atendimentos() + ' do dia, por horário'">
   <mat-form-field appearance="outline" class="filtro">
     <mat-label>Status</mat-label>
     <mat-select [formControl]="filtroStatus">
@@ -28,7 +28,7 @@
 
 @if (!carregando()) {
   @if (slotsFiltrados.length === 0) {
-    <app-empty-state icon="event_note" title="Nenhuma consulta encontrada"
+    <app-empty-state icon="event_note" [title]="'Sem ' + vocab.atendimentos().toLowerCase() + ' para exibir'"
       description="Não há consultas para os filtros selecionados." />
   } @else {
     @for (slot of slotsPaginados; track slot.id) {
@@ -39,12 +39,12 @@
           <span class="medico-nome">{{ slot.profissional_nome }}</span>
         </mat-panel-title>
         <mat-panel-description>
-          <span class="paciente-nome">{{ slot.consulta!.cliente_nome }}</span>
-          <span class="badge badge--{{ slot.consulta!.urgencia.toLowerCase() }}">
-            {{ slot.consulta!.urgencia }}
+          <span class="paciente-nome">{{ slot.atendimento!.cliente_nome }}</span>
+          <span class="badge badge--{{ slot.atendimento!.urgencia.toLowerCase() }}">
+            {{ slot.atendimento!.urgencia }}
           </span>
-          <span class="badge badge--{{ slot.consulta!.status.toLowerCase() }}">
-            {{ slot.consulta!.status }}
+          <span class="badge badge--{{ slot.atendimento!.status.toLowerCase() }}">
+            {{ slot.atendimento!.status }}
           </span>
         </mat-panel-description>
       </mat-expansion-panel-header>
@@ -52,19 +52,19 @@
       <!-- Detalhe expandido -->
       <div class="consulta-detail">
         <div class="detail-grid">
-          <div><strong>CPF:</strong> {{ slot.consulta!.paciente_cpf_mascarado }}</div>
-          <div><strong>Canal:</strong> {{ slot.consulta!.canal_origem }}</div>
+          <div><strong>CPF:</strong> {{ slot.atendimento!.cliente_cpf_mascarado }}</div>
+          <div><strong>Canal:</strong> {{ slot.atendimento!.canal_origem }}</div>
           <div><strong>Especialidade:</strong> {{ slot.especialidade_nome }}</div>
-          @if (slot.consulta!.observacoes) {
-            <div class="full"><strong>Observações:</strong> {{ slot.consulta!.observacoes }}</div>
+          @if (slot.atendimento!.observacoes) {
+            <div class="full"><strong>Observações:</strong> {{ slot.atendimento!.observacoes }}</div>
           }
         </div>
 
-        @if (triagemItens(slot.consulta!.triagem_resumo).length) {
+        @if (triagemItens(slot.atendimento!.triagem_resumo).length) {
           <div class="triagem-section">
             <strong>Triagem IA:</strong>
             <ul class="triagem-list">
-              @for (item of triagemItens(slot.consulta!.triagem_resumo); track item.chave) {
+              @for (item of triagemItens(slot.atendimento!.triagem_resumo); track item.chave) {
                 <li><em>{{ item.chave }}:</em> {{ item.valor }}</li>
               }
             </ul>
@@ -72,10 +72,10 @@
         }
 
         <div class="detail-actions">
-          @if (slot.consulta!.status === 'AGENDADA' || slot.consulta!.status === 'CONFIRMADA') {
+          @if (slot.atendimento!.status === 'AGENDADA' || slot.atendimento!.status === 'CONFIRMADA') {
             <button mat-stroked-button color="warn" (click)="confirmarCancelar(slot)">
               <mat-icon>cancel</mat-icon>
-              Cancelar Consulta
+              Cancelar {{ vocab.atendimento().toLowerCase() }}
             </button>
           }
         </div>

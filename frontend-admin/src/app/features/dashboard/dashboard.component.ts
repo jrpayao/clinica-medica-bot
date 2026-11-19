@@ -35,6 +35,7 @@ import { AuthAdminService } from '../../core/services/auth-admin.service';
 import { EmptyStateComponent } from '../../shared/components/empty-state/empty-state.component';
 import { PageHeaderComponent } from '../../shared/components/page-header/page-header.component';
 import { localDateString } from '../../core/utils/date.utils';
+import { VocabularioService } from '../../core/services/vocabulario.service';
 
 Chart.register(...registerables);
 
@@ -56,6 +57,7 @@ Chart.register(...registerables);
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class DashboardComponent implements OnInit, AfterViewInit {
+  readonly vocab = inject(VocabularioService);
   readonly ds     = inject(DashboardService);
   readonly auth   = inject(AuthAdminService);
   private  router = inject(Router);

@@ -10,7 +10,7 @@ export interface UsoModelo {
 }
 
 export interface ProximaConsulta {
-  consulta_id: number;
+  atendimento_id: number;
   hora_inicio: string;
   cliente_nome: string;
   profissional_nome: string;

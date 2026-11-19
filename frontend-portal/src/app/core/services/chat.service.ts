@@ -96,13 +96,9 @@ export class ChatService {
       ]);
     }
 
-    if (data.quick_replies) {
-      this.quickReplies.set(data.quick_replies);
-    }
-
-    if (data.convenios) {
-      this.convenios.set(data.convenios);
-    }
+    // Botões valem só para a pergunta atual: cada resposta do assistente substitui os anteriores
+    this.quickReplies.set(data.quick_replies ?? []);
+    this.convenios.set(data.convenios ?? []);
 
     if (data.slots_sugeridos) {
       this.slotsSugeridos.set(data.slots_sugeridos);

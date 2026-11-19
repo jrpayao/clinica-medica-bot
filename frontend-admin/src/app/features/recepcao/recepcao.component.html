@@ -1,0 +1,141 @@
+<app-page-header [titulo]="titulo" [subtitulo]="(modo === 'profissional' ? 'Seus atendimentos de hoje, ' : 'Fila de hoje, ') + (hoje | date:'EEEE, dd/MM')">
+  <button mat-stroked-button routerLink="/agenda">
+    <mat-icon>calendar_month</mat-icon>
+    Agenda
+  </button>
+  <button mat-stroked-button (click)="carregar()" [disabled]="carregando()">
+    <mat-icon>refresh</mat-icon>
+    Atualizar
+  </button>
+</app-page-header>
+
+@if (carregando() && !painel()) {
+  <div class="centro"><mat-spinner diameter="40" /></div>
+} @else if (falhou() && !painel()) {
+  <app-empty-state
+    icon="cloud_off"
+    title="Não foi possível carregar a fila"
+    description="Verifique a conexão e toque em Atualizar." />
+} @else {
+
+  @if (resumo().urgentes > 0) {
+    <div class="alerta-urgencia" role="alert">
+      <mat-icon>emergency</mat-icon>
+      <span>
+        {{ resumo().urgentes }} {{ resumo().urgentes === 1 ? 'pessoa com urgência alta aguarda' : 'pessoas com urgência alta aguardam' }}
+        atendimento. Priorize na fila.
+      </span>
+    </div>
+  }
+
+  <div class="cartoes">
+    @for (c of cartoes(); track c.filtro) {
+      <button
+        type="button"
+        class="cartao"
+        [class.cartao--ativo]="filtro() === c.filtro"
+        [attr.aria-pressed]="filtro() === c.filtro"
+        (click)="alternarFiltro(c.filtro)">
+        <mat-icon class="cartao__icone">{{ c.icone }}</mat-icon>
+        <span class="cartao__valor">{{ c.valor }}</span>
+        <span class="cartao__rotulo">{{ c.rotulo }}</span>
+      </button>
+    }
+  </div>
+
+  @if (proximo(); as p) {
+    <div class="proximo">
+      <mat-icon>upcoming</mat-icon>
+      <span>
+        Próxima chegada esperada: <strong>{{ p.cliente_nome }}</strong> às {{ p.hora_inicio }}@if (modo === 'recepcao') {, com {{ p.profissional_nome }}}.
+      </span>
+    </div>
+  }
+
+  <div class="fila-cabecalho">
+    <h2>
+      @if (filtro() === 'todos') { {{ vocab.atendimentos() }} de hoje }
+      @else { {{ lista().length }} de {{ atendimentos().length }} {{ vocab.atendimentos().toLowerCase() }} }
+    </h2>
+    @if (filtro() !== 'todos') {
+      <button mat-button (click)="filtro.set('todos')">Ver todos</button>
+    }
+  </div>
+
+  @if (!atendimentos().length) {
+    <app-empty-state
+      icon="event_available"
+      title="Nada agendado para hoje"
+      [description]="modo === 'profissional' ? 'Quando houver atendimento marcado com você, ele aparece aqui.' : 'Os agendamentos feitos pelo chat ou pela agenda aparecem aqui.'" />
+  } @else if (!lista().length) {
+    <p class="vazio">Ninguém nesta etapa agora.</p>
+  } @else {
+    <ul class="fila">
+      @for (a of lista(); track a.atendimento_id) {
+        <li class="item item--{{ etapa(a.status) }}" [class.item--sem-acoes]="!a.acoes.length" [class.item--urgente]="a.urgencia === 'ALTA' || a.urgencia === 'EMERGENCIA'">
+          <div class="item__hora">{{ a.hora_inicio }}</div>
+
+          <div class="item__pessoa">
+            <span class="item__nome">{{ a.cliente_nome }}</span>
+            @if (modo === 'profissional' && a.observacoes) {
+              <span class="item__obs">{{ a.observacoes }}</span>
+            }
+            <span class="item__meta">
+              {{ a.cliente_cpf_mascarado }}
+              @if (a.cliente_telefone) { · {{ a.cliente_telefone }} }
+              · {{ a.convenio_nome ?? 'Particular' }}
+            </span>
+          </div>
+
+          <div class="item__profissional">
+            @if (modo === 'profissional') {
+              <span class="item__nome-prof">{{ a.especialidade_nome }}</span>
+              <span class="item__meta">até {{ a.hora_fim }}</span>
+            } @else {
+              <span class="item__nome-prof">{{ a.profissional_nome }}</span>
+              <span class="item__meta">{{ a.especialidade_nome }}</span>
+            }
+          </div>
+
+          <div class="item__selos">
+            <span class="selo selo--{{ etapa(a.status) }}">{{ rotuloStatus[a.status] || a.status }}</span>
+            @if (a.urgencia === 'ALTA' || a.urgencia === 'EMERGENCIA') {
+              <span class="selo selo--urgente">Urgência {{ rotuloUrgencia[a.urgencia].toLowerCase() }}</span>
+            }
+          </div>
+
+          <div class="item__acoes">
+            @if (salvandoId() === a.atendimento_id) {
+              <mat-spinner diameter="24" />
+            } @else {
+              @if (acaoPrincipal(a); as acao) {
+                <button mat-flat-button color="primary" [disabled]="salvandoId() !== null" (click)="mudarStatus(a, acao)">
+                  <mat-icon>{{ rotuloAcao[acao].icone }}</mat-icon>
+                  {{ rotuloAcao[acao].texto }}
+                </button>
+              }
+              @if (acoesSecundarias(a).length) {
+                <button
+                  mat-icon-button
+                  [matMenuTriggerFor]="menu"
+                  [disabled]="salvandoId() !== null"
+                  [attr.aria-label]="'Mais ações para ' + a.cliente_nome"
+                  matTooltip="Mais ações">
+                  <mat-icon>more_vert</mat-icon>
+                </button>
+                <mat-menu #menu="matMenu">
+                  @for (acao of acoesSecundarias(a); track acao) {
+                    <button mat-menu-item (click)="mudarStatus(a, acao)">
+                      <mat-icon>{{ rotuloAcao[acao].icone }}</mat-icon>
+                      <span>{{ rotuloAcao[acao].texto }}</span>
+                    </button>
+                  }
+                </mat-menu>
+              }
+            }
+          </div>
+        </li>
+      }
+    </ul>
+  }
+}

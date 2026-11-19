@@ -1,4 +1,4 @@
-<app-page-header titulo="Pacientes" subtitulo="Lista de pacientes atendidos na clínica">
+<app-page-header [titulo]="vocab.clientes()" [subtitulo]="vocab.clientes() + ' com cadastro na unidade'">
   <mat-form-field appearance="outline" class="busca-field">
     <mat-label>Buscar por nome ou CPF</mat-label>
     <input matInput [formControl]="busca" />
@@ -12,14 +12,14 @@
 
 @if (!carregando()) {
   @if (pacientes().length === 0) {
-    <app-empty-state icon="group" title="Nenhum paciente cadastrado"
-      description="Os pacientes aparecem aqui após realizarem um agendamento." />
+    <app-empty-state icon="group" [title]="'Sem ' + vocab.clientes().toLowerCase() + ' no cadastro'"
+      description="Os cadastros aparecem aqui após o primeiro agendamento." />
   } @else {
     <div class="table-container">
       <table mat-table [dataSource]="pacientesPaginados" class="mat-elevation-z0">
 
         <ng-container matColumnDef="nome">
-          <th mat-header-cell *matHeaderCellDef>Paciente</th>
+          <th mat-header-cell *matHeaderCellDef>{{ vocab.cliente() }}</th>
           <td mat-cell *matCellDef="let p">
             <div class="paciente-info">
               <div class="avatar">{{ p.nome.charAt(0).toUpperCase() }}</div>

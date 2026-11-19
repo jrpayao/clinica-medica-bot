@@ -31,6 +31,7 @@ import { SlotDetalheDialogComponent } from './slot-detalhe-dialog.component';
 import { EmptyStateComponent } from '../../shared/components/empty-state/empty-state.component';
 import { PageHeaderComponent } from '../../shared/components/page-header/page-header.component';
 import { localDateString } from '../../core/utils/date.utils';
+import { VocabularioService } from '../../core/services/vocabulario.service';
 
 @Component({
   selector: 'app-agenda',
@@ -48,9 +49,12 @@ import { localDateString } from '../../core/utils/date.utils';
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class AgendaComponent implements OnInit {
+  readonly vocab = inject(VocabularioService);
   readonly agenda    = inject(AgendaAdminService);
   readonly medicosSvc = inject(ProfissionaisService);
   readonly auth      = inject(AuthAdminService);
+  /** Profissional vê só a própria agenda (a API já restringe): filtros por pessoa não fazem sentido */
+  readonly agendaPropria = this.auth.usuario()?.role === 'MEDICO';
   private readonly dialog = inject(MatDialog);
 
   readonly dataCtrl                = new FormControl<Date>(new Date());

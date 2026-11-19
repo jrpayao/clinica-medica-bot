@@ -4,6 +4,8 @@ import {
   HostListener,
   OnInit,
   computed,
+  effect,
+  untracked,
   inject,
   signal,
 } from '@angular/core';
@@ -24,18 +26,22 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 
 import { AuthAdminService } from '../../core/services/auth-admin.service';
 import { DashboardService } from '../../core/services/dashboard.service';
+import { VocabularioService } from '../../core/services/vocabulario.service';
+import { rotuloPerfil } from '../../core/services/perfil';
 
 interface NavItem {
   path: string;
   label: string;
   icon: string;
-  modos: Array<'global' | 'escopado' | 'estabelecimento' | '*'>;
+  modos: Array<'global' | 'escopado' | 'estabelecimento' | 'recepcao' | 'profissional' | '*'>;
 }
 
 const NAV_ITEMS: NavItem[] = [
   // ── Modo global (ADMIN_GLOBAL sem clínica) ──────────────────────
   { path: '/platform-dashboard', label: 'Dashboard',        icon: 'dashboard',        modos: ['global'] },
   { path: '/dashboard',          label: 'Dashboard',        icon: 'dashboard',        modos: ['escopado', 'estabelecimento'] },
+  { path: '/recepcao',           label: 'Recepção',        icon: 'how_to_reg',       modos: ['escopado', 'estabelecimento', 'recepcao'] },
+  { path: '/meu-dia',            label: 'Meu dia',          icon: 'today',            modos: ['profissional'] },
   { path: '/estabelecimentos',   label: 'Estabelecimentos', icon: 'business',         modos: ['global'] },
   { path: '/licencas',           label: 'Licenças',         icon: 'verified',         modos: ['global'] },
   { path: '/usuarios',           label: 'Usuários',         icon: 'manage_accounts',  modos: ['global', 'estabelecimento'] },
@@ -43,15 +49,16 @@ const NAV_ITEMS: NavItem[] = [
   { path: '/auditoria',          label: 'Auditoria',        icon: 'history',          modos: ['global'] },
 
   // ── Modo escopado (ADMIN_GLOBAL dentro de uma clínica) ──────────
-  { path: '/agenda',             label: 'Agenda',           icon: 'calendar_month',   modos: ['escopado', 'estabelecimento'] },
-  { path: '/atendimentos',       label: 'Atendimentos',     icon: 'event_note',       modos: ['escopado', 'estabelecimento'] },
-  { path: '/clientes',           label: 'Clientes',         icon: 'group',            modos: ['escopado', 'estabelecimento'] },
-  { path: '/profissionais',      label: 'Profissionais',    icon: 'medical_services', modos: ['escopado', 'estabelecimento'] },
+  { path: '/agenda',             label: 'Agenda',           icon: 'calendar_month',   modos: ['escopado', 'estabelecimento', 'recepcao'] },
+  { path: '/meus-pacientes',     label: 'Meus pacientes',   icon: 'group',            modos: ['profissional'] },
+  { path: '/atendimentos',       label: 'Atendimentos',     icon: 'event_note',       modos: ['escopado', 'estabelecimento', 'recepcao'] },
+  { path: '/clientes',           label: 'Clientes',         icon: 'group',            modos: ['escopado', 'estabelecimento', 'recepcao'] },
+  { path: '/profissionais',      label: 'Profissionais',    icon: 'medical_services', modos: ['escopado', 'estabelecimento', 'recepcao'] },
   { path: '/especialidades',     label: 'Especialidades',   icon: 'category',         modos: ['escopado', 'estabelecimento'] },
   { path: '/convenios',          label: 'Convênios',        icon: 'health_and_safety', modos: ['escopado', 'estabelecimento'] },
   { path: '/catalogo',           label: 'Catálogo',         icon: 'medical_services',  modos: ['escopado', 'estabelecimento'] },
   { path: '/vocabulario',        label: 'Vocabulário',      icon: 'translate',         modos: ['escopado', 'estabelecimento'] },
-  { path: '/billing',            label: 'Billing IA',       icon: 'payments',         modos: ['escopado'] },
+  { path: '/billing',            label: 'Billing IA',       icon: 'payments',         modos: ['escopado', 'estabelecimento'] },
   { path: '/documentos',         label: 'Documentos RAG',   icon: 'description',      modos: ['escopado', 'estabelecimento'] },
 
   // ── Apenas ADMIN_ESTABELECIMENTO ────────────────────────────────
@@ -75,7 +82,11 @@ const NAV_ITEMS: NavItem[] = [
 export class ShellComponent implements OnInit {
   readonly auth = inject(AuthAdminService);
   readonly ds   = inject(DashboardService);
+  readonly vocab = inject(VocabularioService);
   private readonly router = inject(Router);
+
+  /** Perfil do usuário por extenso (nunca o identificador interno) */
+  readonly perfil = computed(() => rotuloPerfil(this.auth.usuario()?.role));
 
   /** Sidebar aberta em mobile (< 768px) */
   readonly sidebarAberta = signal(false);
@@ -96,16 +107,22 @@ export class ShellComponent implements OnInit {
   readonly sidenavOpened = computed(() => this.isDesktop() || this.sidebarAberta());
 
   /** Nome do título da rota ativa */
-  readonly tituloPagina = toSignal(
+  private readonly urlAtual = toSignal(
     this.router.events.pipe(
       filter((e) => e instanceof NavigationEnd),
-      map(() => {
-        const url = this.router.url.split('?')[0].split('/')[1] ?? '';
-        return NAV_ITEMS.find((n) => n.path === '/' + url)?.label ?? 'MedBot Admin';
-      }),
+      map(() => this.router.url),
     ),
-    { initialValue: 'Dashboard' },
+    { initialValue: this.router.url },
   );
+
+  /** Reage à rota e ao menu: acompanha o modo (Billing Global x Billing IA) e o vocabulário */
+  readonly tituloPagina = computed(() => {
+    const caminho = '/' + (this.urlAtual().split('?')[0].split('/')[1] ?? '');
+    const item =
+      this.navItemsFiltrados().find((n) => n.path === caminho) ??
+      NAV_ITEMS.find((n) => n.path === caminho);
+    return item?.label ?? 'MedBot Admin';
+  });
 
   /** Itens de menu filtrados pela role e modo do usuário logado */
   readonly navItemsFiltrados = computed(() => {
@@ -113,11 +130,34 @@ export class ShellComponent implements OnInit {
     const modoGlobal = this.isModoGlobal();
     const modoEscopado = this.isModoEscopado();
 
+    // Termos do negócio configurados pela unidade (G27)
+    const rotulos: Record<string, string> = {
+      '/atendimentos': this.vocab.atendimentos(),
+      '/clientes': this.vocab.clientes(),
+      '/profissionais': this.vocab.profissionais(),
+      '/especialidades': this.vocab.especialidades(),
+      '/meus-pacientes': `Meus ${this.vocab.clientes().toLowerCase()}`,
+      ...(role === 'MEDICO' ? { '/agenda': 'Minha agenda' } : {}),
+    };
+
     return NAV_ITEMS.filter((item) => {
       if (role === 'ADMIN_GLOBAL' && modoGlobal)   return item.modos.includes('global');
       if (role === 'ADMIN_GLOBAL' && modoEscopado) return item.modos.includes('escopado');
       if (role === 'ADMIN_ESTABELECIMENTO')        return item.modos.includes('estabelecimento');
+      if (role === 'RECEPCIONISTA')                return item.modos.includes('recepcao');
+      if (role === 'MEDICO')                       return item.modos.includes('profissional') || item.path === '/agenda';
       return false;
+    }).map((item) => (modoGlobal ? item : { ...item, label: rotulos[item.path] ?? item.label }));
+  });
+
+  /** Recarrega os termos sempre que a unidade ativa muda; no modo plataforma vale o padrão */
+  private readonly sincronizarVocabulario = effect(() => {
+    const role = this.auth.usuario()?.role;
+    const unidade = this.auth.estabelecimentoAtivoId();
+    untracked(() => {
+      if (!role) return;
+      if (role === 'ADMIN_GLOBAL' && !unidade) this.vocab.restaurarPadrao();
+      else void this.vocab.carregar();
     });
   });
 
@@ -141,7 +181,24 @@ export class ShellComponent implements OnInit {
     return this.ds.estabelecimentos().find((e) => e.id === id)?.nome ?? `#${id}`;
   });
 
+  /** Unidades onde o profissional logado atende (troca de unidade só aparece com mais de uma) */
+  readonly unidadesDoProfissional = signal<Array<{ id: number; nome: string }>>([]);
+  readonly unidadeAtualDoProfissional = computed(
+    () => this.unidadesDoProfissional().find((u) => u.id === this.auth.estabelecimentoAtivoId())?.nome ?? null,
+  );
+
+  async trocarUnidadeDoProfissional(id: number): Promise<void> {
+    if (id === this.auth.estabelecimentoAtivoId()) return;
+    await this.auth.selecionarUnidadeDoProfissional(id);
+    // recarrega a tela atual com o token da nova unidade
+    await this.router.navigateByUrl('/', { skipLocationChange: true });
+    await this.router.navigate(['/meu-dia']);
+  }
+
   async ngOnInit(): Promise<void> {
+    if (this.auth.usuario()?.role === 'MEDICO') {
+      this.unidadesDoProfissional.set(await this.auth.unidadesDoProfissional());
+    }
     if (this.auth.usuario()?.role === 'ADMIN_GLOBAL') {
       await this.ds.carregarEstabelecimentos();
       // Sincronizar seletor com filtro persistido na sessão

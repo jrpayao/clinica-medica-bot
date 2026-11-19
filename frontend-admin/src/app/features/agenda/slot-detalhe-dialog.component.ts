@@ -27,13 +27,13 @@ import { SlotAdmin } from '../../core/services/agenda-admin.service';
 
     <mat-dialog-content>
 
-      @if (slot.consulta; as c) {
+      @if (slot.atendimento; as c) {
         <!-- Paciente -->
         <section class="section">
           <h4 class="section-title"><mat-icon>person</mat-icon> Paciente</h4>
           <p class="info-row"><strong>Nome:</strong> {{ c.cliente_nome }}</p>
-          @if (c.paciente_cpf_mascarado) {
-            <p class="info-row"><strong>CPF:</strong> {{ c.paciente_cpf_mascarado }}</p>
+          @if (c.cliente_cpf_mascarado) {
+            <p class="info-row"><strong>CPF:</strong> {{ c.cliente_cpf_mascarado }}</p>
           }
           <p class="info-row"><strong>Canal:</strong> {{ c.canal_origem }}</p>
           <p class="info-row">
@@ -103,11 +103,11 @@ export class SlotDetalheDialogComponent {
     const mapa: Record<string, string> = {
       BAIXA: '#64748b', MEDIA: '#d97706', ALTA: '#ea580c', EMERGENCIA: '#dc2626',
     };
-    return mapa[this.slot.consulta?.urgencia ?? ''] ?? '#2563eb';
+    return mapa[this.slot.atendimento?.urgencia ?? ''] ?? '#2563eb';
   }
 
   get triagemItens(): { chave: string; valor: string }[] {
-    const resumo = this.slot.consulta?.triagem_resumo;
+    const resumo = this.slot.atendimento?.triagem_resumo;
     if (!resumo || typeof resumo !== 'object') return [];
     return Object.entries(resumo as Record<string, unknown>).map(([chave, valor]) => ({
       chave,

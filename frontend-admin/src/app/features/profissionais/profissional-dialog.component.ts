@@ -47,9 +47,9 @@ export interface ProfissionalDialogData {
         @if (!data.medico) {
           <mat-form-field appearance="outline">
             <mat-label>CRM *</mat-label>
-            <input matInput formControlName="crm" placeholder="123456" />
+            <input matInput formControlName="registro_profissional" placeholder="123456" />
             <mat-hint>Somente números, sem estado</mat-hint>
-            @if (form.controls.crm.hasError('required') && form.controls.crm.touched) {
+            @if (form.controls.registro_profissional.hasError('required') && form.controls.registro_profissional.touched) {
               <mat-error>CRM é obrigatório.</mat-error>
             }
           </mat-form-field>
@@ -88,7 +88,7 @@ export interface ProfissionalDialogData {
         <!-- Duração -->
         <mat-form-field appearance="outline">
           <mat-label>Duração da consulta (minutos)</mat-label>
-          <input matInput type="number" formControlName="duracao_consulta_min" min="10" max="120" />
+          <input matInput type="number" formControlName="duracao_atendimento_min" min="10" max="120" />
           <mat-hint>Entre 10 e 120 minutos</mat-hint>
         </mat-form-field>
 
@@ -128,11 +128,11 @@ export class ProfissionalDialogComponent {
 
   readonly form = this.fb.group({
     nome:                 [this.data.medico?.nome ?? '', Validators.required],
-    crm:                  [this.data.medico?.crm ?? '', this.data.medico ? [] : [Validators.required]],
+    registro_profissional:                  [this.data.medico?.registro_profissional ?? '', this.data.medico ? [] : [Validators.required]],
     especialidade_id:     [this.data.medico?.especialidade_id ?? null, this.data.medico ? [] : [Validators.required]],
     email:                [this.data.medico?.email ?? '', Validators.email],
     telefone:             [this.data.medico?.telefone ?? ''],
-    duracao_consulta_min: [this.data.medico?.duracao_consulta_min ?? 30, [Validators.min(10), Validators.max(120)]],
+    duracao_atendimento_min: [this.data.medico?.duracao_atendimento_min ?? 30, [Validators.min(10), Validators.max(120)]],
   });
 
   salvar(): void {

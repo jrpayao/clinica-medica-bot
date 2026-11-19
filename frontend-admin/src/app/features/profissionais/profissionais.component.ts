@@ -14,6 +14,10 @@ import { ConfirmDialogComponent } from '../../shared/components/confirm-dialog/c
 import { EmptyStateComponent } from '../../shared/components/empty-state/empty-state.component';
 import { PageHeaderComponent } from '../../shared/components/page-header/page-header.component';
 import { ToastService } from '../../core/services/toast.service';
+import { VocabularioService } from '../../core/services/vocabulario.service';
+
+import { AuthAdminService } from '../../core/services/auth-admin.service';
+import { perfilSomenteLeituraDeCadastros } from '../../core/services/perfil';
 
 @Component({
   selector: 'app-profissionais',
@@ -28,11 +32,18 @@ import { ToastService } from '../../core/services/toast.service';
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class ProfissionaisComponent implements OnInit {
+  readonly vocab = inject(VocabularioService);
   readonly svc = inject(ProfissionaisService);
   private readonly dialog = inject(MatDialog);
   private readonly toast = inject(ToastService);
 
-  readonly colunas = ['avatar', 'nome', 'crm', 'especialidade', 'duracao', 'status', 'acoes'];
+  /** Recepção consulta o cadastro, mas não altera (a API também recusa). */
+  readonly somenteLeitura = perfilSomenteLeituraDeCadastros(inject(AuthAdminService).usuario()?.role);
+
+  readonly colunas = [
+    'avatar', 'nome', 'registro_profissional', 'especialidade', 'duracao', 'status',
+    ...(this.somenteLeitura ? [] : ['acoes']),
+  ];
 
   async ngOnInit(): Promise<void> {
     await this.svc.listar();
@@ -51,9 +62,9 @@ export class ProfissionaisComponent implements OnInit {
       if (!dados) return;
       try {
         await this.svc.criar(dados);
-        this.toast.sucesso('Médico criado com sucesso!');
+        this.toast.sucesso(`${this.vocab.profissional()}: cadastro criado.`);
       } catch {
-        this.toast.erro('Erro ao criar médico. Verifique as informações.');
+        this.toast.erro('Erro ao criar o cadastro. Verifique as informações.');
       }
     });
   }
@@ -74,11 +85,11 @@ export class ProfissionaisComponent implements OnInit {
           nome: dados.nome,
           email: dados.email || undefined,
           telefone: dados.telefone || undefined,
-          duracao_consulta_min: dados.duracao_consulta_min,
+          duracao_atendimento_min: dados.duracao_atendimento_min,
         });
-        this.toast.sucesso('Médico atualizado!');
+        this.toast.sucesso('Cadastro atualizado.');
       } catch {
-        this.toast.erro('Erro ao atualizar médico.');
+        this.toast.erro('Erro ao atualizar o cadastro.');
       }
     });
   }
@@ -86,8 +97,8 @@ export class ProfissionaisComponent implements OnInit {
   confirmarDesativar(medico: Medico): void {
     const ref = this.dialog.open(ConfirmDialogComponent, {
       data: {
-        titulo: 'Desativar médico',
-        mensagem: `Tem certeza que deseja desativar ${medico.nome}? O médico não aparecerá mais na agenda.`,
+        titulo: `Desativar ${this.vocab.profissional().toLowerCase()}`,
+        mensagem: `Tem certeza que deseja desativar ${medico.nome}? O cadastro não aparecerá mais na agenda.`,
         confirmLabel: 'Desativar',
         confirmColor: 'warn',
       },
@@ -97,7 +108,7 @@ export class ProfissionaisComponent implements OnInit {
       if (!confirmado) return;
       try {
         await this.svc.desativar(medico.id);
-        this.toast.sucesso('Médico desativado.');
+        this.toast.sucesso('Cadastro desativado.');
       } catch {
         this.toast.erro('Erro ao desativar médico.');
       }

@@ -10,13 +10,8 @@ import { firstValueFrom } from 'rxjs';
 import { ApiService } from '../../core/services/api.service';
 import { PageHeaderComponent } from '../../shared/components/page-header/page-header.component';
 import { ToastService } from '../../core/services/toast.service';
+import { Vocabulario, VocabularioService } from '../../core/services/vocabulario.service';
 
-interface Vocabulario {
-  label_profissional: string;
-  label_atendimento: string;
-  label_cliente: string;
-  label_especialidade: string;
-}
 
 @Component({
   selector: 'app-vocabulario',
@@ -32,6 +27,7 @@ interface Vocabulario {
 export class VocabularioComponent implements OnInit {
   private api   = inject(ApiService);
   private toast = inject(ToastService);
+  private vocab = inject(VocabularioService);
 
   readonly loading = signal(false);
   readonly salvando = signal(false);
@@ -60,7 +56,10 @@ export class VocabularioComponent implements OnInit {
   async salvar(): Promise<void> {
     this.salvando.set(true);
     try {
-      await firstValueFrom(this.api.patch('/estabelecimentos/meu/vocabulario', this.form.value));
+      const salvo = await firstValueFrom(
+        this.api.patch<Vocabulario>('/estabelecimentos/meu/vocabulario', this.form.value),
+      );
+      this.vocab.definir(salvo);
       this.toast.sucesso('Vocabulário atualizado');
     } catch {
       this.toast.erro('Erro ao salvar');

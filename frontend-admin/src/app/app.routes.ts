@@ -1,5 +1,6 @@
 import { Routes } from '@angular/router';
 import { authGuard } from './core/guards/auth.guard';
+import { perfilGuard } from './core/guards/perfil.guard';
 
 export const routes: Routes = [
   {
@@ -20,6 +21,7 @@ export const routes: Routes = [
     loadComponent: () =>
       import('./shared/shell/shell.component').then((m) => m.ShellComponent),
     canActivate: [authGuard],
+    canActivateChild: [perfilGuard],
     children: [
       { path: '', redirectTo: 'dashboard', pathMatch: 'full' },
 
@@ -28,6 +30,24 @@ export const routes: Routes = [
         path: 'dashboard',
         loadComponent: () =>
           import('./features/dashboard/dashboard.component').then((m) => m.DashboardComponent),
+      },
+      {
+        path: 'recepcao',
+        loadComponent: () =>
+          import('./features/recepcao/recepcao.component').then((m) => m.RecepcaoComponent),
+      },
+      {
+        path: 'meu-dia',
+        data: { modo: 'profissional' },
+        loadComponent: () =>
+          import('./features/recepcao/recepcao.component').then((m) => m.RecepcaoComponent),
+      },
+      {
+        path: 'meus-pacientes',
+        loadComponent: () =>
+          import('./features/meus-pacientes/meus-pacientes.component').then(
+            (m) => m.MeusPacientesComponent,
+          ),
       },
       {
         path: 'agenda',

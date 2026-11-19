@@ -1,9 +1,9 @@
 <app-page-header
-  titulo="Especialidades"
-  subtitulo="Gerencie as especialidades médicas da clínica">
+  [titulo]="vocab.especialidades()"
+  [subtitulo]="'Áreas de atuação oferecidas na unidade'">
   <button mat-raised-button color="primary" (click)="abrirNova()">
     <mat-icon>add</mat-icon>
-    Nova Especialidade
+    Adicionar {{ vocab.especialidade().toLowerCase() }}
   </button>
 </app-page-header>
 

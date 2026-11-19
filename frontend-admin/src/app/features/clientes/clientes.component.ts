@@ -23,6 +23,7 @@ import { EmptyStateComponent } from '../../shared/components/empty-state/empty-s
 import { PageHeaderComponent } from '../../shared/components/page-header/page-header.component';
 import { ClienteEditDialogComponent } from './cliente-edit-dialog.component';
 import { ToastService } from '../../core/services/toast.service';
+import { VocabularioService } from '../../core/services/vocabulario.service';
 
 interface Paciente {
   id: number;
@@ -52,6 +53,7 @@ interface Paciente {
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class ClientesComponent implements OnInit {
+  readonly vocab = inject(VocabularioService);
   private readonly api = inject(ApiService);
   private readonly dialog = inject(MatDialog);
   private readonly toast = inject(ToastService);

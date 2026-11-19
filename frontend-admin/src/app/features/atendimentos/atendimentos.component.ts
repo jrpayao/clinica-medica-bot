@@ -24,6 +24,7 @@ import { EmptyStateComponent } from '../../shared/components/empty-state/empty-s
 import { PageHeaderComponent } from '../../shared/components/page-header/page-header.component';
 import { ToastService } from '../../core/services/toast.service';
 import { localDateString } from '../../core/utils/date.utils';
+import { VocabularioService } from '../../core/services/vocabulario.service';
 
 interface Consulta {
   id: number;
@@ -48,10 +49,10 @@ interface SlotComConsulta {
   hora_inicio: string;
   hora_fim: string;
   status: string;
-  consulta: {
+  atendimento: {
     id: number;
     cliente_nome: string;
-    paciente_cpf_mascarado: string;
+    cliente_cpf_mascarado: string;
     status: string;
     urgencia: string;
     canal_origem: string;
@@ -77,6 +78,7 @@ interface SlotComConsulta {
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class AtendimentosComponent implements OnInit {
+  readonly vocab = inject(VocabularioService);
   private readonly api    = inject(ApiService);
   private readonly dialog = inject(MatDialog);
   private readonly toast  = inject(ToastService);
@@ -92,11 +94,11 @@ export class AtendimentosComponent implements OnInit {
   readonly colunas = ['data', 'medico', 'paciente', 'urgencia', 'status', 'canal', 'acoes'];
 
   get slotsFiltrados(): SlotComConsulta[] {
-    let lista = this.slots().filter((s) => s.consulta);
+    let lista = this.slots().filter((s) => s.atendimento);
     const status = this.filtroStatus.value;
     const urgencia = this.filtroUrgencia.value;
-    if (status) lista = lista.filter((s) => s.consulta!.status === status);
-    if (urgencia) lista = lista.filter((s) => s.consulta!.urgencia === urgencia);
+    if (status) lista = lista.filter((s) => s.atendimento!.status === status);
+    if (urgencia) lista = lista.filter((s) => s.atendimento!.urgencia === urgencia);
     return lista;
   }
 
@@ -129,9 +131,9 @@ export class AtendimentosComponent implements OnInit {
   confirmarCancelar(slot: SlotComConsulta): void {
     const ref = this.dialog.open(ConfirmDialogComponent, {
       data: {
-        titulo: 'Cancelar consulta',
-        mensagem: `Cancelar a consulta de ${slot.consulta!.cliente_nome}?`,
-        confirmLabel: 'Cancelar consulta',
+        titulo: `Cancelar ${this.vocab.atendimento().toLowerCase()}`,
+        mensagem: `Cancelar o horário de ${slot.atendimento!.cliente_nome}?`,
+        confirmLabel: 'Cancelar',
         confirmColor: 'warn',
       },
     });
@@ -140,20 +142,20 @@ export class AtendimentosComponent implements OnInit {
       if (!ok) return;
       try {
         await firstValueFrom(
-          this.api.patch(`/agenda/atendimentos/${slot.consulta!.id}/cancelar`, {
+          this.api.patch(`/agenda/atendimentos/${slot.atendimento!.id}/cancelar`, {
             motivo: 'Cancelado pelo administrador',
           }),
         );
         this.slots.update((l) =>
           l.map((s) =>
-            s.id === slot.id && s.consulta
-              ? { ...s, consulta: { ...s.consulta, status: 'CANCELADA' } }
+            s.id === slot.id && s.atendimento
+              ? { ...s, atendimento: { ...s.atendimento, status: 'CANCELADA' } }
               : s,
           ),
         );
-        this.toast.sucesso('Consulta cancelada.');
+        this.toast.sucesso('Cancelamento registrado.');
       } catch {
-        this.toast.erro('Erro ao cancelar consulta.');
+        this.toast.erro('Erro ao cancelar.');
       }
     });
   }

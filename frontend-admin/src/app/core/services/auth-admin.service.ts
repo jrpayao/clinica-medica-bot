@@ -103,6 +103,29 @@ export class AuthAdminService {
     this._aplicarToken(res.access_token, null);
   }
 
+  /** Unidades onde o profissional logado atende. */
+  async unidadesDoProfissional(): Promise<Array<{ id: number; nome: string }>> {
+    try {
+      return await firstValueFrom(
+        this.api.get<Array<{ id: number; nome: string }>>('/profissional/unidades'),
+      );
+    } catch {
+      return [];
+    }
+  }
+
+  /** Profissional troca de unidade: novo token, restrito às unidades onde ele tem vínculo. */
+  async selecionarUnidadeDoProfissional(estabelecimentoId: number): Promise<void> {
+    const res = await firstValueFrom(
+      this.api.post<{ access_token: string }>('/profissional/selecionar-unidade', {
+        estabelecimento_id: estabelecimentoId,
+      }),
+    );
+    localStorage.setItem(this.TOKEN_KEY, res.access_token);
+    this._token.set(res.access_token);
+    this._aplicarToken(res.access_token, null);
+  }
+
   /** ADMIN_GLOBAL seleciona estabelecimento via toolbar (modo global, sem trocar JWT). */
   selecionarFiltroGlobal(id: number | null): void {
     if (id !== null) {

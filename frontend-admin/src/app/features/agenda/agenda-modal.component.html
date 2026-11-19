@@ -11,11 +11,11 @@
       <p class="secondary">{{ slot.especialidade_nome }}</p>
     </section>
 
-    @if (slot.consulta; as c) {
+    @if (slot.atendimento; as c) {
       <section class="modal-section">
         <h4>Paciente</h4>
         <p>{{ c.cliente_nome }}</p>
-        <p class="secondary">CPF: {{ c.paciente_cpf_mascarado }}</p>
+        <p class="secondary">CPF: {{ c.cliente_cpf_mascarado }}</p>
       </section>
 
       <section class="modal-section">

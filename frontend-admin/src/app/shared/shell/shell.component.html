@@ -67,7 +67,7 @@
         </div>
         <div class="sidebar__user-info">
           <span class="sidebar__user-name">{{ auth.usuario()?.nome ?? '—' }}</span>
-          <span class="sidebar__user-role">{{ auth.usuario()?.role ?? '' }}</span>
+          <span class="sidebar__user-role">{{ perfil() }}</span>
         </div>
         <button
           mat-icon-button
@@ -106,6 +106,23 @@
             }
           </mat-select>
         </mat-form-field>
+      }
+
+      <!-- Profissional que atende em mais de uma unidade: troca de unidade -->
+      @if (unidadesDoProfissional().length > 1) {
+        <button mat-button class="main__toolbar-est" [matMenuTriggerFor]="menuUnidades" matTooltip="Trocar de unidade">
+          <mat-icon>business</mat-icon>
+          <span class="main__toolbar-est-label">{{ unidadeAtualDoProfissional() ?? 'Unidade' }}</span>
+          <mat-icon class="toolbar-est-swap">swap_horiz</mat-icon>
+        </button>
+        <mat-menu #menuUnidades="matMenu">
+          @for (u of unidadesDoProfissional(); track u.id) {
+            <button mat-menu-item (click)="trocarUnidadeDoProfissional(u.id)">
+              <mat-icon>{{ u.id === auth.estabelecimentoAtivoId() ? 'check' : 'business' }}</mat-icon>
+              <span>{{ u.nome }}</span>
+            </button>
+          }
+        </mat-menu>
       }
 
       <!-- ADMIN_GLOBAL — modo escopado: mostra nome + botão trocar -->

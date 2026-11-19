@@ -1,0 +1,16 @@
+.centro { display: flex; justify-content: center; padding: 64px 0; }
+.vazio { padding: 24px 0; color: var(--color-text-secondary); font-size: 14px; }
+.busca { width: 260px; max-width: 100%; }
+
+.tabela {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--border-radius);
+  overflow-x: auto; // tabela larga rola dentro do cartão, não a página
+
+  table { width: 100%; min-width: 640px; }
+}
+
+.nome { font-weight: 600; color: var(--color-text); }
+.numero { font-variant-numeric: tabular-nums; white-space: nowrap; }
+.direita { text-align: right; }

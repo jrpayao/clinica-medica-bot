@@ -47,7 +47,7 @@
       </button>
       <button mat-stroked-button (click)="irParaConsultas()">
         <mat-icon>list_alt</mat-icon>
-        Consultas de Hoje
+        {{ vocab.atendimentos() }} de hoje
       </button>
       <button mat-stroked-button routerLink="/billing">
         <mat-icon>payments</mat-icon>
@@ -62,7 +62,7 @@
         <mat-card-content>
           <div class="kpi-card__inner">
             <div class="kpi-card__info">
-              <span class="kpi-card__label">Total Consultas</span>
+              <span class="kpi-card__label">Total de {{ vocab.atendimentos() }}</span>
               <span class="kpi-card__value">{{ kpi.total_consultas }}</span>
             </div>
             <mat-icon class="kpi-card__icon" style="color:#2563eb">event_note</mat-icon>
@@ -160,7 +160,7 @@
       <mat-card-header>
         <mat-card-title>
           <mat-icon>upcoming</mat-icon>
-          Próximas Consultas
+          {{ vocab.atendimentos() }} a seguir
         </mat-card-title>
         <mat-card-subtitle>Agendadas a partir de agora</mat-card-subtitle>
         <span class="spacer-header"></span>
@@ -171,7 +171,7 @@
       <mat-card-content>
         @if (ds.proximas().length) {
           <div class="proximas-lista">
-            @for (c of ds.proximas(); track c.consulta_id) {
+            @for (c of ds.proximas(); track c.atendimento_id) {
               <div class="proxima-item" (click)="irParaConsultas('AGENDADA')">
                 <div class="proxima-hora">{{ c.hora_inicio }}</div>
                 <div class="proxima-info">
@@ -185,7 +185,7 @@
             }
           </div>
         } @else {
-          <p class="empty-text">Nenhuma consulta agendada para o restante do dia.</p>
+          <p class="empty-text">Nada agendado para o restante do dia.</p>
         }
       </mat-card-content>
     </mat-card>

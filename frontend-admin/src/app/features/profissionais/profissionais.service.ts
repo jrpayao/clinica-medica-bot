@@ -13,30 +13,30 @@ export interface Especialidade {
 
 export interface Medico {
   id: number;
-  crm: string;
+  registro_profissional: string;
   nome: string;
   especialidade_id: number;
   email: string | null;
   telefone: string | null;
-  duracao_consulta_min: number;
+  duracao_atendimento_min: number;
   ativo: boolean;
   created_at: string;
 }
 
 export interface MedicoCreate {
-  crm: string;
+  registro_profissional: string;
   nome: string;
   especialidade_id: number;
   email?: string;
   telefone?: string;
-  duracao_consulta_min?: number;
+  duracao_atendimento_min?: number;
 }
 
 export interface MedicoUpdate {
   nome?: string;
   email?: string;
   telefone?: string;
-  duracao_consulta_min?: number;
+  duracao_atendimento_min?: number;
   ativo?: boolean;
 }
 

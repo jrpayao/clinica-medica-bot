@@ -22,6 +22,7 @@ import { ConfirmDialogComponent } from '../../shared/components/confirm-dialog/c
 import { EmptyStateComponent } from '../../shared/components/empty-state/empty-state.component';
 import { PageHeaderComponent } from '../../shared/components/page-header/page-header.component';
 import { ToastService } from '../../core/services/toast.service';
+import { VocabularioService } from '../../core/services/vocabulario.service';
 
 interface Especialidade {
   id: number;
@@ -47,6 +48,7 @@ interface Especialidade {
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class EspecialidadesComponent implements OnInit {
+  readonly vocab = inject(VocabularioService);
   private readonly api = inject(ApiService);
   private readonly dialog = inject(MatDialog);
   private readonly toast = inject(ToastService);

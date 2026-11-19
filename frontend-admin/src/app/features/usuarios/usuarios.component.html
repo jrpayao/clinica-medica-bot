@@ -21,9 +21,20 @@
           <mat-label>Perfil</mat-label>
           <mat-select [ngModel]="novoRole()" (ngModelChange)="novoRole.set($event)">
             <mat-option value="RECEPCIONISTA">Recepcionista</mat-option>
-            <mat-option value="MEDICO">Médico</mat-option>
+            <mat-option value="MEDICO">{{ vocab.profissional() }}</mat-option>
           </mat-select>
         </mat-form-field>
+        @if (novoRole() === 'MEDICO') {
+          <mat-form-field appearance="outline">
+            <mat-label>Agenda de</mat-label>
+            <mat-select [ngModel]="novoProfissionalId()" (ngModelChange)="novoProfissionalId.set($event)">
+              @for (p of profissionais(); track p.id) {
+                <mat-option [value]="p.id">{{ p.nome }}</mat-option>
+              }
+            </mat-select>
+            <mat-hint>O acesso enxerga só a agenda e os pacientes desta pessoa</mat-hint>
+          </mat-form-field>
+        }
         <button mat-raised-button color="primary" (click)="criarUsuario()" [disabled]="criando()">
           <mat-icon>person_add</mat-icon> Criar
         </button>
@@ -48,7 +59,11 @@
       </ng-container>
       <ng-container matColumnDef="role">
         <th mat-header-cell *matHeaderCellDef>Perfil</th>
-        <td mat-cell *matCellDef="let u"><mat-chip>{{ u.role }}</mat-chip></td>
+        <td mat-cell *matCellDef="let u"><mat-chip>{{ rotuloPerfil(u.role) }}</mat-chip></td>
+      </ng-container>
+      <ng-container matColumnDef="estabelecimento">
+        <th mat-header-cell *matHeaderCellDef>Estabelecimento</th>
+        <td mat-cell *matCellDef="let u">{{ u.estabelecimento_nome ?? 'Plataforma' }}</td>
       </ng-container>
       <ng-container matColumnDef="ativo">
         <th mat-header-cell *matHeaderCellDef>Status</th>
@@ -72,8 +87,8 @@
           }
         </td>
       </ng-container>
-      <tr mat-header-row *matHeaderRowDef="colunas"></tr>
-      <tr mat-row *matRowDef="let row; columns: colunas;"></tr>
+      <tr mat-header-row *matHeaderRowDef="colunas()"></tr>
+      <tr mat-row *matRowDef="let row; columns: colunas();"></tr>
     </table>
   }
 </div>

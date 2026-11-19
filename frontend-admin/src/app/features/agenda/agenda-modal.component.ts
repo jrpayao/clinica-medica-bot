@@ -21,12 +21,12 @@ export class AgendaModalComponent {
   @Output() fechar = new EventEmitter<void>();
 
   get urgenciaClass(): string {
-    const u = this.slot.consulta?.urgencia ?? '';
+    const u = this.slot.atendimento?.urgencia ?? '';
     return u.toLowerCase();
   }
 
   get triagemItens(): { chave: string; valor: string }[] {
-    const resumo = this.slot.consulta?.triagem_resumo;
+    const resumo = this.slot.atendimento?.triagem_resumo;
     if (!resumo) return [];
     return Object.entries(resumo).map(([chave, valor]) => ({
       chave,
