@@ -19,6 +19,7 @@ from app.services.avaliacao_service import (
 )
 from app.services.mensageria import obter_pendencia, registrar_pendencia
 from tests.fabrica import (
+    nas_unidades_do_teste,
     Caixa,
     RedisFalso,
     criar_atendimento,
@@ -102,7 +103,7 @@ async def test_avaliacao_e_pedida_24h_depois_do_atendimento(db_session):
     _, prof, paciente, atendimento = await _realizado(db_session, horas_atras=25)
     redis, wa = RedisFalso(), Caixa()
 
-    resultado = await solicitar_avaliacoes(db_session, redis, agora_utc=AGORA, enviar=wa)
+    resultado = await nas_unidades_do_teste(solicitar_avaliacoes, db_session, redis, agora_utc=AGORA, enviar=wa)
 
     assert resultado["enviados"] == 1
     assert wa.enviadas[0][0] == paciente.telefone
@@ -119,7 +120,7 @@ async def test_avaliacao_nao_e_pedida_antes_de_24h_nem_depois_de_72h(db_session)
     await _realizado(db_session, horas_atras=73)
     wa = Caixa()
 
-    resultado = await solicitar_avaliacoes(db_session, RedisFalso(), agora_utc=AGORA, enviar=wa)
+    resultado = await nas_unidades_do_teste(solicitar_avaliacoes, db_session, RedisFalso(), agora_utc=AGORA, enviar=wa)
 
     assert resultado["enviados"] == 0
 
@@ -127,8 +128,8 @@ async def test_avaliacao_nao_e_pedida_antes_de_24h_nem_depois_de_72h(db_session)
 async def test_avaliacao_nao_e_pedida_duas_vezes(db_session):
     await _realizado(db_session)
     wa = Caixa()
-    await solicitar_avaliacoes(db_session, RedisFalso(), agora_utc=AGORA, enviar=wa)
-    await solicitar_avaliacoes(db_session, RedisFalso(), agora_utc=AGORA + timedelta(hours=1), enviar=wa)
+    await nas_unidades_do_teste(solicitar_avaliacoes, db_session, RedisFalso(), agora_utc=AGORA, enviar=wa)
+    await nas_unidades_do_teste(solicitar_avaliacoes, db_session, RedisFalso(), agora_utc=AGORA + timedelta(hours=1), enviar=wa)
 
     assert len(wa.enviadas) == 1
 
@@ -138,7 +139,7 @@ async def test_avaliacao_nao_e_pedida_para_cancelado_ou_falta(db_session):
     await _realizado(db_session, status=AtendimentoStatus.FALTA)
     wa = Caixa()
 
-    await solicitar_avaliacoes(db_session, RedisFalso(), agora_utc=AGORA, enviar=wa)
+    await nas_unidades_do_teste(solicitar_avaliacoes, db_session, RedisFalso(), agora_utc=AGORA, enviar=wa)
 
     assert wa.enviadas == []
 
@@ -154,7 +155,7 @@ async def test_avaliacao_nao_e_pedida_se_ja_foi_avaliado(db_session):
     await db_session.flush()
     wa = Caixa()
 
-    await solicitar_avaliacoes(db_session, RedisFalso(), agora_utc=AGORA, enviar=wa)
+    await nas_unidades_do_teste(solicitar_avaliacoes, db_session, RedisFalso(), agora_utc=AGORA, enviar=wa)
 
     assert wa.enviadas == []
 
@@ -165,7 +166,7 @@ async def test_pedido_espera_se_o_cliente_tem_outra_pergunta_em_aberto(db_sessio
     redis, wa = RedisFalso(), Caixa()
     await registrar_pendencia(redis, paciente.telefone, {"tipo": "fila", "fila_id": 1}, ttl=60)
 
-    await solicitar_avaliacoes(db_session, redis, agora_utc=AGORA, enviar=wa)
+    await nas_unidades_do_teste(solicitar_avaliacoes, db_session, redis, agora_utc=AGORA, enviar=wa)
 
     assert wa.enviadas == []
     assert atendimento.avaliacao_solicitada_em is None

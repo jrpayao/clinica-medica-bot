@@ -28,6 +28,7 @@ from app.services.whatsapp.evolution import EvolutionProvider
 from app.services.whatsapp.uazapi import UazapiProvider
 from app.services.whatsapp_respostas import tratar_resposta_pendente
 from tests.fabrica import (
+    nas_unidades_do_teste,
     Caixa,
     RedisFalso,
     cabecalho,
@@ -180,7 +181,7 @@ async def test_sem_horario_o_paciente_entra_na_fila_e_agenda_pelo_whatsapp_quand
 
     vaga = await criar_slot(db_session, est, prof)
     whatsapp = Caixa()
-    await processar_fila(db_session, redis, enviar=whatsapp)
+    await nas_unidades_do_teste(processar_fila, db_session, redis, enviar=whatsapp)
     assert "Abriu um horário" in whatsapp.textos[0]
 
     # o WhatsApp entrega o número sem o nono dígito: a resposta precisa ser reconhecida mesmo assim
@@ -275,7 +276,7 @@ async def test_avaliacao_respondida_no_whatsapp_aparece_no_nps_e_nos_relatorios_
     await db_session.flush()
     redis, whatsapp = RedisFalso(), Caixa()
 
-    await solicitar_avaliacoes(db_session, redis, agora_utc=agora, enviar=whatsapp)
+    await nas_unidades_do_teste(solicitar_avaliacoes, db_session, redis, agora_utc=agora, enviar=whatsapp)
     assert "nota de 1 a 5" in whatsapp.textos[0]
     pedido_de_comentario = await tratar_resposta_pendente(db_session, redis, cliente.telefone, "5")
     agradecimento = await tratar_resposta_pendente(db_session, redis, cliente.telefone, "Fui muito bem atendido")
@@ -385,7 +386,7 @@ async def test_webhook_entrega_a_resposta_ao_fluxo_pendente_e_responde_pelo_prov
 
     await FilaEsperaService(db_session).entrar_sem_duplicar(cliente.id, est.id, esp.id, None)
     redis, envio = RedisFalso(), AsyncMock(return_value=True)
-    await processar_fila(db_session, redis, enviar=Caixa())
+    await nas_unidades_do_teste(processar_fila, db_session, redis, enviar=Caixa())
     payload = {
         "event": "messages.upsert",
         "data": {

@@ -41,12 +41,16 @@ async def enviar_resumos_pendentes(
     agora=agora_local,
     enviar_wa=enviar_whatsapp,
     enviar_mail=_email,
+    estabelecimento_id: int | None = None,
 ) -> dict:
     """Envia por WhatsApp e e-mail o resumo dos atendimentos que começam nos próximos 30 minutos.
 
     `agora(fuso)` devolve a hora local da unidade (injetável para teste).
     """
     hoje = agora(None).date()  # um dia de folga para cada lado cobre qualquer fuso
+    restricao = (
+        (Atendimento.estabelecimento_id == estabelecimento_id,) if estabelecimento_id is not None else ()
+    )
     linhas = (
         await db.execute(
             select(Atendimento, Slot, Cliente.nome, Profissional, EstabelecimentoSaude.timezone)
@@ -59,6 +63,7 @@ async def enviar_resumos_pendentes(
                 Atendimento.triagem_resumo.isnot(None),
                 Atendimento.status.notin_(_ENCERRADOS),
                 Slot.data.between(hoje - timedelta(days=1), hoje + timedelta(days=1)),
+                *restricao,
             )
             .order_by(Slot.data, Slot.hora_inicio)
         )

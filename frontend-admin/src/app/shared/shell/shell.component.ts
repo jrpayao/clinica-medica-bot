@@ -42,6 +42,8 @@ const NAV_ITEMS: NavItem[] = [
   { path: '/dashboard',          label: 'Dashboard',        icon: 'dashboard',        modos: ['escopado', 'estabelecimento'] },
   { path: '/recepcao',           label: 'Recepção',        icon: 'how_to_reg',       modos: ['escopado', 'estabelecimento', 'recepcao'] },
   { path: '/meu-dia',            label: 'Meu dia',          icon: 'today',            modos: ['profissional'] },
+  { path: '/fila-espera',        label: 'Lista de espera',  icon: 'hourglass_top',    modos: ['escopado', 'estabelecimento', 'recepcao'] },
+  { path: '/relatorios',         label: 'Relatórios',       icon: 'insights',         modos: ['escopado', 'estabelecimento'] },
   { path: '/estabelecimentos',   label: 'Estabelecimentos', icon: 'business',         modos: ['global'] },
   { path: '/licencas',           label: 'Licenças',         icon: 'verified',         modos: ['global'] },
   { path: '/usuarios',           label: 'Usuários',         icon: 'manage_accounts',  modos: ['global', 'estabelecimento'] },

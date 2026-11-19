@@ -18,6 +18,7 @@ Uso:
 # ruff: noqa: T201, E501 — script de linha de comando: print() é a saída do resumo
 
 import asyncio
+import random
 import sys
 from datetime import UTC, date, datetime, time, timedelta
 from decimal import Decimal
@@ -31,6 +32,11 @@ from sqlalchemy import select, text
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
 from app.core.config import settings
+from app.models.atendimento import MotivoCancelamento
+from app.models.avaliacao import Avaliacao, AvaliacaoCanal
+from app.models.fila_espera import FilaEspera, FilaEsperaStatus
+from app.models.reagendamento import ReagendamentoOferta, ReagendamentoStatus
+from app.services.ia.resumo_triagem import categorizar_sintomas, resumo_por_regra
 from app.core.security import hash_password
 from app.models import (
     Atendimento,
@@ -208,6 +214,20 @@ ROTEIRO_ATENDIMENTOS = [
     ],
 ]
 
+TRIAGENS_HISTORICO = [
+    ["dor de cabeça há 3 dias", "tontura leve"],
+    ["febre e dor de garganta desde ontem"],
+    ["tosse seca que não passa"],
+    ["dor nas costas, região lombar"],
+    ["quero fazer um check-up"],
+    ["dor de cabeça forte e enjoo"],
+    ["manchas na pele e coceira"],
+    ["dor no joelho ao subir escadas"],
+    ["ansiedade e insônia"],
+    ["dor abdominal após refeições"],
+    ["febre há dois dias"],
+]
+
 TRIAGENS = [
     ["dor de cabeça há 3 dias", "tontura leve"],
     ["manchas na pele", "coceira"],
@@ -296,6 +316,135 @@ async def _criar_profissionais(
     return profissionais
 
 
+def _triagem(relatos: list[str], canal) -> dict | None:
+    """Resumo de triagem como o chat grava. Agendamento feito pela recepção não tem triagem."""
+    if canal == _C.INTERNO:
+        return None
+    return {
+        "texto": resumo_por_regra({"sintomas": relatos}),
+        "origem": "regra",
+        "sintomas": relatos,
+        "categorias": categorizar_sintomas(relatos),
+        "historico": [],
+    }
+
+
+COMENTARIOS = {
+    5: ["Atendimento excelente, muito atencioso.", "Fui atendido no horário.", None, None],
+    4: ["Bom atendimento, só a espera foi um pouco longa.", None],
+    3: ["Consulta rápida demais.", None],
+    2: ["Esperei quase uma hora além do horário marcado."],
+    1: ["Não consegui tirar minhas dúvidas."],
+}
+NOTAS = [5, 5, 5, 5, 5, 4, 4, 5, 3, 5, 4, 2, 5, 5, 1, 4, 5]
+
+
+async def _criar_historico(
+    db: AsyncSession, est_id: int, clientes: list[Cliente], carteirinhas: dict[int, ClienteConvenio]
+) -> int:
+    """Três semanas de atendimentos passados, com faltas, cancelamentos e avaliações, para os relatórios."""
+    sorteio = random.Random(est_id)  # noqa: S311 — dados de demonstração, reproduzíveis
+    profissionais = (await db.execute(
+        select(Profissional)
+        .join(ProfissionalEstabelecimento, ProfissionalEstabelecimento.profissional_id == Profissional.id)
+        .where(ProfissionalEstabelecimento.estabelecimento_id == est_id)
+        .order_by(Profissional.id)
+    )).scalars().all()
+    horarios = [time(8, 0), time(9, 0), time(10, 0), time(11, 0), time(14, 0), time(15, 0), time(16, 0)]
+    desfechos = [_S.REALIZADA] * 8 + [_S.FALTA] + [_S.CANCELADA]
+    origens = [MotivoCancelamento.PACIENTE, MotivoCancelamento.PACIENTE, MotivoCancelamento.MEDICO]
+    canais = [_C.PORTAL, _C.PORTAL, _C.WHATSAPP, _C.INTERNO]
+
+    total = n = 0
+    dia = date.today() - timedelta(days=1)
+    dias_uteis = 0
+    while dias_uteis < 15:
+        if dia.weekday() < 5:
+            dias_uteis += 1
+            for prof in profissionais:
+                for hora in horarios:
+                    ocupado = sorteio.random() < 0.62
+                    slot = Slot(
+                        profissional_id=prof.id, data=dia, hora_inicio=hora,
+                        hora_fim=(datetime.combine(dia, hora) + timedelta(minutes=30)).time(),
+                        status=SlotStatus.AGENDADO if ocupado else SlotStatus.DISPONIVEL,
+                        estabelecimento_id=est_id,
+                    )
+                    db.add(slot)
+                    if not ocupado:
+                        continue
+                    await db.flush()
+                    n += 1
+                    status = sorteio.choice(desfechos)
+                    canal = sorteio.choice(canais)
+                    cliente = clientes[n % len(clientes)]
+                    carteirinha = carteirinhas.get(cliente.id)
+                    quando = datetime.combine(dia, hora, tzinfo=UTC) + timedelta(hours=3, minutes=30)
+                    atendimento = Atendimento(
+                        slot_id=slot.id, cliente_id=cliente.id, profissional_id=prof.id,
+                        especialidade_id=prof.especialidade_id,
+                        tipo=AtendimentoTipo.INTERNO if canal == _C.INTERNO else AtendimentoTipo.EXTERNO,
+                        status=status, urgencia=_U.BAIXA, canal_origem=canal,
+                        triagem_resumo=_triagem(TRIAGENS_HISTORICO[n % len(TRIAGENS_HISTORICO)], canal),
+                        cliente_convenio_id=carteirinha.id if carteirinha else None,
+                        motivo_cancelamento=sorteio.choice(origens) if status == _S.CANCELADA else None,
+                        estabelecimento_id=est_id,
+                        created_at=quando - timedelta(days=3), updated_at=quando,
+                    )
+                    db.add(atendimento)
+                    await db.flush()
+                    db.add(AtendimentoStatusHistorico(
+                        atendimento_id=atendimento.id, status_novo=status, created_at=quando,
+                        observacao="Carga inicial (seed)",
+                    ))
+                    if status == _S.CANCELADA:
+                        slot.status = SlotStatus.DISPONIVEL
+                    if status == _S.REALIZADA and sorteio.random() < 0.7:
+                        nota = NOTAS[(n + prof.id) % len(NOTAS)]
+                        atendimento.avaliacao_solicitada_em = quando + timedelta(hours=24)
+                        db.add(Avaliacao(
+                            atendimento_id=atendimento.id, cliente_id=cliente.id, profissional_id=prof.id,
+                            estabelecimento_id=est_id, nota=nota,
+                            comentario=sorteio.choice(COMENTARIOS[nota]),
+                            canal=AvaliacaoCanal.WHATSAPP, created_at=quando + timedelta(hours=26),
+                        ))
+                    total += 1
+        dia -= timedelta(days=1)
+    await db.flush()
+    return total
+
+
+async def _criar_fila_e_pendencias(db: AsyncSession, est_id: int, clientes: list[Cliente]) -> None:
+    """Lista de espera com três pessoas e uma remarcação que pede contato da recepção."""
+    especialidades = (await db.execute(
+        select(Especialidade.id).where(Especialidade.estabelecimento_id == est_id).order_by(Especialidade.id)
+    )).scalars().all()
+    agora = datetime.now(UTC)
+    for n, cliente in enumerate(clientes[:3]):
+        db.add(FilaEspera(
+            cliente_id=cliente.id, estabelecimento_id=est_id,
+            especialidade_id=especialidades[n % len(especialidades)],
+            status=FilaEsperaStatus.AGUARDANDO, created_at=agora - timedelta(days=3 - n, hours=2 * n),
+        ))
+    cancelado = (await db.execute(
+        select(Atendimento)
+        .join(Slot, Atendimento.slot_id == Slot.id)
+        .where(
+            Atendimento.estabelecimento_id == est_id,
+            Atendimento.status == _S.CANCELADA,
+            Atendimento.motivo_cancelamento == MotivoCancelamento.MEDICO,
+        )
+        .order_by(Slot.data.desc())
+        .limit(1)
+    )).scalar_one_or_none()
+    if cancelado is not None:
+        db.add(ReagendamentoOferta(
+            atendimento_id=cancelado.id, cliente_id=cancelado.cliente_id, estabelecimento_id=est_id,
+            slot_ids=[], status=ReagendamentoStatus.EXPIRADA, enviado_em=agora - timedelta(hours=5),
+        ))
+    await db.flush()
+
+
 async def _criar_atendimentos(
     db: AsyncSession,
     est_id: int,
@@ -330,7 +479,7 @@ async def _criar_atendimentos(
                 status=status,
                 urgencia=urgencia,
                 canal_origem=canal,
-                triagem_resumo={"sintomas": TRIAGENS[n % len(TRIAGENS)]},
+                triagem_resumo=_triagem(TRIAGENS[n % len(TRIAGENS)], canal),
                 cliente_convenio_id=carteirinha.id if carteirinha else None,
                 estabelecimento_id=est_id,
             )
@@ -475,6 +624,9 @@ async def seed(db: AsyncSession) -> None:
     # ── 8. Atendimentos de demo ─────────────────────────────
     total_atendimentos = await _criar_atendimentos(db, est1.id, clientes_est1, carteirinhas)
     total_atendimentos += await _criar_atendimentos(db, est2.id, clientes_est2, carteirinhas)
+    for est, lista in ((est1, clientes_est1), (est2, clientes_est2)):
+        total_atendimentos += await _criar_historico(db, est.id, lista, carteirinhas)
+        await _criar_fila_e_pendencias(db, est.id, lista)
     log.info("seed_atendimentos", total=total_atendimentos)
 
     # ── 9. Usuários internos ────────────────────────────────

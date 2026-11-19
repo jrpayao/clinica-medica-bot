@@ -54,9 +54,16 @@ def calcular_nps(notas: list[int]) -> dict:
 
 
 async def solicitar_avaliacoes(
-    db: AsyncSession, redis, agora_utc: datetime | None = None, enviar=enviar_whatsapp
+    db: AsyncSession,
+    redis,
+    agora_utc: datetime | None = None,
+    enviar=enviar_whatsapp,
+    estabelecimento_id: int | None = None,
 ) -> dict:
-    """Pede a nota a quem foi atendido entre 24 e 72 horas atrás e ainda não avaliou."""
+    """Pede a nota a quem foi atendido entre 24 e 72 horas atrás e ainda não avaliou.
+
+    `estabelecimento_id` restringe a rotina a uma unidade (o job roda para todas).
+    """
     agora_utc = agora_utc or datetime.now(timezone.utc)
     realizado_em = (
         select(
@@ -68,24 +75,25 @@ async def solicitar_avaliacoes(
         .subquery()
     )
     quando = func.coalesce(realizado_em.c.quando, Atendimento.updated_at)
-    linhas = (
-        await db.execute(
-            select(Atendimento, Cliente, Profissional.nome, Slot.data)
-            .join(Cliente, Atendimento.cliente_id == Cliente.id)
-            .join(Profissional, Atendimento.profissional_id == Profissional.id)
-            .join(Slot, Atendimento.slot_id == Slot.id)
-            .outerjoin(realizado_em, realizado_em.c.atendimento_id == Atendimento.id)
-            .outerjoin(Avaliacao, Avaliacao.atendimento_id == Atendimento.id)
-            .where(
-                Atendimento.status == AtendimentoStatus.REALIZADA,
-                Atendimento.avaliacao_solicitada_em.is_(None),
-                Avaliacao.id.is_(None),
-                quando <= agora_utc - timedelta(hours=ESPERA_H),
-                quando >= agora_utc - timedelta(hours=ESPERA_H + JANELA_H),
-            )
-            .order_by(quando)
+    consulta = (
+        select(Atendimento, Cliente, Profissional.nome, Slot.data)
+        .join(Cliente, Atendimento.cliente_id == Cliente.id)
+        .join(Profissional, Atendimento.profissional_id == Profissional.id)
+        .join(Slot, Atendimento.slot_id == Slot.id)
+        .outerjoin(realizado_em, realizado_em.c.atendimento_id == Atendimento.id)
+        .outerjoin(Avaliacao, Avaliacao.atendimento_id == Atendimento.id)
+        .where(
+            Atendimento.status == AtendimentoStatus.REALIZADA,
+            Atendimento.avaliacao_solicitada_em.is_(None),
+            Avaliacao.id.is_(None),
+            quando <= agora_utc - timedelta(hours=ESPERA_H),
+            quando >= agora_utc - timedelta(hours=ESPERA_H + JANELA_H),
         )
-    ).all()
+        .order_by(quando)
+    )
+    if estabelecimento_id is not None:
+        consulta = consulta.where(Atendimento.estabelecimento_id == estabelecimento_id)
+    linhas = (await db.execute(consulta)).all()
 
     enviados = 0
     for atendimento, cliente, profissional, data in linhas:

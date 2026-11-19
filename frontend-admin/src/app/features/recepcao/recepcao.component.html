@@ -77,7 +77,7 @@
 
           <div class="item__pessoa">
             <span class="item__nome">{{ a.cliente_nome }}</span>
-            @if (modo === 'profissional' && a.observacoes) {
+            @if (modo === 'profissional' && a.observacoes && !a.triagem) {
               <span class="item__obs">{{ a.observacoes }}</span>
             }
             <span class="item__meta">
@@ -134,6 +134,28 @@
               }
             }
           </div>
+
+          @if (a.triagem; as t) {
+            <details class="triagem">
+              <summary>
+                <mat-icon>assignment</mat-icon>
+                Resumo da triagem pelo chat
+                @if (t.historico.length) {
+                  <span class="triagem__retorno">já passou pela triagem {{ t.historico.length === 1 ? 'uma vez' : t.historico.length + ' vezes' }} antes</span>
+                }
+              </summary>
+              <p class="triagem__texto">{{ t.texto }}</p>
+              @if (t.historico.length) {
+                <p class="triagem__titulo">Triagens anteriores</p>
+                <ul class="triagem__historico">
+                  @for (h of t.historico; track $index) {
+                    <li><strong>{{ h.data }}{{ h.especialidade ? ' · ' + h.especialidade : '' }}</strong> {{ h.resumo }}</li>
+                  }
+                </ul>
+              }
+              <p class="triagem__aviso">Traz apenas o relato do paciente. Não substitui a sua avaliação.</p>
+            </details>
+          }
         </li>
       }
     </ul>

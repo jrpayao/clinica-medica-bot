@@ -18,13 +18,13 @@ describe('rotuloPerfil', () => {
 });
 
 describe('rotaPermitida — RECEPCIONISTA', () => {
-  it.each(['/recepcao', '/agenda', '/atendimentos', '/clientes', '/profissionais'])(
+  it.each(['/recepcao', '/fila-espera', '/agenda', '/atendimentos', '/clientes', '/profissionais'])(
     'acessa %s',
     (rota) => expect(rotaPermitida('RECEPCIONISTA', rota)).toBe(true),
   );
 
   it.each([
-    '/dashboard', '/billing', '/billing/config', '/usuarios', '/minha-licenca', '/auditoria',
+    '/dashboard', '/relatorios', '/billing', '/billing/config', '/usuarios', '/minha-licenca', '/auditoria',
     '/vocabulario', '/catalogo', '/convenios', '/documentos', '/especialidades',
     '/estabelecimentos', '/licencas', '/platform-dashboard',
   ])('não acessa %s', (rota) => expect(rotaPermitida('RECEPCIONISTA', rota)).toBe(false));
@@ -48,7 +48,10 @@ describe('rotaPermitida — MEDICO', () => {
     expect(rotaPermitida('MEDICO', rota)).toBe(true),
   );
 
-  it.each(['/recepcao', '/clientes', '/atendimentos', '/profissionais', '/dashboard', '/billing', '/usuarios'])(
+  it.each([
+    '/recepcao', '/fila-espera', '/relatorios', '/clientes', '/atendimentos', '/profissionais', '/dashboard',
+    '/billing', '/usuarios',
+  ])(
     'não acessa %s',
     (rota) => expect(rotaPermitida('MEDICO', rota)).toBe(false),
   );

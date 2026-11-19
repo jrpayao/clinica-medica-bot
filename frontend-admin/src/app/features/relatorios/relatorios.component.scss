@@ -1,0 +1,185 @@
+// Cores de dado: um só tom para magnitude; par divergente (laranja ↔ azul) com cinza neutro no meio para o NPS.
+:host {
+  --dado: #2563eb;
+  --dado-trilho: #eef2f7;
+  --nps-detrator: #c2410c;
+  --nps-neutro: #94a3b8;
+  --nps-promotor: #2563eb;
+  display: block;
+}
+
+.centro { display: flex; justify-content: center; padding: 64px 0; }
+.vazio { margin: 4px 0 0; color: var(--color-text-secondary); font-size: 14px; }
+.aviso { margin: 0 0 16px; color: var(--color-danger); font-size: 14px; }
+.recarregando { opacity: .55; transition: opacity .15s; }
+.direita { text-align: right; }
+
+.filtros {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 20px;
+
+  &__data { width: 170px; }
+  &__profissional { width: 260px; max-width: 100%; }
+}
+
+// ── Indicadores ────────────────────────────────────────────────
+.indicadores {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 16px;
+  margin-bottom: 16px;
+
+  @media (max-width: 1100px) { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  @media (max-width: 520px) { grid-template-columns: minmax(0, 1fr); }
+}
+
+.indicador {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  grid-template-areas: 'icone rotulo' 'valor valor' 'detalhe detalhe';
+  column-gap: 8px;
+  row-gap: 2px;
+  align-items: center;
+  padding: 16px 18px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--border-radius);
+
+  &__icone { grid-area: icone; font-size: 20px; width: 20px; height: 20px; color: var(--color-text-secondary); }
+  &__rotulo { grid-area: rotulo; font-size: 13px; color: var(--color-text-secondary); }
+  &__valor { grid-area: valor; font-size: 30px; font-weight: 700; line-height: 1.2; color: var(--color-text); font-variant-numeric: tabular-nums; }
+  &__detalhe { grid-area: detalhe; font-size: 12.5px; color: var(--color-text-secondary); }
+}
+
+// ── Painéis ────────────────────────────────────────────────────
+.grade {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+
+  @media (max-width: 900px) { grid-template-columns: minmax(0, 1fr); }
+}
+
+.painel {
+  min-width: 0;
+  padding: 18px 20px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--border-radius);
+
+  &--largo { grid-column: 1 / -1; }
+
+  h2 { margin: 0 0 4px; font-size: 16px; font-weight: 600; color: var(--color-text); }
+  h3 { margin: 20px 0 8px; font-size: 14px; font-weight: 600; color: var(--color-text); }
+  &__nota { margin: 0 0 12px; font-size: 12.5px; color: var(--color-text-secondary); }
+  .barras + &__nota { margin: 12px 0 0; }
+}
+
+// ── Barras horizontais (rótulo · barra · valor) ────────────────
+.barras { list-style: none; margin: 12px 0 0; padding: 0; display: grid; row-gap: 10px; }
+
+.barra {
+  display: grid;
+  grid-template-columns: minmax(110px, 220px) minmax(60px, 1fr) 56px 64px;
+  align-items: center;
+  column-gap: 12px;
+  font-size: 13.5px;
+
+  .barras--compactas & { grid-template-columns: minmax(110px, 190px) minmax(60px, 1fr) 40px; }
+
+  &__rotulo { color: var(--color-text); overflow-wrap: anywhere; }
+  &__trilho { height: 12px; background: var(--dado-trilho); border-radius: 4px; overflow: hidden; }
+  &__valor { display: block; height: 100%; min-width: 0; background: var(--dado); border-radius: 0 4px 4px 0; }
+  &__numero { text-align: right; font-weight: 600; color: var(--color-text); font-variant-numeric: tabular-nums; }
+  &__extra { text-align: right; font-size: 12.5px; color: var(--color-text-secondary); font-variant-numeric: tabular-nums; }
+
+  @media (max-width: 520px) {
+    grid-template-columns: minmax(0, 1fr) auto auto !important;
+    grid-template-areas: 'rotulo numero extra' 'trilho trilho trilho';
+    row-gap: 4px;
+
+    &__rotulo { grid-area: rotulo; }
+    &__trilho { grid-area: trilho; }
+    &__numero { grid-area: numero; }
+    &__extra { grid-area: extra; }
+  }
+}
+
+// ── Listas de números ──────────────────────────────────────────
+.numeros {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px 16px;
+  margin: 12px 0;
+
+  dt { font-size: 12.5px; color: var(--color-text-secondary); }
+  dd { margin: 2px 0 0; font-size: 20px; font-weight: 700; color: var(--color-text); font-variant-numeric: tabular-nums; }
+  small { font-size: 13px; font-weight: 500; color: var(--color-text-secondary); }
+}
+
+// ── NPS ────────────────────────────────────────────────────────
+.nps {
+  display: grid;
+  grid-template-columns: 220px minmax(0, 1fr) minmax(0, 1fr);
+  gap: 24px;
+  align-items: start;
+  margin-top: 12px;
+
+  @media (max-width: 1100px) { grid-template-columns: minmax(0, 1fr); }
+
+  &__placar { display: flex; flex-direction: column; gap: 4px; }
+  &__numero { font-size: 48px; font-weight: 700; line-height: 1; color: var(--color-text); font-variant-numeric: tabular-nums; }
+  &__faixa { font-size: 13.5px; font-weight: 600; color: var(--color-text); }
+  &__media { font-size: 12.5px; color: var(--color-text-secondary); }
+  &__notas { margin-top: 0; }
+}
+
+.segmentos { display: flex; gap: 2px; height: 16px; border-radius: 4px; overflow: hidden; }
+.segmento { flex-basis: 0; min-width: 4px; }
+.segmento--detrator { background: var(--nps-detrator); }
+.segmento--neutro { background: var(--nps-neutro); }
+.segmento--promotor { background: var(--nps-promotor); }
+
+.legenda {
+  list-style: none;
+  margin: 10px 0 0;
+  padding: 0;
+  display: grid;
+  row-gap: 4px;
+  font-size: 13px;
+  color: var(--color-text);
+
+  &__cor { display: inline-block; width: 10px; height: 10px; margin-right: 8px; border-radius: 2px; }
+}
+
+.tabela {
+  margin-top: 20px;
+  overflow-x: auto;
+
+  table { width: 100%; min-width: 420px; border-collapse: collapse; font-size: 13.5px; }
+  caption { text-align: left; padding-bottom: 8px; font-size: 14px; font-weight: 600; color: var(--color-text); }
+  th, td { padding: 8px 10px; border-top: 1px solid var(--color-border); color: var(--color-text); }
+  thead th { border-top: 0; font-size: 12.5px; font-weight: 600; color: var(--color-text-secondary); text-align: left; }
+  thead th.direita { text-align: right; }
+  tbody th { font-weight: 500; text-align: left; }
+  td { font-variant-numeric: tabular-nums; }
+}
+
+.comentarios { list-style: none; margin: 0; padding: 0; }
+
+.comentario {
+  display: grid;
+  grid-template-columns: 92px minmax(0, 1fr);
+  grid-template-areas: 'nota texto' 'nota meta';
+  column-gap: 12px;
+  padding: 10px 0;
+
+  & + & { border-top: 1px solid var(--color-border); }
+
+  &__nota { grid-area: nota; font-size: 15px; letter-spacing: 1px; color: var(--color-text); white-space: nowrap; }
+  &__texto { grid-area: texto; font-size: 14px; color: var(--color-text); overflow-wrap: anywhere; }
+  &__meta { grid-area: meta; font-size: 12.5px; color: var(--color-text-secondary); }
+}

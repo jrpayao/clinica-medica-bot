@@ -19,11 +19,12 @@ import { MatDialog } from '@angular/material/dialog';
 import { MatExpansionModule } from '@angular/material/expansion';
 
 import { ApiService } from '../../core/services/api.service';
-import { ConfirmDialogComponent } from '../../shared/components/confirm-dialog/confirm-dialog.component';
+import { CancelarDialogComponent, CancelarDialogResultado } from './cancelar-dialog.component';
 import { EmptyStateComponent } from '../../shared/components/empty-state/empty-state.component';
 import { PageHeaderComponent } from '../../shared/components/page-header/page-header.component';
 import { ToastService } from '../../core/services/toast.service';
 import { localDateString } from '../../core/utils/date.utils';
+import { itensDaTriagem } from '../../core/utils/triagem.utils';
 import { VocabularioService } from '../../core/services/vocabulario.service';
 
 interface Consulta {
@@ -129,22 +130,23 @@ export class AtendimentosComponent implements OnInit {
   }
 
   confirmarCancelar(slot: SlotComConsulta): void {
-    const ref = this.dialog.open(ConfirmDialogComponent, {
-      data: {
-        titulo: `Cancelar ${this.vocab.atendimento().toLowerCase()}`,
-        mensagem: `Cancelar o horário de ${slot.atendimento!.cliente_nome}?`,
-        confirmLabel: 'Cancelar',
-        confirmColor: 'warn',
+    const ref = this.dialog.open<CancelarDialogComponent, unknown, CancelarDialogResultado | null>(
+      CancelarDialogComponent,
+      {
+        width: '480px',
+        data: {
+          clienteNome: slot.atendimento!.cliente_nome,
+          rotuloCliente: this.vocab.cliente(),
+          rotuloProfissional: this.vocab.profissional(),
+        },
       },
-    });
+    );
 
-    ref.afterClosed().subscribe(async (ok) => {
-      if (!ok) return;
+    ref.afterClosed().subscribe(async (escolha) => {
+      if (!escolha) return;
       try {
         await firstValueFrom(
-          this.api.patch(`/agenda/atendimentos/${slot.atendimento!.id}/cancelar`, {
-            motivo: 'Cancelado pelo administrador',
-          }),
+          this.api.patch(`/agenda/atendimentos/${slot.atendimento!.id}/cancelar`, escolha),
         );
         this.slots.update((l) =>
           l.map((s) =>
@@ -153,7 +155,11 @@ export class AtendimentosComponent implements OnInit {
               : s,
           ),
         );
-        this.toast.sucesso('Cancelamento registrado.');
+        this.toast.sucesso(
+          escolha.origem === 'PACIENTE'
+            ? 'Cancelamento registrado.'
+            : 'Cancelamento registrado. Novos horários foram oferecidos por WhatsApp; se não houver resposta, o caso aparece em Lista de espera.',
+        );
       } catch {
         this.toast.erro('Erro ao cancelar.');
       }
@@ -166,7 +172,6 @@ export class AtendimentosComponent implements OnInit {
   }
 
   triagemItens(resumo: Record<string, unknown> | null): { chave: string; valor: string }[] {
-    if (!resumo) return [];
-    return Object.entries(resumo).map(([chave, valor]) => ({ chave, valor: String(valor) }));
+    return itensDaTriagem(resumo);
   }
 }

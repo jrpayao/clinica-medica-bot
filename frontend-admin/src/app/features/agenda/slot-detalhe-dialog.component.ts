@@ -2,6 +2,7 @@
  * SlotDetalheDialogComponent — detalhe do slot/consulta.
  * Substitui o AgendaModalComponent inline por um mat-dialog.
  */
+import { itensDaTriagem } from '../../core/utils/triagem.utils';
 import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
 import { MAT_DIALOG_DATA, MatDialogModule } from '@angular/material/dialog';
 import { MatButtonModule } from '@angular/material/button';
@@ -107,11 +108,6 @@ export class SlotDetalheDialogComponent {
   }
 
   get triagemItens(): { chave: string; valor: string }[] {
-    const resumo = this.slot.atendimento?.triagem_resumo;
-    if (!resumo || typeof resumo !== 'object') return [];
-    return Object.entries(resumo as Record<string, unknown>).map(([chave, valor]) => ({
-      chave,
-      valor: String(valor),
-    }));
+    return itensDaTriagem(this.slot.atendimento?.triagem_resumo);
   }
 }

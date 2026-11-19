@@ -73,7 +73,7 @@ Resumo das regras criticas (detalhes completos no arquivo):
 
 ## DASHBOARD DE FEATURES — Ver `TASK.md`
 
-**Progresso geral:** `[●●●●●●●●●○]` 91% — 118 de 129 tasks concluidas (revisao de 2026-11-19: T90–T102 reabertas por falta de codigo)
+**Progresso geral:** `[●●●●●●●●●●]` 97% — 125 de 129 tasks concluidas (pendente: G9 Deploy)
 
 | Grupo | Status |
 |---|---|
@@ -91,8 +91,8 @@ Resumo das regras criticas (detalhes completos no arquivo):
 | G11 Multi-tenancy | ✅ 100% (8/8) |
 | G12 Licenciamento | ✅ 100% (11/11) |
 | G13 Revisao Qualidade | ✅ 100% (3/3) |
-| G14 Fluxo Guiado Agendamento | 🔄 87% (7/8) — pendente: T85 |
-| G15 Diferenciais de Mercado | 🔄 26% (5/19) — T90–T102 reabertas (sem codigo), T104 pendente |
+| G14 Fluxo Guiado Agendamento | ✅ 100% (8/8) — concluido 2026-11-19 |
+| G15 Diferenciais de Mercado | ✅ 100% (19/19) — concluido 2026-11-19 |
 | G16 N3 Enterprise | ⛔ BACKLOG (0/3) |
 | G17 Plataforma BotFlow | ⛔ BACKLOG (0/4) |
 | G18 Qualidade: Correcoes IA | ✅ 100% (3/3) |
@@ -108,8 +108,6 @@ Resumo das regras criticas (detalhes completos no arquivo):
 | G28 Correcoes pos-varredura | ✅ 100% (11/11) — 2026-11-19 |
 
 **Tasks pendentes em aberto:**
-- G14: T85 (frontend fluxo guiado — renderizacao chat)
-- G15: T90–T102 (fila de espera, resumo de triagem, relatorios, reagendamento, avaliacao/NPS) + T104 (E2E)
 - G9: T47–T50 (Deploy Hostinger + CapRover)
 
 ---

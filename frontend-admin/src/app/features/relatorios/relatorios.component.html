@@ -1,0 +1,252 @@
+<app-page-header titulo="Relatórios" subtitulo="Ocupação, comparecimento, procura e satisfação da unidade">
+  <button mat-stroked-button (click)="carregar()" [disabled]="carregando() || !periodoOk()">
+    <mat-icon>refresh</mat-icon>
+    Atualizar
+  </button>
+</app-page-header>
+
+<div class="filtros">
+  <mat-button-toggle-group
+    [value]="diasRapidos()"
+    (change)="escolherPeriodoRapido($event.value)"
+    aria-label="Período"
+    hideSingleSelectionIndicator>
+    @for (p of periodosRapidos; track p.dias) {
+      <mat-button-toggle [value]="p.dias">{{ p.rotulo }}</mat-button-toggle>
+    }
+  </mat-button-toggle-group>
+
+  <mat-form-field appearance="outline" subscriptSizing="dynamic" class="filtros__data">
+    <mat-label>De</mat-label>
+    <input matInput type="date" [ngModel]="periodo().inicio" (ngModelChange)="mudarData('inicio', $event)" [max]="periodo().fim" />
+  </mat-form-field>
+  <mat-form-field appearance="outline" subscriptSizing="dynamic" class="filtros__data">
+    <mat-label>Até</mat-label>
+    <input matInput type="date" [ngModel]="periodo().fim" (ngModelChange)="mudarData('fim', $event)" [min]="periodo().inicio" />
+  </mat-form-field>
+
+  @if (profissionais().length > 1) {
+    <mat-form-field appearance="outline" subscriptSizing="dynamic" class="filtros__profissional">
+      <mat-label>{{ vocab.profissional() }}</mat-label>
+      <mat-select [value]="profissionalId()" (selectionChange)="mudarProfissional($event.value)">
+        <mat-option [value]="null">Todos</mat-option>
+        @for (p of profissionais(); track p.id) {
+          <mat-option [value]="p.id">{{ p.nome }}</mat-option>
+        }
+      </mat-select>
+    </mat-form-field>
+  }
+</div>
+
+@if (!periodoOk()) {
+  <p class="aviso" role="alert">A data inicial precisa ser anterior ou igual à final.</p>
+}
+
+@if (carregando() && !dados()) {
+  <div class="centro"><mat-spinner diameter="40" /></div>
+} @else if (falhou() && !dados()) {
+  <app-empty-state
+    icon="cloud_off"
+    title="Não foi possível carregar os relatórios"
+    description="Verifique a conexão e toque em Atualizar." />
+} @else if (dados(); as d) {
+
+  <div class="indicadores" [class.recarregando]="carregando()">
+    @for (i of indicadores(); track i.rotulo) {
+      <div class="indicador">
+        <mat-icon class="indicador__icone">{{ i.icone }}</mat-icon>
+        <span class="indicador__rotulo">{{ i.rotulo }}</span>
+        <span class="indicador__valor">{{ i.valor }}</span>
+        <span class="indicador__detalhe">{{ i.detalhe }}</span>
+      </div>
+    }
+  </div>
+
+  <div class="grade" [class.recarregando]="carregando()">
+
+    <!-- Ocupação por profissional -->
+    <section class="painel painel--largo" aria-labelledby="t-ocupacao">
+      <h2 id="t-ocupacao">Ocupação por {{ vocab.profissional().toLowerCase() }}</h2>
+      <p class="painel__nota">Horários ocupados sobre horários abertos no período. Horários bloqueados não entram na conta.</p>
+      @if (!d.ocupacao.profissionais.length) {
+        <p class="vazio">Nenhum horário aberto no período.</p>
+      } @else {
+        <ul class="barras">
+          @for (p of d.ocupacao.profissionais; track p.profissional_id) {
+            <li class="barra" [matTooltip]="p.ocupados + ' de ' + p.total_slots + ' horários ocupados'">
+              <span class="barra__rotulo">{{ p.profissional_nome }}</span>
+              <span class="barra__trilho"><span class="barra__valor" [style.width.%]="p.taxa"></span></span>
+              <span class="barra__numero">{{ taxa(p.taxa) }}</span>
+              <span class="barra__extra">{{ p.ocupados }}/{{ p.total_slots }}</span>
+            </li>
+          }
+        </ul>
+      }
+    </section>
+
+    <!-- Cancelamentos -->
+    <section class="painel" aria-labelledby="t-cancel">
+      <h2 id="t-cancel">Quem cancelou</h2>
+      @if (!motivos().length) {
+        <p class="vazio">Nenhum cancelamento no período.</p>
+      } @else {
+        <ul class="barras barras--compactas">
+          @for (m of motivos(); track m[0]) {
+            <li class="barra">
+              <span class="barra__rotulo">{{ rotuloMotivo[m[0]] || m[0] }}</span>
+              <span class="barra__trilho"><span class="barra__valor" [style.width.%]="largura(m[1], d.confirmacao.cancelados)"></span></span>
+              <span class="barra__numero">{{ m[1] }}</span>
+            </li>
+          }
+        </ul>
+        <p class="painel__nota">Cancelamentos pela unidade ou pelo profissional geram oferta automática de novo horário ao cliente.</p>
+      }
+    </section>
+
+    <!-- Sintomas -->
+    <section class="painel" aria-labelledby="t-sintomas">
+      <h2 id="t-sintomas">Queixas mais citadas no chat</h2>
+      @if (!d.sintomas.sintomas.length) {
+        <p class="vazio">
+          @if (d.sintomas.total_triagens) { As triagens do período não citaram queixas reconhecidas. }
+          @else { Nenhum agendamento pelo chat no período. }
+        </p>
+      } @else {
+        <ul class="barras barras--compactas">
+          @for (s of d.sintomas.sintomas; track s.rotulo) {
+            <li class="barra">
+              <span class="barra__rotulo">{{ s.rotulo }}</span>
+              <span class="barra__trilho"><span class="barra__valor" [style.width.%]="largura(s.total, maxSintoma())"></span></span>
+              <span class="barra__numero">{{ s.total }}</span>
+            </li>
+          }
+        </ul>
+        <p class="painel__nota">Base: {{ d.sintomas.total_triagens }} {{ d.sintomas.total_triagens === 1 ? 'triagem' : 'triagens' }} feitas pelo chat.</p>
+      }
+    </section>
+
+    <!-- Especialidades -->
+    <section class="painel" aria-labelledby="t-esp">
+      <h2 id="t-esp">{{ vocab.especialidades() }} mais procuradas</h2>
+      @if (!d.sintomas.especialidades.length) {
+        <p class="vazio">Nenhum {{ vocab.atendimento().toLowerCase() }} no período.</p>
+      } @else {
+        <ul class="barras barras--compactas">
+          @for (e of d.sintomas.especialidades; track e.nome) {
+            <li class="barra">
+              <span class="barra__rotulo">{{ e.nome }}</span>
+              <span class="barra__trilho"><span class="barra__valor" [style.width.%]="largura(e.total, maxEspecialidade())"></span></span>
+              <span class="barra__numero">{{ e.total }}</span>
+            </li>
+          }
+        </ul>
+      }
+    </section>
+
+    <!-- Lista de espera -->
+    <section class="painel" aria-labelledby="t-fila">
+      <h2 id="t-fila">Lista de espera</h2>
+      <dl class="numeros">
+        <div><dt>Entraram na lista</dt><dd>{{ d.fila.entradas }}</dd></div>
+        <div><dt>Viraram agendamento</dt><dd>{{ d.fila.agendados }} <small>({{ taxa(d.fila.taxa_conversao) }})</small></dd></div>
+        <div><dt>Ainda aguardando</dt><dd>{{ d.fila.aguardando + d.fila.notificados }}</dd></div>
+        <div>
+          <dt>Espera média até a oferta</dt>
+          <dd>{{ d.fila.espera_media_horas === null ? '—' : (d.fila.espera_media_horas.toLocaleString('pt-BR') + ' h') }}</dd>
+        </div>
+      </dl>
+    </section>
+
+    <!-- Custo de IA -->
+    <section class="painel" aria-labelledby="t-custo">
+      <h2 id="t-custo">Custo de IA por agendamento</h2>
+      <dl class="numeros">
+        <div><dt>Custo por agendamento no chat</dt><dd>{{ usd(d.custo.custo_por_agendamento_usd) }}</dd></div>
+        <div><dt>Agendamentos pelo chat</dt><dd>{{ d.custo.agendamentos_chat }}</dd></div>
+        <div><dt>Gasto de IA no período</dt><dd>{{ usd(d.custo.custo_total_usd) }}</dd></div>
+        <div><dt>Chamadas ao modelo</dt><dd>{{ d.custo.chamadas }}</dd></div>
+      </dl>
+      <p class="painel__nota">Considera toda a unidade, independentemente do filtro de {{ vocab.profissional().toLowerCase() }}.</p>
+    </section>
+
+    <!-- Satisfação -->
+    <section class="painel painel--largo" aria-labelledby="t-nps">
+      <h2 id="t-nps">Satisfação dos {{ vocab.clientes().toLowerCase() }}</h2>
+      @if (!d.nps.geral.total) {
+        <p class="vazio">
+          Nenhuma avaliação no período. O pedido de nota é enviado por WhatsApp 24 horas depois do
+          {{ vocab.atendimento().toLowerCase() }} realizado.
+        </p>
+      } @else {
+        <div class="nps">
+          <div class="nps__placar">
+            <span class="nps__numero">{{ d.nps.geral.nps }}</span>
+            <span class="nps__faixa nps__faixa--{{ faixa().chave }}">{{ faixa().rotulo }}</span>
+            <span class="nps__media">Média {{ d.nps.geral.media?.toLocaleString('pt-BR') }} de 5 em {{ d.nps.geral.total }} {{ d.nps.geral.total === 1 ? 'avaliação' : 'avaliações' }}</span>
+          </div>
+
+          <div class="nps__composicao">
+            <div class="segmentos" role="img"
+              [attr.aria-label]="d.nps.geral.promotores + ' promotores, ' + d.nps.geral.neutros + ' neutros e ' + d.nps.geral.detratores + ' detratores'">
+              @if (d.nps.geral.detratores) { <span class="segmento segmento--detrator" [style.flex-grow]="d.nps.geral.detratores"></span> }
+              @if (d.nps.geral.neutros) { <span class="segmento segmento--neutro" [style.flex-grow]="d.nps.geral.neutros"></span> }
+              @if (d.nps.geral.promotores) { <span class="segmento segmento--promotor" [style.flex-grow]="d.nps.geral.promotores"></span> }
+            </div>
+            <ul class="legenda">
+              <li><span class="legenda__cor segmento--detrator"></span>Detratores (notas 1 a 3): <strong>{{ d.nps.geral.detratores }}</strong></li>
+              <li><span class="legenda__cor segmento--neutro"></span>Neutros (nota 4): <strong>{{ d.nps.geral.neutros }}</strong></li>
+              <li><span class="legenda__cor segmento--promotor"></span>Promotores (nota 5): <strong>{{ d.nps.geral.promotores }}</strong></li>
+            </ul>
+          </div>
+
+          <ul class="barras barras--compactas nps__notas" aria-label="Distribuição das notas">
+            @for (n of distribuicao(); track n.nota) {
+              <li class="barra">
+                <span class="barra__rotulo">Nota {{ n.nota }}</span>
+                <span class="barra__trilho"><span class="barra__valor" [style.width.%]="largura(n.total, maxNota())"></span></span>
+                <span class="barra__numero">{{ n.total }}</span>
+              </li>
+            }
+          </ul>
+        </div>
+
+        <div class="tabela">
+          <table>
+            <caption>Avaliação por {{ vocab.profissional().toLowerCase() }}</caption>
+            <thead>
+              <tr>
+                <th scope="col">{{ vocab.profissional() }}</th>
+                <th scope="col" class="direita">Média</th>
+                <th scope="col" class="direita">NPS</th>
+                <th scope="col" class="direita">Avaliações</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (p of d.nps.profissionais; track p.profissional_id) {
+                <tr>
+                  <th scope="row">{{ p.profissional_nome }}</th>
+                  <td class="direita">{{ p.media?.toLocaleString('pt-BR') }}</td>
+                  <td class="direita">{{ p.nps }}</td>
+                  <td class="direita">{{ p.total }}</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+
+        @if (d.avaliacoes.length) {
+          <h3>Avaliações mais recentes</h3>
+          <ul class="comentarios">
+            @for (a of d.avaliacoes; track a.id) {
+              <li class="comentario">
+                <span class="comentario__nota" [attr.aria-label]="'Nota ' + a.nota + ' de 5'">{{ estrelas(a.nota) }}</span>
+                <span class="comentario__texto">{{ a.comentario || 'Sem comentário.' }}</span>
+                <span class="comentario__meta">{{ a.cliente_nome }} · {{ a.profissional_nome }} · {{ a.created_at | date:'dd/MM/yyyy' }}</span>
+              </li>
+            }
+          </ul>
+        }
+      }
+    </section>
+  </div>
+}

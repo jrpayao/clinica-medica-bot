@@ -18,6 +18,26 @@ from app.models.slot import Slot, SlotStatus
 
 _seq = itertools.count(1)
 
+# Unidades criadas pelo teste em andamento (zerado a cada teste em conftest.py)
+UNIDADES_DO_TESTE: list[int] = []
+
+
+async def nas_unidades_do_teste(rotina, *args, **kwargs):
+    """Roda uma rotina de job só nas unidades criadas pelo teste, somando os resultados.
+
+    O banco de desenvolvimento tem dados de demonstração; sem isto, o job os alcançaria também.
+    """
+    total = None
+    for unidade in list(UNIDADES_DO_TESTE):
+        parcial = await rotina(*args, estabelecimento_id=unidade, **kwargs)
+        if total is None:
+            total = parcial
+        elif isinstance(parcial, dict):
+            total = {chave: total[chave] + valor for chave, valor in parcial.items()}
+        else:
+            total += parcial
+    return total
+
 
 def _unico(tamanho: int) -> str:
     return str(uuid.uuid4().int)[:tamanho]
@@ -43,6 +63,7 @@ async def criar_estabelecimento(db: AsyncSession, **campos) -> EstabelecimentoSa
     )
     db.add(est)
     await db.flush()
+    UNIDADES_DO_TESTE.append(est.id)
     db.add(Licenca(estabelecimento_id=est.id, plano="pro", status=LicencaStatus.ATIVA))
     await db.flush()
     return est

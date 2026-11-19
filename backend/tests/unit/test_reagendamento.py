@@ -16,6 +16,7 @@ from app.services.reagendamento_service import (
     responder_reagendamento,
 )
 from tests.fabrica import (
+    nas_unidades_do_teste,
     Caixa,
     RedisFalso,
     criar_atendimento,
@@ -152,8 +153,8 @@ async def test_sem_resposta_em_30_min_expira_e_avisa_a_recepcao(db_session):
     aviso = Caixa()
     agora = datetime.now(timezone.utc)
 
-    assert await expirar_ofertas(db_session, agora_utc=agora + timedelta(minutes=29), avisar=aviso) == 0
-    assert await expirar_ofertas(db_session, agora_utc=agora + timedelta(minutes=31), avisar=aviso) == 1
+    assert await nas_unidades_do_teste(expirar_ofertas, db_session, agora_utc=agora + timedelta(minutes=29), avisar=aviso) == 0
+    assert await nas_unidades_do_teste(expirar_ofertas, db_session, agora_utc=agora + timedelta(minutes=31), avisar=aviso) == 1
 
     assert oferta.status == ReagendamentoStatus.EXPIRADA
     assert len(aviso.enviadas) == 1
@@ -225,8 +226,7 @@ async def test_horario_ocupado_enquanto_o_cliente_decidia_oferece_os_restantes(d
 
 async def test_resposta_a_oferta_expirada_nao_agenda(db_session):
     _, _, _, livres, oferta = await _oferta_enviada(db_session)
-    await expirar_ofertas(
-        db_session, agora_utc=datetime.now(timezone.utc) + timedelta(hours=1), avisar=Caixa()
+    await nas_unidades_do_teste(expirar_ofertas, db_session, agora_utc=datetime.now(timezone.utc) + timedelta(hours=1), avisar=Caixa()
     )
 
     resposta, concluido = await responder_reagendamento(db_session, oferta.id, "1", avisar=Caixa())

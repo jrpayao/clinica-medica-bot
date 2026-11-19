@@ -1,3 +1,4 @@
+import { itensDaTriagem } from '../../core/utils/triagem.utils';
 import {
   ChangeDetectionStrategy,
   Component,
@@ -26,11 +27,6 @@ export class AgendaModalComponent {
   }
 
   get triagemItens(): { chave: string; valor: string }[] {
-    const resumo = this.slot.atendimento?.triagem_resumo;
-    if (!resumo) return [];
-    return Object.entries(resumo).map(([chave, valor]) => ({
-      chave,
-      valor: String(valor),
-    }));
+    return itensDaTriagem(this.slot.atendimento?.triagem_resumo);
   }
 }

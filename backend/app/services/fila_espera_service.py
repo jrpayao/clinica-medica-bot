@@ -180,16 +180,15 @@ async def _liberar_slot(db: AsyncSession, slot_id: int | None) -> None:
         slot.reservado_em = None
 
 
-async def _expirar_ofertas(db: AsyncSession, agora_utc: datetime) -> int:
+async def _expirar_ofertas(db: AsyncSession, agora_utc: datetime, estabelecimento_id: int | None) -> int:
     limite = agora_utc - timedelta(minutes=PRAZO_RESPOSTA_MIN)
-    vencidas = (
-        await db.execute(
-            select(FilaEspera).where(
-                FilaEspera.status == FilaEsperaStatus.NOTIFICADO,
-                FilaEspera.notificado_em < limite,
-            )
-        )
-    ).scalars().all()
+    consulta = select(FilaEspera).where(
+        FilaEspera.status == FilaEsperaStatus.NOTIFICADO,
+        FilaEspera.notificado_em < limite,
+    )
+    if estabelecimento_id is not None:
+        consulta = consulta.where(FilaEspera.estabelecimento_id == estabelecimento_id)
+    vencidas = (await db.execute(consulta)).scalars().all()
     for entrada in vencidas:
         await _liberar_slot(db, entrada.slot_ofertado_id)
         entrada.tentativas += 1
@@ -217,19 +216,24 @@ async def processar_fila(
     redis,
     agora_utc: datetime | None = None,
     enviar=enviar_whatsapp,
+    estabelecimento_id: int | None = None,
 ) -> dict:
-    """Vence as ofertas sem resposta e oferece os horários livres a quem aguarda, em ordem de chegada."""
-    agora_utc = agora_utc or datetime.now(timezone.utc)
-    expirados = await _expirar_ofertas(db, agora_utc)
+    """Vence as ofertas sem resposta e oferece os horários livres a quem aguarda, em ordem de chegada.
 
-    aguardando = (
-        await db.execute(
-            select(FilaEspera, Cliente)
-            .join(Cliente, FilaEspera.cliente_id == Cliente.id)
-            .where(FilaEspera.status == FilaEsperaStatus.AGUARDANDO)
-            .order_by(FilaEspera.created_at, FilaEspera.id)
-        )
-    ).all()
+    `estabelecimento_id` restringe a rotina a uma unidade (o job roda para todas).
+    """
+    agora_utc = agora_utc or datetime.now(timezone.utc)
+    expirados = await _expirar_ofertas(db, agora_utc, estabelecimento_id)
+
+    consulta = (
+        select(FilaEspera, Cliente)
+        .join(Cliente, FilaEspera.cliente_id == Cliente.id)
+        .where(FilaEspera.status == FilaEsperaStatus.AGUARDANDO)
+        .order_by(FilaEspera.created_at, FilaEspera.id)
+    )
+    if estabelecimento_id is not None:
+        consulta = consulta.where(FilaEspera.estabelecimento_id == estabelecimento_id)
+    aguardando = (await db.execute(consulta)).all()
 
     agenda = AgendaService(db)
     disponiveis: dict[tuple, list[Slot]] = {}

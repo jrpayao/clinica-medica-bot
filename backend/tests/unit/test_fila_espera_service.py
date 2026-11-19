@@ -20,6 +20,7 @@ from app.services.fila_espera_service import (
 )
 from app.services.mensageria import obter_pendencia
 from tests.fabrica import (
+    nas_unidades_do_teste,
     Caixa,
     RedisFalso,
     criar_cliente,
@@ -98,7 +99,7 @@ async def test_slot_livre_e_oferecido_ao_primeiro_da_fila_e_fica_reservado(db_se
     slot = await criar_slot(db_session, est, prof)
     redis, caixa = RedisFalso(), Caixa()
 
-    resultado = await processar_fila(db_session, redis, enviar=caixa)
+    resultado = await nas_unidades_do_teste(processar_fila, db_session, redis, enviar=caixa)
 
     assert resultado["notificados"] == 1
     assert entrada.status == FilaEsperaStatus.NOTIFICADO
@@ -119,7 +120,7 @@ async def test_dois_slots_atendem_os_dois_primeiros_da_fila(db_session):
     s1 = await criar_slot(db_session, est, prof, dias=2)
     s2 = await criar_slot(db_session, est, prof, dias=3)
 
-    await processar_fila(db_session, RedisFalso(), enviar=Caixa())
+    await nas_unidades_do_teste(processar_fila, db_session, RedisFalso(), enviar=Caixa())
 
     assert {a.slot_ofertado_id, b.slot_ofertado_id} == {s1.id, s2.id}
 
@@ -132,7 +133,7 @@ async def test_slot_de_outra_especialidade_nao_e_oferecido(db_session):
     await criar_slot(db_session, est, ortopedista)
     caixa = Caixa()
 
-    await processar_fila(db_session, RedisFalso(), enviar=caixa)
+    await nas_unidades_do_teste(processar_fila, db_session, RedisFalso(), enviar=caixa)
 
     assert entrada.status == FilaEsperaStatus.AGUARDANDO
     assert caixa.enviadas == []
@@ -148,7 +149,7 @@ async def test_convenio_de_outra_unidade_nao_recebe_oferta(db_session):
     )
     await criar_slot(db_session, est, prof)
 
-    await processar_fila(db_session, RedisFalso(), enviar=Caixa())
+    await nas_unidades_do_teste(processar_fila, db_session, RedisFalso(), enviar=Caixa())
 
     assert entrada.status == FilaEsperaStatus.AGUARDANDO
 
@@ -158,7 +159,7 @@ async def test_falha_no_envio_nao_reserva_o_slot(db_session):
     _, entrada = await _entrar(db_session, est, esp)
     slot = await criar_slot(db_session, est, prof)
 
-    await processar_fila(db_session, RedisFalso(), enviar=Caixa(sucesso=False))
+    await nas_unidades_do_teste(processar_fila, db_session, RedisFalso(), enviar=Caixa(sucesso=False))
 
     assert entrada.status == FilaEsperaStatus.AGUARDANDO
     assert slot.status == SlotStatus.DISPONIVEL
@@ -170,7 +171,7 @@ async def test_cliente_sem_telefone_e_pulado_e_o_proximo_recebe(db_session):
     _, com_fone = await _entrar(db_session, est, esp, nome="Com Fone")
     await criar_slot(db_session, est, prof)
 
-    await processar_fila(db_session, RedisFalso(), enviar=Caixa())
+    await nas_unidades_do_teste(processar_fila, db_session, RedisFalso(), enviar=Caixa())
 
     assert sem_fone.status == FilaEsperaStatus.AGUARDANDO
     assert com_fone.status == FilaEsperaStatus.NOTIFICADO
@@ -183,12 +184,12 @@ async def test_sem_resposta_em_30_min_libera_o_slot_e_oferece_ao_proximo(db_sess
     slot = await criar_slot(db_session, est, prof)
     redis, caixa = RedisFalso(), Caixa()
     inicio = datetime.now(timezone.utc)
-    await processar_fila(db_session, redis, agora_utc=inicio, enviar=caixa)
+    await nas_unidades_do_teste(processar_fila, db_session, redis, agora_utc=inicio, enviar=caixa)
 
-    await processar_fila(db_session, redis, agora_utc=inicio + timedelta(minutes=29), enviar=caixa)
+    await nas_unidades_do_teste(processar_fila, db_session, redis, agora_utc=inicio + timedelta(minutes=29), enviar=caixa)
     assert primeira.status == FilaEsperaStatus.NOTIFICADO
 
-    resultado = await processar_fila(db_session, redis, agora_utc=inicio + timedelta(minutes=31), enviar=caixa)
+    resultado = await nas_unidades_do_teste(processar_fila, db_session, redis, agora_utc=inicio + timedelta(minutes=31), enviar=caixa)
 
     assert resultado["expirados"] == 1
     assert primeira.status == FilaEsperaStatus.AGUARDANDO
@@ -206,10 +207,10 @@ async def test_quem_nao_responde_repetidas_vezes_sai_da_fila(db_session):
 
     for rodada in range(MAX_TENTATIVAS):
         await criar_slot(db_session, est, prof, dias=2 + rodada)
-        await processar_fila(db_session, redis, agora_utc=agora, enviar=caixa)
+        await nas_unidades_do_teste(processar_fila, db_session, redis, agora_utc=agora, enviar=caixa)
         assert entrada.status == FilaEsperaStatus.NOTIFICADO
         agora += timedelta(minutes=31)
-        await processar_fila(db_session, redis, agora_utc=agora, enviar=Caixa(sucesso=False))
+        await nas_unidades_do_teste(processar_fila, db_session, redis, agora_utc=agora, enviar=Caixa(sucesso=False))
 
     assert entrada.status == FilaEsperaStatus.CANCELADO
 
@@ -220,7 +221,7 @@ async def _oferta(db):
     est, esp, prof = await _cenario(db)
     cliente, entrada = await _entrar(db, est, esp)
     slot = await criar_slot(db, est, prof)
-    await processar_fila(db, RedisFalso(), enviar=Caixa())
+    await nas_unidades_do_teste(processar_fila, db, RedisFalso(), enviar=Caixa())
     return est, cliente, entrada, slot
 
 
@@ -277,8 +278,7 @@ async def test_resposta_que_nao_e_opcao_orienta_e_mantem_a_oferta(db_session):
 
 async def test_resposta_depois_do_prazo_avisa_que_o_horario_nao_esta_mais_guardado(db_session):
     _, _, entrada, slot = await _oferta(db_session)
-    await processar_fila(
-        db_session, RedisFalso(), agora_utc=datetime.now(timezone.utc) + timedelta(minutes=40),
+    await nas_unidades_do_teste(processar_fila, db_session, RedisFalso(), agora_utc=datetime.now(timezone.utc) + timedelta(minutes=40),
         enviar=Caixa(sucesso=False),
     )
 

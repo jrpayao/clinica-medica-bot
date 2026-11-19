@@ -73,3 +73,12 @@ def _sem_ia_no_resumo_de_triagem(monkeypatch):
         raise RuntimeError("IA desligada nos testes")
 
     monkeypatch.setattr("app.services.ia.resumo_triagem._invocar_llm", _indisponivel)
+
+
+@pytest.fixture(autouse=True)
+def _unidades_do_teste():
+    from tests.fabrica import UNIDADES_DO_TESTE
+
+    UNIDADES_DO_TESTE.clear()
+    yield
+    UNIDADES_DO_TESTE.clear()

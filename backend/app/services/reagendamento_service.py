@@ -255,18 +255,23 @@ async def responder_reagendamento(
 
 
 async def expirar_ofertas(
-    db: AsyncSession, agora_utc: datetime | None = None, avisar=notificar_recepcao
+    db: AsyncSession,
+    agora_utc: datetime | None = None,
+    avisar=notificar_recepcao,
+    estabelecimento_id: int | None = None,
 ) -> int:
-    """Ofertas sem resposta há mais de 30 minutos viram pendência da recepção."""
+    """Ofertas sem resposta há mais de 30 minutos viram pendência da recepção.
+
+    `estabelecimento_id` restringe a rotina a uma unidade (o job roda para todas).
+    """
     limite = (agora_utc or datetime.now(timezone.utc)) - timedelta(minutes=PRAZO_RESPOSTA_MIN)
-    vencidas = (
-        await db.execute(
-            select(ReagendamentoOferta).where(
-                ReagendamentoOferta.status == ReagendamentoStatus.PENDENTE,
-                ReagendamentoOferta.enviado_em < limite,
-            )
-        )
-    ).scalars().all()
+    consulta = select(ReagendamentoOferta).where(
+        ReagendamentoOferta.status == ReagendamentoStatus.PENDENTE,
+        ReagendamentoOferta.enviado_em < limite,
+    )
+    if estabelecimento_id is not None:
+        consulta = consulta.where(ReagendamentoOferta.estabelecimento_id == estabelecimento_id)
+    vencidas = (await db.execute(consulta)).scalars().all()
     for oferta in vencidas:
         oferta.status = ReagendamentoStatus.EXPIRADA
     await db.flush()

@@ -8,7 +8,7 @@
 
 ## Progresso Geral
 
-`[●●●●●●●●●○]` 91% — 118/129 tasks concluídas (pendentes: G9 Deploy, T85, T90–T102 reabertas, T104; G16–G17 em BACKLOG)
+`[●●●●●●●●●●]` 97% — 125/129 tasks concluídas (pendente: G9 Deploy; G16–G17 em BACKLOG)
 
 > **Revisão de 2026-11-19:** varredura do código e das telas mostrou que T91–T102 estavam marcadas como concluídas sem código em nenhuma branch, e T90 só pela metade. Foram reabertas abaixo. G25–G27 e G28 foram registrados.
 
@@ -29,8 +29,8 @@
 | G11 — Multi-tenancy               | T56–T63   | 8/8         | `[●●●●●]` 100%  |
 | G12 — Licenciamento por Cliente   | T64–T74   | 11/11       | `[●●●●●]` 100%  |
 | G13 — Revisão de Qualidade        | T75–T77   | 3/3         | `[●●●●●]` 100%  |
-| G14 — Fluxo Guiado Agendamento    | T78–T85   | 7/8 (T85🔄) | `[●●●●○]` 87%   |
-| G15 — Diferenciais de Mercado     | T86–T104  | 5/19        | `[●○○○○]` 26%   |
+| G14 — Fluxo Guiado Agendamento    | T78–T85   | 8/8         | `[●●●●●]` 100%  |
+| G15 — Diferenciais de Mercado     | T86–T104  | 19/19       | `[●●●●●]` 100%  |
 | G16 — N3 Enterprise               | T105–T107 | 0/3         | `[BACKLOG]`     |
 | G17 — Plataforma BotFlow          | T108–T111 | 0/4         | `[BACKLOG]`     |
 | G18 — Qualidade: Correções IA     | T112–T114 | 3/3         | `[●●●●●]` 100%  |
@@ -646,7 +646,7 @@
 
 ---
 
-## GRUPO 14 — Fluxo Guiado de Agendamento `[●●●●●●●○]` 87% 🔄
+## GRUPO 14 — Fluxo Guiado de Agendamento `[●●●●●]` 100% ✅
 
 ### ✅ T78: Model Convenio + migration + seed
 - **Depende de:** T57 (EstabelecimentoSaude)
@@ -698,10 +698,10 @@
 - **TDAD:** `tests/unit/test_slot_reservado.py` (RED primeiro)
 - **Verificação:** slot vai RESERVADO ao escolher | volta DISPONIVEL após 10min | vai AGENDADO após confirmação
 
-### 🔄 T85: Fluxo guiado completo — backend + frontend (reaberta)
+### ✅ T85: Fluxo guiado completo — backend + frontend
 - **Depende de:** T83, T84
 - **ADR:** ADR-035, ADR-036, ADR-037
-- **Status:** Reaberta — critério "fluxo completo nome→confirmação" não estava atendido
+- **Status:** Concluída em 2026-11-19. O critério "fluxo completo nome→confirmação" é coberto por `tests/integration/test_diferenciais.py::test_fluxo_guiado_completo_do_nome_a_confirmacao` (banco real: nome → convênio → sintomas → horário → CPF → telefone → e-mail → confirmação, com atendimento e cliente gravados) e foi conferido no portal pela sonda `tools/video/sonda-chat.mjs`. Os testes de prompt dinâmico pedidos na T85.5 estão em `tests/unit/test_chat_fluxo_booking.py`.
 
 #### T85.1 ✅ — Backend: estados COLETANDO_CONTATO + CONFIRMANDO
 - **Arquivos:** `backend/app/services/ia/chat_service.py`
@@ -740,10 +740,36 @@
 
 ---
 
-## GRUPO 15 — Diferenciais de Mercado `[●○○○○]` 26% (5/19)
+## GRUPO 15 — Diferenciais de Mercado `[●●●●●]` 100% ✅
 
-> **Reabertura em 2026-11-19.** Existem no código: histórico clínico (T86–T88), model e service da fila de espera (T89 e parte da T90) e a abstração de provedor WhatsApp (T103).
-> Não existe em nenhuma branch: endpoints e job da fila de espera, resumo de triagem, relatórios, reagendamento, avaliação/NPS. As tasks correspondentes voltaram a pendente; a descrição de cada uma segue válida como escopo.
+> **Concluído em 2026-11-19** (branch `feature/g15-diferenciais`). Backend: 701 testes passando. Admin: 108 testes, build limpo.
+> Telas conferidas no navegador com `tools/video/sonda-g15.mjs`. Migration `5e2b8a41c7d9_g15_diferenciais`.
+>
+> **O que foi entregue**
+> - **Lista de espera (T90, T91):** sem horário livre, o chat convida para a lista e coleta CPF e WhatsApp. Quando abre um horário compatível, o primeiro da lista recebe a oferta e o horário fica guardado por 30 minutos (1 confirma, 2 continua aguardando, 0 sai). Sem resposta, passa ao próximo; duas ofertas sem resposta tiram a pessoa da lista. Painel: `/fila-espera` (recepção e gestor).
+> - **Resumo de triagem (T92, T93):** gravado no agendamento a partir do relato do paciente, até 200 palavras, sem diagnóstico (texto da IA que pareça diagnóstico ou prescrição é descartado e vale o resumo por regra). O profissional vê no "Meu dia" e recebe por WhatsApp e e-mail 30 minutos antes.
+> - **Relatórios (T94, T95):** `/relatorios` com ocupação por profissional, comparecimento, quem cancelou, queixas mais citadas, especialidades procuradas, lista de espera e custo de IA por agendamento. Filtro por período e por profissional.
+> - **Reagendamento (T96–T98):** o cancelamento registra quem pediu. Pela unidade ou pelo profissional, o cliente recebe até três horários numerados; a resposta agenda. Recusa, falta de resposta em 30 minutos, falta de horário ou de telefone viram pendência em `/fila-espera`.
+> - **Avaliação e NPS (T99–T102):** pedido de nota 24 horas depois do atendimento realizado, comentário opcional, aviso à recepção para nota abaixo de 3. NPS, distribuição, ranking e últimos comentários em `/relatorios`.
+> - **Histórico (T87, T88):** estava marcado como concluído mas não era chamado em lugar nenhum. Agora a triagem é gravada no agendamento, o paciente que volta é reconhecido pelo CPF e o profissional vê as triagens anteriores.
+>
+> **Decisões diferentes do que as tasks descreviam**
+> - Gráficos em HTML/CSS (barras com rótulo e valor), não Chart.js: uma cor só para magnitude, legível sem depender de cor e testável.
+> - A oferta de reagendamento sai na hora do cancelamento, não por job Celery; o job só vence as ofertas sem resposta. Assim funciona mesmo com o worker parado.
+> - Cancelamento pelo profissional bloqueia o horário (ele não vai atender); pela unidade ou pelo cliente, o horário volta para a agenda.
+> - Cancelamento sem a origem informada por recepção ou gestor fica como "não informado" e não dispara mensagem. O painel sempre pergunta.
+> - NPS em escala de 1 a 5: nota 5 é promotor, 4 é neutro, 1 a 3 é detrator.
+>
+> **Correções feitas no caminho**
+> - O beat do Celery agendava `limpar_slots_expirados`, que cancelava todo atendimento AGENDADA com mais de 10 minutos. Saiu do agendamento.
+> - O Celery não importava os módulos de tasks (`include`): o worker subiria sem conhecer nenhuma.
+> - O chat nunca registrava uso de tokens: a sessão não era gravada em `sessoes_chat` (o model ainda apontava para a tabela `pacientes`) e o WebSocket não fazia commit. Agora a sessão é gravada e cada chamada à IA entra no billing.
+>
+> **Limites conhecidos**
+> - Nenhuma mensagem real foi enviada: não há instância da Evolution API neste ambiente. Os fluxos de WhatsApp foram testados com o provedor substituído.
+> - O chat de agendamento iniciado pelo WhatsApp continua sem saber de qual unidade é o número (sessão criada sem estabelecimento). As respostas às perguntas do sistema (lista de espera, reagendamento, avaliação) não dependem disso.
+> - Avaliação só pelo WhatsApp; o canal PORTAL existe no model, sem tela.
+> - Uma pergunta em aberto por número: uma nova substitui a anterior (o pedido de avaliação espera se já houver outra).
 
 ### N1 — Alto Impacto, Baixo Esforço
 
@@ -775,7 +801,7 @@
 - **TDAD:** `tests/unit/test_fila_espera_model.py` (RED primeiro)
 - **Verificação:** migration roda | status transita corretamente
 
-### 🔄 T90: Fila de espera — Endpoint + service (reaberta: só o service existe; faltam os endpoints e a oferta no chat)
+### ✅ T90: Fila de espera — Endpoint + service
 - **Depende de:** T89
 - **Arquivos:** `backend/app/services/fila_espera_service.py`, `backend/app/api/v1/endpoints/fila_espera.py`
 - **Endpoints:** POST /v1/fila-espera | DELETE /v1/fila-espera/{id} | GET /v1/admin/fila-espera
@@ -783,21 +809,21 @@
 - **TDAD:** `tests/unit/test_fila_espera_service.py` (RED primeiro)
 - **Verificação:** paciente entra na fila | admin vê fila | paciente sai da fila
 
-### ⬜ T91: Fila de espera — Job Celery monitora slots (reaberta 2026-11-19 — sem código)
+### ✅ T91: Fila de espera — Job Celery monitora slots
 - **Depende de:** T90
 - **Arquivos:** `backend/app/workers/fila_espera.py`
 - **Lógica:** a cada 5 min, verificar slots DISPONIVEL que atendam pacientes na fila (especialidade + convenio). Se encontrar → WhatsApp → slot RESERVADO por 30 min → se não responder → próximo da fila
 - **TDAD:** `tests/unit/test_fila_espera_worker.py` (RED primeiro)
 - **Verificação:** paciente recebe WhatsApp quando slot abre | slot fica RESERVADO | próximo notificado se timeout
 
-### ⬜ T92: Resumo de triagem — Gerar resumo estruturado (reaberta 2026-11-19 — sem código)
+### ✅ T92: Resumo de triagem — Gerar resumo estruturado
 - **Depende de:** T87
 - **Arquivos:** `backend/app/services/ia/resumo_triagem.py`
 - **Lógica:** após consulta confirmada, gerar resumo com LLM (modelo econômico). Máx 200 palavras. Nunca usa termos de diagnóstico.
 - **TDAD:** `tests/unit/test_resumo_triagem.py` (RED primeiro)
 - **Verificação:** resumo gerado | sem diagnóstico | máx 200 palavras | dados corretos
 
-### ⬜ T93: Resumo de triagem — Enviar para o médico (reaberta 2026-11-19 — sem código)
+### ✅ T93: Resumo de triagem — Enviar para o médico
 - **Depende de:** T92
 - **Arquivos:** `backend/app/workers/resumo_medico.py`
 - **Lógica:** 30 min antes da consulta, job Celery envia ao médico (WhatsApp + email). Beat schedule a cada 15 min.
@@ -808,21 +834,21 @@
 
 ### N2 — Alto Impacto, Médio Esforço
 
-### ⬜ T94: Relatórios — Endpoints de analytics (reaberta 2026-11-19 — sem código)
+### ✅ T94: Relatórios — Endpoints de analytics
 - **Depende de:** T27
 - **Arquivos:** `backend/app/api/v1/endpoints/relatorios.py`, `backend/app/services/relatorio_service.py`
 - **Endpoints (ADMIN):** GET /v1/relatorios/ocupacao | /confirmacao | /sintomas | /custo-por-agendamento | /fila-espera
 - **TDAD:** `tests/unit/test_relatorio_service.py` (RED primeiro)
 - **Verificação:** todos endpoints retornam dados agregados | filtro por período funciona | filtro por medico_id opcional
 
-### ⬜ T95: Relatórios — Dashboard frontend-admin (reaberta 2026-11-19 — sem código)
+### ✅ T95: Relatórios — Dashboard frontend-admin
 - **Depende de:** T94
 - **Arquivos:** `frontend-admin/src/app/features/relatorios/`
 - **Componentes:** KPI cards | gráfico de barras (Chart.js) | doughnut top sintomas | tabela médicos | date range picker
 - **TDAD:** specs dos componentes (RED primeiro)
 - **Verificação:** ng build sem erros | dados carregam | filtro de período atualiza gráficos
 
-### ⬜ T96: Reagendamento — Detectar cancelamento pelo médico/admin (reaberta 2026-11-19 — sem código)
+### ✅ T96: Reagendamento — Detectar cancelamento pelo médico/admin
 - **Depende de:** T12
 - **Arquivos:** `backend/app/services/consulta_service.py`, `backend/app/workers/reagendamento.py`
 - **Novo campo:** Consulta.motivo_cancelamento ENUM(PACIENTE, MEDICO, ESTABELECIMENTO, SISTEMA)
@@ -830,42 +856,42 @@
 - **TDAD:** `tests/unit/test_cancelamento_motivo.py` (RED primeiro)
 - **Verificação:** motivo persiste | job disparado apenas para cancelamentos do lado do estabelecimento
 
-### ⬜ T97: Reagendamento — Buscar e oferecer novos slots (reaberta 2026-11-19 — sem código)
+### ✅ T97: Reagendamento — Buscar e oferecer novos slots
 - **Depende de:** T96
 - **Arquivos:** `backend/app/workers/reagendamento.py`
 - **Lógica:** busca 3 slots disponíveis (mesma especialidade + convenio). WhatsApp com 3 opções numeradas. Timeout 30 min → notificar recepção.
 - **TDAD:** `tests/unit/test_reagendamento_worker.py` (RED primeiro)
 - **Verificação:** WhatsApp enviado com 3 opções | resposta "1" agenda slot 1 | timeout notifica recepção
 
-### ⬜ T98: Reagendamento — Webhook de resposta WhatsApp (reaberta 2026-11-19 — sem código)
+### ✅ T98: Reagendamento — Webhook de resposta WhatsApp
 - **Depende de:** T97, T21
 - **Arquivos:** `backend/app/api/v1/endpoints/chat.py`, `backend/app/services/reagendamento_service.py`
 - **Lógica:** webhook recebe "1"/"2"/"3" → identifica contexto via sessão Redis → agenda slot → confirma via WhatsApp
 - **TDAD:** `tests/unit/test_reagendamento_webhook.py` (RED primeiro)
 - **Verificação:** resposta "1" agenda slot 1 | resposta inválida → orientação | "0" → cancela e notifica recepção
 
-### ⬜ T99: Avaliação — Model Avaliacao + migration (reaberta 2026-11-19 — sem código)
+### ✅ T99: Avaliação — Model Avaliacao + migration
 - **Depende de:** T12
 - **Arquivos:** `backend/app/models/avaliacao.py`, `backend/app/schemas/avaliacao.py`, migration Alembic
 - **Campos:** id, consulta_id (FK unique), paciente_id (FK), medico_id (FK), nota INT (1-5), comentario TEXT nullable, canal ENUM(WHATSAPP, PORTAL), created_at
 - **TDAD:** `tests/unit/test_avaliacao_model.py` (RED primeiro)
 - **Verificação:** migration roda | nota entre 1-5 | uma avaliação por consulta (unique)
 
-### ⬜ T100: Avaliação — Job Celery dispara 24h após consulta (reaberta 2026-11-19 — sem código)
+### ✅ T100: Avaliação — Job Celery dispara 24h após consulta
 - **Depende de:** T99
 - **Arquivos:** `backend/app/workers/avaliacao.py`
 - **Lógica:** a cada hora, verificar consultas REALIZADA há 24h e sem avaliação. Enviar WhatsApp com opções 1-5. Timeout 48h.
 - **TDAD:** `tests/unit/test_avaliacao_worker.py` (RED primeiro)
 - **Verificação:** WhatsApp enviado 24h após REALIZADA | não envia se já avaliado | não envia se cancelada
 
-### ⬜ T101: Avaliação — Webhook de resposta + comentário opcional (reaberta 2026-11-19 — sem código)
+### ✅ T101: Avaliação — Webhook de resposta + comentário opcional
 - **Depende de:** T100, T21
 - **Arquivos:** `backend/app/services/avaliacao_service.py`, expandir webhook em `chat.py`
 - **Lógica:** resposta com nota → pedir comentário opcional → "pular" aceito → salvar → encerrar. Nota < 3 → notificar recepção via email.
 - **TDAD:** `tests/unit/test_avaliacao_webhook.py` (RED primeiro)
 - **Verificação:** nota salva | comentário opcional | nota baixa notifica recepção | "pular" encerra sem comentário
 
-### ⬜ T102: Avaliação — Endpoints e NPS no painel admin (reaberta 2026-11-19 — sem código)
+### ✅ T102: Avaliação — Endpoints e NPS no painel admin
 - **Depende de:** T101
 - **Arquivos:** `backend/app/api/v1/endpoints/avaliacoes.py`, `frontend-admin/src/app/features/relatorios/`
 - **Endpoints:** GET /v1/admin/avaliacoes | GET /v1/admin/avaliacoes/nps
@@ -880,7 +906,7 @@
 - **TDAD:** `tests/unit/test_whatsapp_provider.py` (RED primeiro)
 - **Verificação:** trocar `WHATSAPP_PROVIDER=evolution` → `uazapi` sem mudar serviços de negócio | zero regressões
 
-### T104: Testes E2E — integração dos diferenciais
+### ✅ T104: Testes E2E — integração dos diferenciais
 - **Depende de:** T86–T103
 - **Arquivos:** `backend/tests/integration/test_diferenciais.py`
 - **Cenários:** (1) paciente retorna → bot reconhece histórico | (2) sem slot → fila → WhatsApp → agenda | (3) médico cancela → reagenda pelo WhatsApp | (4) avaliação 24h → painel admin | (5) admin vê relatórios NPS + ocupação | (6) troca de provedor WhatsApp sem impacto

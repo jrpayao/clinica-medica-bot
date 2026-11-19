@@ -13,6 +13,7 @@ from app.services.ia.resumo_triagem import (
 )
 from app.workers.resumo_medico import enviar_resumos_pendentes
 from tests.fabrica import (
+    nas_unidades_do_teste,
     Caixa,
     criar_atendimento,
     criar_cliente,
@@ -140,7 +141,7 @@ async def test_resumo_e_enviado_ao_profissional_30_min_antes(db_session):
     atendimento = await _atendimento_as(db_session, agora + timedelta(minutes=25))
     wa, mail = Caixa(), Caixa()
 
-    resultado = await enviar_resumos_pendentes(db_session, agora=_relogio(agora), enviar_wa=wa, enviar_mail=mail)
+    resultado = await nas_unidades_do_teste(enviar_resumos_pendentes, db_session, agora=_relogio(agora), enviar_wa=wa, enviar_mail=mail)
 
     assert resultado["enviados"] == 1
     assert wa.enviadas[0][0] == "11977776666"
@@ -155,10 +156,9 @@ async def test_resumo_nao_e_reenviado(db_session):
     agora = datetime(2030, 5, 10, 14, 0)
     await _atendimento_as(db_session, agora + timedelta(minutes=25))
     wa = Caixa()
-    await enviar_resumos_pendentes(db_session, agora=_relogio(agora), enviar_wa=wa, enviar_mail=Caixa())
+    await nas_unidades_do_teste(enviar_resumos_pendentes, db_session, agora=_relogio(agora), enviar_wa=wa, enviar_mail=Caixa())
 
-    resultado = await enviar_resumos_pendentes(
-        db_session, agora=_relogio(agora + timedelta(minutes=10)), enviar_wa=wa, enviar_mail=Caixa()
+    resultado = await nas_unidades_do_teste(enviar_resumos_pendentes, db_session, agora=_relogio(agora + timedelta(minutes=10)), enviar_wa=wa, enviar_mail=Caixa()
     )
 
     assert resultado["enviados"] == 0
@@ -171,7 +171,7 @@ async def test_atendimento_fora_da_janela_nao_envia(db_session):
     await _atendimento_as(db_session, agora - timedelta(minutes=5))    # já começou
     wa = Caixa()
 
-    resultado = await enviar_resumos_pendentes(db_session, agora=_relogio(agora), enviar_wa=wa, enviar_mail=Caixa())
+    resultado = await nas_unidades_do_teste(enviar_resumos_pendentes, db_session, agora=_relogio(agora), enviar_wa=wa, enviar_mail=Caixa())
 
     assert resultado["enviados"] == 0
     assert wa.enviadas == []
@@ -183,7 +183,7 @@ async def test_atendimento_cancelado_ou_sem_triagem_nao_envia(db_session):
     await _atendimento_as(db_session, agora + timedelta(minutes=21), triagem_resumo=None)
     wa = Caixa()
 
-    await enviar_resumos_pendentes(db_session, agora=_relogio(agora), enviar_wa=wa, enviar_mail=Caixa())
+    await nas_unidades_do_teste(enviar_resumos_pendentes, db_session, agora=_relogio(agora), enviar_wa=wa, enviar_mail=Caixa())
 
     assert wa.enviadas == []
 
@@ -192,8 +192,7 @@ async def test_falha_nos_dois_canais_deixa_para_a_proxima_rodada(db_session):
     agora = datetime(2030, 5, 10, 14, 0)
     atendimento = await _atendimento_as(db_session, agora + timedelta(minutes=25))
 
-    resultado = await enviar_resumos_pendentes(
-        db_session, agora=_relogio(agora), enviar_wa=Caixa(sucesso=False), enviar_mail=Caixa(sucesso=False)
+    resultado = await nas_unidades_do_teste(enviar_resumos_pendentes, db_session, agora=_relogio(agora), enviar_wa=Caixa(sucesso=False), enviar_mail=Caixa(sucesso=False)
     )
 
     assert resultado["enviados"] == 0

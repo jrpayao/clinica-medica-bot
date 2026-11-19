@@ -1,0 +1,160 @@
+<app-page-header
+  titulo="Lista de espera"
+  [subtitulo]="'Quem aguarda horário e remarcações que pedem contato'">
+  <button mat-stroked-button (click)="carregar()" [disabled]="carregando()">
+    <mat-icon>refresh</mat-icon>
+    Atualizar
+  </button>
+  <button mat-flat-button color="primary" (click)="abrirInclusao()" [disabled]="incluindo()">
+    <mat-icon>person_add</mat-icon>
+    Incluir na lista
+  </button>
+</app-page-header>
+
+@if (incluindo()) {
+  <form class="inclusao" (ngSubmit)="incluir()">
+    <div class="inclusao__cliente">
+      <mat-form-field appearance="outline" subscriptSizing="dynamic">
+        <mat-label>{{ vocab.cliente() }}</mat-label>
+        <mat-icon matPrefix>search</mat-icon>
+        <input
+          matInput
+          name="busca"
+          autocomplete="off"
+          placeholder="Digite o nome"
+          [ngModel]="busca()"
+          (ngModelChange)="mudarBusca($event)" />
+      </mat-form-field>
+      @if (sugestoes().length) {
+        <ul class="sugestoes">
+          @for (c of sugestoes(); track c.id) {
+            <li>
+              <button type="button" (click)="escolherCliente(c)">
+                <span>{{ c.nome }}</span>
+                <span class="sugestoes__fone">{{ c.telefone || 'sem telefone' }}</span>
+              </button>
+            </li>
+          }
+        </ul>
+      } @else if (busca().trim().length >= 2 && !clienteEscolhido() && clientes().length) {
+        <p class="inclusao__ajuda">Ninguém com esse nome. Cadastre em {{ vocab.clientes() }} antes de incluir na lista.</p>
+      }
+      @if (clienteEscolhido(); as c) {
+        @if (!c.telefone) {
+          <p class="inclusao__ajuda inclusao__ajuda--alerta">
+            Este cadastro não tem telefone: o aviso de vaga não chegará por WhatsApp.
+          </p>
+        }
+      }
+    </div>
+
+    <mat-form-field appearance="outline" subscriptSizing="dynamic" class="inclusao__especialidade">
+      <mat-label>{{ vocab.especialidade() }}</mat-label>
+      <mat-select name="especialidade" [ngModel]="especialidadeId()" (ngModelChange)="especialidadeId.set($event)">
+        <mat-option [value]="null">Qualquer uma</mat-option>
+        @for (e of especialidades(); track e.id) {
+          <mat-option [value]="e.id">{{ e.nome }}</mat-option>
+        }
+      </mat-select>
+    </mat-form-field>
+
+    <div class="inclusao__acoes">
+      <button mat-button type="button" (click)="incluindo.set(false)">Cancelar</button>
+      <button mat-flat-button color="primary" type="submit" [disabled]="!clienteEscolhido() || salvando()">
+        Incluir
+      </button>
+    </div>
+  </form>
+}
+
+@if (carregando() && !fila().length && !pendencias().length) {
+  <div class="centro"><mat-spinner diameter="40" /></div>
+} @else if (falhou()) {
+  <app-empty-state
+    icon="cloud_off"
+    title="Não foi possível carregar a lista"
+    description="Verifique a conexão e toque em Atualizar." />
+} @else {
+
+  @if (pendencias().length) {
+    <section class="bloco" aria-labelledby="t-pendencias">
+      <h2 id="t-pendencias">
+        Remarcações que pedem contato
+        <span class="contador">{{ pendencias().length }}</span>
+      </h2>
+      <p class="bloco__nota">
+        {{ vocab.atendimentos() }} cancelados pela unidade em que o {{ vocab.cliente().toLowerCase() }} ainda não foi remarcado.
+      </p>
+      <ul class="lista">
+        @for (p of pendencias(); track p.id) {
+          <li class="linha linha--pendencia">
+            <div class="linha__pessoa">
+              <span class="linha__nome">{{ p.cliente_nome }}</span>
+              <span class="linha__meta">{{ p.cliente_telefone || 'Sem telefone no cadastro' }}</span>
+            </div>
+            <div class="linha__detalhe">
+              <span>{{ p.especialidade_nome }} com {{ p.profissional_nome }}</span>
+              <span class="linha__meta">Era em {{ p.data_original.split('-').reverse().join('/') }} às {{ p.hora_original }}</span>
+            </div>
+            <span class="selo selo--alerta">{{ rotuloPendencia[p.status] || p.status }}</span>
+            <div class="linha__acoes">
+              <button mat-stroked-button (click)="resolver(p)" matTooltip="Use depois de falar com a pessoa">
+                <mat-icon>done</mat-icon>
+                Já resolvi
+              </button>
+            </div>
+          </li>
+        }
+      </ul>
+    </section>
+  }
+
+  <section class="bloco" aria-labelledby="t-fila">
+    <h2 id="t-fila">
+      Aguardando horário
+      @if (fila().length) { <span class="contador contador--neutro">{{ fila().length }}</span> }
+    </h2>
+    @if (!fila().length) {
+      <app-empty-state
+        icon="hourglass_empty"
+        title="Ninguém na lista de espera"
+        description="Quem não encontra horário no chat pode entrar na lista. Quando um horário abre, o sistema avisa pelo WhatsApp na ordem de chegada." />
+    } @else {
+      <p class="bloco__nota">
+        Quando um horário compatível abre, a primeira pessoa da lista recebe a oferta por WhatsApp e tem 30 minutos para responder.
+      </p>
+      <ul class="lista">
+        @for (e of fila(); track e.id) {
+          <li class="linha">
+            <span class="linha__posicao" [attr.aria-label]="'Posição ' + e.posicao">{{ e.posicao }}º</span>
+            <div class="linha__pessoa">
+              <span class="linha__nome">{{ e.cliente_nome }}</span>
+              <span class="linha__meta">
+                {{ e.cliente_cpf_mascarado }} ·
+                @if (semComoAvisar(e)) { <strong class="sem-fone">sem telefone, não será avisado</strong> }
+                @else { {{ e.cliente_telefone }} }
+              </span>
+            </div>
+            <div class="linha__detalhe">
+              <span>{{ e.especialidade_nome || 'Qualquer ' + vocab.especialidade().toLowerCase() }}</span>
+              <span class="linha__meta">@if (e.convenio_nome) { {{ e.convenio_nome }} · } na lista {{ espera(e.created_at) }}</span>
+            </div>
+            <span class="selo" [class.selo--oferta]="e.status === 'NOTIFICADO'">
+              {{ rotuloStatus[e.status] || e.status }}
+              @if (e.status === 'NOTIFICADO') { {{ espera(e.notificado_em) }} }
+            </span>
+            <div class="linha__acoes">
+              <button
+                mat-icon-button
+                (click)="remover(e)"
+                [attr.aria-label]="'Tirar ' + e.cliente_nome + ' da lista'"
+                matTooltip="Tirar da lista">
+                <mat-icon>person_remove</mat-icon>
+              </button>
+            </div>
+          </li>
+        }
+      </ul>
+    }
+  </section>
+}
